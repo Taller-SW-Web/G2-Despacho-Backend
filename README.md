@@ -111,6 +111,8 @@ Las tres aplicaciones se desplegarán como servicios independientes en Render, i
 
 Los Dockerfiles y workflows de GitHub Actions todavía no están implementados. Cuando se incorporen, cada workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
 
+El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
+
 ## Contribución
 
 El equipo utiliza ramas de trabajo y Conventional Commits en español:
