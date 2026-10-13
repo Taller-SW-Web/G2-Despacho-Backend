@@ -1,0 +1,10 @@
+# Archivos de texto: normalizar finales de línea
+* text=auto
+
+# Scripts de Linux: LF
+*.sh text eol=lf
+mvnw text eol=lf
+
+# Scripts de Windows: CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
