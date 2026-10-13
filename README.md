@@ -22,7 +22,8 @@ Cada microservicio es propietario de sus datos. No se comparten tablas ni entida
 - Spring Cloud 2025.1.3 para el API Gateway.
 - Spring Security y OAuth2 Resource Server.
 - Spring Data JPA en los microservicios.
-- PostgreSQL y Flyway.
+- PostgreSQL 17.11 administrado por Supabase y Flyway.
+- Supabase Storage con bucket privado para evidencias de entrega.
 - Testcontainers para pruebas de integración.
 - Springdoc OpenAPI para documentar las APIs.
 - Hibernate Spatial y JTS en Gestión de Despachos para zonas geográficas.
@@ -59,7 +60,7 @@ El paquete `shared` se reserva para componentes transversales del microservicio,
 - JDK 21.
 - Git.
 - Docker para ejecutar las pruebas que utilizan Testcontainers.
-- Una instancia PostgreSQL para cada microservicio cuando se habilite la persistencia local.
+- Dos persistencias PostgreSQL aisladas en Supabase: una para Gestión de Despachos y otra para Operación de Reparto.
 
 No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wrapper.
 
@@ -82,7 +83,7 @@ cd servicio-operacion-reparto
 .\mvnw.cmd spring-boot:run
 ```
 
-Las conexiones a PostgreSQL, los puertos, las rutas del Gateway, la validación JWT y las URLs de otros módulos todavía deben incorporarse a los archivos `application.yaml` mediante variables de entorno. No se deben guardar credenciales ni secretos en Git.
+Las conexiones a Supabase, los puertos, las rutas del Gateway, la validación JWT y las URLs de otros módulos todavía deben incorporarse a los archivos `application.yaml` mediante variables de entorno. No se deben guardar credenciales ni secretos en Git.
 
 ## Pruebas
 
@@ -96,7 +97,9 @@ Las pruebas de integración de los microservicios pueden requerir que Docker se 
 
 ## API e integraciones
 
-El API Gateway será la única entrada pública para los frontends y los módulos consumidores. Los dos microservicios se comunicarán mediante APIs internas y mantendrán bases de datos aisladas.
+El API Gateway será la única entrada pública para los frontends y los módulos consumidores. Los dos microservicios se comunicarán mediante APIs internas y mantendrán bases de datos aisladas en Supabase.
+
+Operación de Reparto utilizará un bucket privado de Supabase Storage para las fotografías de evidencia. Los archivos se consultarán mediante acceso autorizado o URLs firmadas temporales; en la base de datos solo se conservarán sus referencias y metadatos relevantes [cite: 4].
 
 Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
 
@@ -124,3 +127,4 @@ Todo cambio debe ingresar a `main` mediante Pull Request y revisión de al menos
 1. [Repositorio de especificaciones del módulo](https://github.com/Taller-SW-Web/G2-Despacho-Specs).
 2. [Contrato de integración](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md).
 3. [Guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md).
+4. [Documentación de Supabase Storage](https://supabase.com/docs/guides/storage).
