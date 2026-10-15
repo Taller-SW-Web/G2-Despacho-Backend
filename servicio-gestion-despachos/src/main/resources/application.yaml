@@ -1,3 +1,35 @@
 spring:
   application:
     name: servicio-gestion-despachos
+  jpa:
+    open-in-view: false
+
+server:
+  port: ${PORT:8081}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+  swagger-ui:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+    persist-authorization: false
+
+despacho:
+  seguridad:
+    url: ${SEGURIDAD_URL}
+    audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
+    algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
+  gateway:
+    url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}

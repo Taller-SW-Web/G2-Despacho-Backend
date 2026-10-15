@@ -83,7 +83,11 @@ cd servicio-operacion-reparto
 .\mvnw.cmd spring-boot:run
 ```
 
-Las conexiones a Supabase, los puertos, las rutas del Gateway, la validación JWT y las URLs de otros módulos todavía deben incorporarse a los archivos `application.yaml` mediante variables de entorno. No se deben guardar credenciales ni secretos en Git.
+Antes de ejecutar estas instrucciones, configurar `SEGURIDAD_URL` con el origen real de Seguridad. Los puertos locales ya están definidos como 8080, 8081 y 8082. Cada aplicación incluye un `.env.example` como referencia; estos archivos no se cargan automáticamente.
+
+Para la primera integración, los microservicios disponen del perfil `integracion-local`, que habilita Swagger UI y permite arrancar sin PostgreSQL. En Gestión también habilita una cotización simulada protegida por JWT. Fuera de ese perfil se requiere configurar la conexión de base de datos propia de cada microservicio mediante las variables habituales de Spring Boot. No se deben guardar credenciales ni secretos en Git.
+
+La [guía de configuración inicial](docs/configuracion-inicial-api-gateway.md) explica las variables, las rutas, el alcance de la simulación y las comprobaciones pendientes. El código de esta entrega todavía no se ha compilado ni ejecutado.
 
 ## Pruebas
 
@@ -103,7 +107,7 @@ Operación de Reparto utilizará un bucket privado de Supabase Storage para las 
 
 Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
 
-La documentación interactiva con Springdoc se habilitará al implementar los primeros endpoints. El contrato oficial seguirá estando en `integraciones/api-contract.md` del repositorio de especificaciones.
+La documentación interactiva con Springdoc está configurada en ambos microservicios y apunta a la URL del Gateway. Está deshabilitada por defecto y se habilita con `integracion-local` o `DOCUMENTACION_HABILITADA=true`. El contrato oficial sigue estando en `integraciones/api-contract.md` del repositorio de especificaciones.
 
 ## Despliegue y CI/CD
 

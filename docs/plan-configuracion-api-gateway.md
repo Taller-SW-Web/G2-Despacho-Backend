@@ -4,6 +4,8 @@
 
 Este documento es un plan técnico provisional. Las rutas, payloads, scopes y códigos HTTP definitivos pertenecen al contrato oficial del repositorio de especificaciones [cite: 1].
 
+La primera implementación está descrita en la [guía de configuración inicial](configuracion-inicial-api-gateway.md). Su código y pruebas están escritos, pero no se han compilado ni ejecutado por indicación del usuario; los criterios de completitud siguen pendientes de verificación.
+
 ## Objetivo
 
 Configurar una versión mínima del API Gateway que permita validar una integración completa desde un consumidor hasta el microservicio propietario, sin esperar a que toda la lógica del módulo esté implementada.
@@ -94,9 +96,11 @@ La tabla inicial es orientativa y debe ajustarse al contrato definitivo:
 | `/api/v1/seguimientos/**` | Gestión de Despachos |
 | `/api/v1/zonas/**` | Gestión de Despachos |
 | `/api/v1/repartidores/**` | Operación de Reparto |
-| `/api/v1/vehiculos/**` | Operación de Reparto |
+| `/api/v1/furgonetas/**` | Operación de Reparto |
 | `/api/v1/jornadas/**` | Operación de Reparto |
-| `/api/v1/rutas/**` | Operación de Reparto |
+| `/api/v1/repartidor/**` | Operación de Reparto |
+| `/api/v1/flota/**` | Operación de Reparto |
+| `/api/v1/catalogos/motivos-fallo` | Operación de Reparto |
 | `/api/v1/evidencias/**` | Operación de Reparto |
 
 Las comunicaciones privadas entre Gestión y Operación serán directas y no pasarán por el Gateway. El webhook saliente hacia Ventas tampoco se enviará mediante el Gateway [cite: 2].
@@ -130,17 +134,19 @@ Las fotografías no atravesarán el Gateway. Operación de Reparto autorizará l
 
 ### 6. Integrar Seguridad
 
-Cuando Seguridad y Usuarios confirme emisor, audiencia y scopes, el flujo será:
+El contrato actual de Seguridad y Usuarios ya define el descubrimiento del emisor, los tipos de token, la audiencia de servicio y los scopes. El flujo de integración será:
 
 ```text
 Consumidor obtiene JWT mediante client_credentials
     ↓
-Gateway valida firma, expiración y audiencia
+Gateway valida firma, algoritmo, emisor, expiración y tipo; audiencia para servicio
     ↓
-Microservicio vuelve a validar JWT, scope y autorización
+Microservicio vuelve a validar JWT y exige el scope o rol y la autorización local
 ```
 
 Mientras la integración con Seguridad no esté disponible, solo podrá utilizarse una configuración de prueba limitada al ambiente local. No se desplegará públicamente una configuración sin autenticación.
+
+Los tokens humanos con `tipo=acceso` no requieren audiencia según el contrato actual. Los tokens de servicio con `tipo=servicio` deben incluir `api-despacho` en `aud`. El emisor y las claves públicas se obtienen mediante descubrimiento, no de valores ilustrativos del contrato. El perfil `integracion-local` de la implementación conserva la validación JWT.
 
 ### 7. Habilitar documentación y pruebas manuales
 

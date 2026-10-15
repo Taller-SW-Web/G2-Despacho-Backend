@@ -1,0 +1,4 @@
+# Variables locales y credenciales
+.env
+.env.*
+!.env.example

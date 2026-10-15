@@ -1,3 +1,44 @@
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 3000
+            response-timeout: 10s
+          routes:
+            - id: gestion-despachos
+              uri: ${GESTION_DESPACHOS_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**
+            - id: operacion-reparto
+              uri: ${OPERACION_REPARTO_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/repartidores/**,/api/v1/furgonetas/**,/api/v1/jornadas/**,/api/v1/flota/**,/api/v1/repartidor/**,/api/v1/evidencias/**,/api/v1/catalogos/motivos-fallo
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+despacho:
+  seguridad:
+    url: ${SEGURIDAD_URL}
+    audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
+    algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
+  cors:
+    origenes: ${CORS_ORIGENES:http://localhost:5173,http://localhost:5174,http://localhost:8081,http://localhost:8082}
+  solicitudes:
+    maximo-bytes: ${SOLICITUD_MAXIMO_BYTES:1048576}

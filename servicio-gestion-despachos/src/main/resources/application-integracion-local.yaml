@@ -1,0 +1,13 @@
+# Solo para validar la integración inicial sin PostgreSQL ni servicios de negocio.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+  flyway:
+    enabled: false
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
