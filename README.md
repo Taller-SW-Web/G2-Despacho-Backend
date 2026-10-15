@@ -4,6 +4,14 @@ Backend del módulo encargado de planificar, ejecutar y dar seguimiento al despa
 
 Las reglas funcionales, los estados y los contratos de integración se mantienen en el repositorio [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs) [cite: 1].
 
+## Estado temporal de la integración con Seguridad
+
+> **Aviso para el equipo y los módulos consumidores:** se dispone de un emisor local de pruebas de G2 para avanzar sin un entorno operativo de Seguridad. No es el servicio real de G7. La integración con las cuentas, credenciales y claves reales permanece pendiente.
+
+El modo temporal conserva la validación JWT y los permisos implementados, utilizando claves y tokens ficticios RS256. No se activa automáticamente si Seguridad falla: hay que seleccionarlo con `compose.seguridad-local.yaml`. El modo real requiere una URL configurada y no omite la autenticación.
+
+La [guía de seguridad temporal](docs/seguridad-temporal-local.md) explica cómo iniciar el entorno, obtener tokens para Swagger y otros consumidores, registrar las limitaciones y migrar a Seguridad real. Los archivos y pruebas están escritos, pero todavía no se han compilado ni ejecutado. La cotización sigue siendo simulada y los otros endpoints deben implementarse progresivamente.
+
 ## Aplicaciones desplegables
 
 | Aplicación | Responsabilidad principal | Stack web |
@@ -32,6 +40,10 @@ Cada microservicio es propietario de sus datos. No se comparten tablas ni entida
 
 ```text
 G2-Despacho-Backend/
+├── compose.yaml
+├── compose.seguridad-local.yaml
+├── .env.example
+├── herramientas/seguridad-local/
 ├── api-gateway/
 ├── servicio-gestion-despachos/
 └── servicio-operacion-reparto/
@@ -66,6 +78,33 @@ No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wr
 
 ## Ejecución local
 
+### Con Docker Compose
+
+La configuración de Compose permite iniciar las tres aplicaciones desde la raíz del repositorio. Cada aplicación tiene su propio Dockerfile y el `.env` raíz contiene la configuración local, fuera de Git. La plantilla compartida es `.env.example`.
+
+En este checkout ya se creó `.env`; en otro clon, copiar primero `.env.example` como `.env`. Con Docker Desktop iniciado, para la integración temporal sin URL ni cuentas reales de Seguridad:
+
+```powershell
+docker compose -f compose.yaml -f compose.seguridad-local.yaml up --build -d
+```
+
+Ese comando construye e inicia los cuatro contenedores: Gateway, Gestión, Operación y emisor temporal. `-d` los deja en segundo plano; se puede omitir para ver los registros durante el arranque. Para consultar su estado y después seguir sus registros:
+
+```powershell
+docker compose -f compose.yaml -f compose.seguridad-local.yaml ps
+docker compose -f compose.yaml -f compose.seguridad-local.yaml logs -f
+```
+
+`logs -f` solo muestra registros de contenedores existentes: no construye imágenes ni inicia el backend. `Ctrl+C` deja de seguir los registros, pero no apaga los servicios iniciados con `-d`.
+
+Para utilizar Seguridad real, completar `SEGURIDAD_URL` y ejecutar `docker compose up --build` sin el archivo adicional. No es necesario que el emisor real esté en la nube: puede ser un backend local accesible. Usar los mismos archivos Compose al consultar registros o detener el entorno seleccionado.
+
+Los dos microservicios utilizan `integracion-local`, sin PostgreSQL y con JWT habilitado. El Gateway queda en `http://localhost:8080` y Swagger de Gestión en `http://localhost:8081/swagger-ui.html`. La [guía de ejecución con Docker](docs/ejecucion-con-docker.md) detalla variables, salud, registros, apagado y comprobaciones pendientes.
+
+Los archivos Docker están preparados, pero todavía no se han construido imágenes ni ejecutado contenedores.
+
+### Con Maven
+
 Cada aplicación se inicia en una terminal diferente. En Windows PowerShell:
 
 ```powershell
@@ -83,7 +122,11 @@ cd servicio-operacion-reparto
 .\mvnw.cmd spring-boot:run
 ```
 
-Las conexiones a Supabase, los puertos, las rutas del Gateway, la validación JWT y las URLs de otros módulos todavía deben incorporarse a los archivos `application.yaml` mediante variables de entorno. No se deben guardar credenciales ni secretos en Git.
+Antes de ejecutar estas instrucciones, configurar `SEGURIDAD_URL` con el origen real de Seguridad. Los puertos locales ya están definidos como 8080, 8081 y 8082. Cada aplicación incluye un `.env.example` como referencia; estos archivos no se cargan automáticamente.
+
+Para la primera integración, los microservicios disponen del perfil `integracion-local`, que habilita Swagger UI y permite arrancar sin PostgreSQL. En Gestión también habilita una cotización simulada protegida por JWT. Fuera de ese perfil se requiere configurar la conexión de base de datos propia de cada microservicio mediante las variables habituales de Spring Boot. No se deben guardar credenciales ni secretos en Git.
+
+La [guía de configuración inicial](docs/configuracion-inicial-api-gateway.md) explica las variables, las rutas, el alcance de la simulación y las comprobaciones pendientes. El código de esta entrega todavía no se ha compilado ni ejecutado.
 
 ## Pruebas
 
@@ -103,13 +146,13 @@ Operación de Reparto utilizará un bucket privado de Supabase Storage para las 
 
 Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
 
-La documentación interactiva con Springdoc se habilitará al implementar los primeros endpoints. El contrato oficial seguirá estando en `integraciones/api-contract.md` del repositorio de especificaciones.
+La documentación interactiva con Springdoc está configurada en ambos microservicios y apunta a la URL del Gateway. Está deshabilitada por defecto y se habilita con `integracion-local` o `DOCUMENTACION_HABILITADA=true`. El contrato oficial sigue estando en `integraciones/api-contract.md` del repositorio de especificaciones.
 
 ## Despliegue y CI/CD
 
 Las tres aplicaciones se desplegarán como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
 
-Los Dockerfiles y workflows de GitHub Actions todavía no están implementados. Cuando se incorporen, cada workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
+Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local; el despliegue en Render y los workflows de GitHub Actions todavía están pendientes. Cada futuro workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
 
 El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
 
@@ -122,7 +165,15 @@ El equipo utiliza ramas de trabajo y Conventional Commits en español:
 - Documentación: `docs/<descripcion-corta>`.
 - Ejemplo de commit: `docs(readme): documentar estructura y ejecución del backend`.
 
-Todo cambio debe ingresar a `main` mediante Pull Request y revisión de al menos un integrante. Las reglas completas se encuentran en la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md) [cite: 3].
+Para este backend, `develop` será la rama de integración del equipo y `main` conservará las versiones estables y verificadas. El flujo acordado es:
+
+1. Crear las ramas de trabajo desde `develop` actualizada.
+2. Abrir los Pull Requests de funcionalidades, correcciones y documentación hacia `develop`, con revisión de al menos otro integrante.
+3. Tras verificar la integración y las pruebas, abrir un Pull Request de `develop` hacia `main` para preparar una versión estable.
+
+La rama `feature/seguridad-local-temporal` acumula la base del Gateway, Docker y el emisor temporal; su Pull Request inicial debe tener `develop` como destino. `develop` se crea desde `main` antes de integrar esos cambios mediante el PR.
+
+Las convenciones generales se encuentran en la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md) [cite: 3]. Esa guía todavía describe ramas y PR directamente desde/hacia `main`; para el backend se aplica el flujo con `develop` descrito aquí. Las protecciones de ambas ramas deben configurarse en GitHub: crear una rama local no las activa.
 
 ## Referencias
 
