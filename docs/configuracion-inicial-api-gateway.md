@@ -6,6 +6,8 @@ Código preparado en la rama `feature/configuracion-inicial-api-gateway`. Por in
 
 El contrato oficial sigue siendo [api-contract.md](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md). Este documento describe configuración y uso; no reemplaza ni duplica los payloads contractuales.
 
+**Estado de Seguridad:** existe una [herramienta temporal de emisión JWT](seguridad-temporal-local.md) para desarrollo local. No representa el servicio real de G7. Sus tokens y claves permiten ejercitar la implementación de G2; la integración con el emisor, cuentas y clientes reales sigue pendiente.
+
 ## Qué contiene
 
 - Gateway en el puerto local 8080 y microservicios en 8081 y 8082.
@@ -56,7 +58,7 @@ Nimbus obtiene y mantiene las claves públicas, con soporte de rotación de clav
 
 Salud no requiere consultar Seguridad. Si no se puede descubrir la configuración o verificar un token, la solicitud protegida se rechaza; no existe un modo que omita la autenticación.
 
-El algoritmo no está especificado todavía en el contrato local. `RS256` es una elección inicial configurable, siguiendo el valor predeterminado de [Spring Security](https://docs.spring.io/spring-security/reference/reactive/oauth2/resource-server/jwt.html). Debe verificarse antes de la primera ejecución contra Seguridad; no se aceptan automáticamente algoritmos indicados por un token.
+El kit de integración compartido por G7 define `RS256`, que coincide con la configuración actual y con el valor predeterminado de [Spring Security](https://docs.spring.io/spring-security/reference/reactive/oauth2/resource-server/jwt.html). Falta comprobar un entorno real operativo. No se aceptan automáticamente algoritmos indicados por un token.
 
 ## Enrutamiento y autorización
 

@@ -6,6 +6,8 @@ Este documento es un plan técnico provisional. Las rutas, payloads, scopes y c�
 
 La primera implementación está descrita en la [guía de configuración inicial](configuracion-inicial-api-gateway.md). Su código y pruebas están escritos, pero no se han compilado ni ejecutado por indicación del usuario; los criterios de completitud siguen pendientes de verificación.
 
+Para continuar sin un entorno operativo de Seguridad se preparó un [emisor temporal local](seguridad-temporal-local.md). Las pruebas con ese emisor deben identificarse como integración local de G2 y no cierran la integración con las cuentas, clientes y claves reales de G7.
+
 ## Objetivo
 
 Configurar una versión mínima del API Gateway que permita validar una integración completa desde un consumidor hasta el microservicio propietario, sin esperar a que toda la lógica del módulo esté implementada.

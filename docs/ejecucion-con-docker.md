@@ -2,7 +2,9 @@
 
 ## Estado
 
-Esta configuración está preparada en la rama `feature/ejecucion-backend-docker`, creada desde el commit `36dc5ef` de la configuración inicial del Gateway.
+La base Docker se preparó en `feature/ejecucion-backend-docker`. La rama `feature/seguridad-local-temporal` agrega un emisor opcional para continuar el desarrollo sin un entorno real de G7.
+
+**Para el equipo y otros módulos:** el emisor temporal no representa Seguridad real. Consultar la [guía de seguridad temporal](seguridad-temporal-local.md) antes de probar o comunicar resultados de integración.
 
 No se han construido imágenes, descargado imágenes, ejecutado contenedores ni ejecutado pruebas o aplicaciones por indicación del usuario. Las instrucciones de este documento están pendientes de validación en ejecución.
 
@@ -18,7 +20,7 @@ No se han construido imágenes, descargado imágenes, ejecutado contenedores ni 
 
 Los puertos publicados se limitan a `127.0.0.1`, para uso desde este equipo.
 
-Los dos microservicios utilizan `integracion-local`: no crean conexiones PostgreSQL ni ejecutan Flyway. Gestión habilita la cotización simulada. Las tres aplicaciones conservan la validación JWT; no se incluye un servidor de Seguridad en Compose.
+Los dos microservicios utilizan `integracion-local`: no crean conexiones PostgreSQL ni ejecutan Flyway. Gestión habilita la cotización simulada. Las tres aplicaciones conservan la validación JWT. El Compose base utiliza Seguridad real; `compose.seguridad-local.yaml` incorpora un emisor ficticio cuando se añade explícitamente.
 
 Este archivo Compose sirve para la integración local inicial. Al incorporar persistencia y funcionalidades reales será necesario preparar otra configuración con las conexiones independientes de cada microservicio y sin el perfil simulado.
 
@@ -27,13 +29,15 @@ Este archivo Compose sirve para la integración local inicial. Al incorporar per
 - Docker Desktop iniciado y configurado para contenedores Linux.
 - Docker Compose disponible mediante `docker compose`.
 - Acceso a Internet para descargar las imágenes base, Maven y dependencias en la primera construcción.
-- URL de Seguridad accesible desde los contenedores y algoritmo de firma acordado.
+- Para modo real: URL de Seguridad accesible desde los contenedores y tokens válidos. El kit compartido define RS256.
+- Para modo temporal: activar explícitamente el archivo Compose adicional; no se necesitan cuentas ni credenciales reales.
 
 Para este arranque con Docker no es necesario instalar Java ni Maven en el equipo: se utilizan dentro de la etapa de construcción de cada imagen.
 
 ## Archivos y configuración
 
 - `compose.yaml`: define las tres aplicaciones, su red, variables y puertos.
+- `compose.seguridad-local.yaml`: agrega y selecciona el emisor temporal para las tres aplicaciones.
 - `Dockerfile` en cada aplicación: construye su JAR con Java 21 y lo ejecuta en una imagen JRE 21.
 - `.dockerignore` en cada aplicación: excluye archivos locales, variables y artefactos de compilación del contexto.
 - `.env.example` en la raíz: plantilla compartida en Git.
@@ -47,9 +51,9 @@ if (-not (Test-Path -LiteralPath '.env')) {
 }
 ```
 
-Editar `.env` y completar `SEGURIDAD_URL` con el origen real, sin agregar `/api/v1/auth` al final. Confirmar también `SEGURIDAD_ALGORITMO`; `RS256` es el valor inicial y no una confirmación del algoritmo del emisor.
+En modo real, editar `.env` y completar `SEGURIDAD_URL` con el origen real, sin agregar `/api/v1/auth` al final. RS256 está definido en el kit compartido; falta comprobar la integración con un entorno operativo.
 
-Mientras `SEGURIDAD_URL` esté vacía, Compose detendrá la carga de la configuración con un mensaje que pide completarla.
+En modo real, una URL vacía provoca un error de configuración al iniciar las aplicaciones. La validación se realiza al crear el decodificador JWT, para que el archivo adicional pueda sustituir explícitamente la URL en modo temporal. No hay autenticación opcional ni cambio automático de emisor.
 
 | Variable del `.env` raíz | Uso |
 |---|---|
@@ -59,6 +63,7 @@ Mientras `SEGURIDAD_URL` esté vacía, Compose detendrá la carga de la configur
 | `GATEWAY_PORT` | Puerto del Gateway en tu equipo; por defecto 8080 |
 | `GESTION_DESPACHOS_PORT` | Puerto de Gestión en tu equipo; por defecto 8081 |
 | `OPERACION_REPARTO_PORT` | Puerto de Operación en tu equipo; por defecto 8082 |
+| `SEGURIDAD_LOCAL_PORT` | Puerto del emisor temporal cuando se activa; por defecto 8090 |
 | `CORS_ORIGENES` | Orígenes de los frontends separados por comas |
 | `SOLICITUD_MAXIMO_BYTES` | Tamaño máximo del cuerpo; por defecto 1048576 bytes |
 
@@ -92,7 +97,15 @@ El documento de descubrimiento debe publicar un `jwks_uri` que también sea acce
 
 ## Iniciar las tres aplicaciones
 
-Una vez configurado `.env`, abrir una terminal en la raíz de `G2-Despacho-Backend`:
+Para iniciar el entorno temporal sin Seguridad real, abrir una terminal en la raíz de `G2-Despacho-Backend`:
+
+```powershell
+docker compose -f compose.yaml -f compose.seguridad-local.yaml up --build -d
+```
+
+Esto agrega un cuarto contenedor de herramientas y mantiene los JWT verificados. Obtener tokens y operar ese entorno siguiendo la [guía temporal](seguridad-temporal-local.md). Los comandos restantes de esta guía usan el archivo base; al trabajar con el emisor temporal, añadir ambos argumentos `-f` también en `ps`, `logs` y `down`.
+
+Para iniciar las tres aplicaciones con Seguridad real, después de configurar `.env`:
 
 ```powershell
 docker compose up --build
@@ -149,6 +162,8 @@ Para la primera verificación manual, seguir esta secuencia:
 El último paso verifica el recorrido real navegador → Gateway → Gestión con autenticación. Salud por sí sola no comprueba enrutamiento, CORS ni validación de tokens. Operación solo puede comprobarse en salud hasta que se implementen sus endpoints de negocio.
 
 ## Registros, reconstrucción y apagado
+
+Los comandos sin `-f` de esta sección corresponden al modo con Seguridad real. En modo temporal, agregar ambos archivos como se muestra en la [guía de seguridad temporal](seguridad-temporal-local.md#registros-y-apagado). `logs -f` solo consulta registros; el arranque se realiza con `up --build`.
 
 Ver registros de los tres servicios:
 

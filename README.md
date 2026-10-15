@@ -4,6 +4,14 @@ Backend del módulo encargado de planificar, ejecutar y dar seguimiento al despa
 
 Las reglas funcionales, los estados y los contratos de integración se mantienen en el repositorio [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs) [cite: 1].
 
+## Estado temporal de la integración con Seguridad
+
+> **Aviso para el equipo y los módulos consumidores:** se dispone de un emisor local de pruebas de G2 para avanzar sin un entorno operativo de Seguridad. No es el servicio real de G7. La integración con las cuentas, credenciales y claves reales permanece pendiente.
+
+El modo temporal conserva la validación JWT y los permisos implementados, utilizando claves y tokens ficticios RS256. No se activa automáticamente si Seguridad falla: hay que seleccionarlo con `compose.seguridad-local.yaml`. El modo real requiere una URL configurada y no omite la autenticación.
+
+La [guía de seguridad temporal](docs/seguridad-temporal-local.md) explica cómo iniciar el entorno, obtener tokens para Swagger y otros consumidores, registrar las limitaciones y migrar a Seguridad real. Los archivos y pruebas están escritos, pero todavía no se han compilado ni ejecutado. La cotización sigue siendo simulada y los otros endpoints deben implementarse progresivamente.
+
 ## Aplicaciones desplegables
 
 | Aplicación | Responsabilidad principal | Stack web |
@@ -33,7 +41,9 @@ Cada microservicio es propietario de sus datos. No se comparten tablas ni entida
 ```text
 G2-Despacho-Backend/
 ├── compose.yaml
+├── compose.seguridad-local.yaml
 ├── .env.example
+├── herramientas/seguridad-local/
 ├── api-gateway/
 ├── servicio-gestion-despachos/
 └── servicio-operacion-reparto/
@@ -72,11 +82,22 @@ No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wr
 
 La configuración de Compose permite iniciar las tres aplicaciones desde la raíz del repositorio. Cada aplicación tiene su propio Dockerfile y el `.env` raíz contiene la configuración local, fuera de Git. La plantilla compartida es `.env.example`.
 
-En este checkout ya se creó `.env`; completar `SEGURIDAD_URL` y confirmar el algoritmo de firma antes de utilizarlo. En otro clon, copiar primero `.env.example` como `.env`. Después, con Docker Desktop iniciado:
+En este checkout ya se creó `.env`; en otro clon, copiar primero `.env.example` como `.env`. Con Docker Desktop iniciado, para la integración temporal sin URL ni cuentas reales de Seguridad:
 
 ```powershell
-docker compose up --build
+docker compose -f compose.yaml -f compose.seguridad-local.yaml up --build -d
 ```
+
+Ese comando construye e inicia los cuatro contenedores: Gateway, Gestión, Operación y emisor temporal. `-d` los deja en segundo plano; se puede omitir para ver los registros durante el arranque. Para consultar su estado y después seguir sus registros:
+
+```powershell
+docker compose -f compose.yaml -f compose.seguridad-local.yaml ps
+docker compose -f compose.yaml -f compose.seguridad-local.yaml logs -f
+```
+
+`logs -f` solo muestra registros de contenedores existentes: no construye imágenes ni inicia el backend. `Ctrl+C` deja de seguir los registros, pero no apaga los servicios iniciados con `-d`.
+
+Para utilizar Seguridad real, completar `SEGURIDAD_URL` y ejecutar `docker compose up --build` sin el archivo adicional. No es necesario que el emisor real esté en la nube: puede ser un backend local accesible. Usar los mismos archivos Compose al consultar registros o detener el entorno seleccionado.
 
 Los dos microservicios utilizan `integracion-local`, sin PostgreSQL y con JWT habilitado. El Gateway queda en `http://localhost:8080` y Swagger de Gestión en `http://localhost:8081/swagger-ui.html`. La [guía de ejecución con Docker](docs/ejecucion-con-docker.md) detalla variables, salud, registros, apagado y comprobaciones pendientes.
 
@@ -144,7 +165,15 @@ El equipo utiliza ramas de trabajo y Conventional Commits en español:
 - Documentación: `docs/<descripcion-corta>`.
 - Ejemplo de commit: `docs(readme): documentar estructura y ejecución del backend`.
 
-Todo cambio debe ingresar a `main` mediante Pull Request y revisión de al menos un integrante. Las reglas completas se encuentran en la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md) [cite: 3].
+Para este backend, `develop` será la rama de integración del equipo y `main` conservará las versiones estables y verificadas. El flujo acordado es:
+
+1. Crear las ramas de trabajo desde `develop` actualizada.
+2. Abrir los Pull Requests de funcionalidades, correcciones y documentación hacia `develop`, con revisión de al menos otro integrante.
+3. Tras verificar la integración y las pruebas, abrir un Pull Request de `develop` hacia `main` para preparar una versión estable.
+
+La rama `feature/seguridad-local-temporal` acumula la base del Gateway, Docker y el emisor temporal; su Pull Request inicial debe tener `develop` como destino. `develop` se crea desde `main` antes de integrar esos cambios mediante el PR.
+
+Las convenciones generales se encuentran en la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md) [cite: 3]. Esa guía todavía describe ramas y PR directamente desde/hacia `main`; para el backend se aplica el flujo con `develop` descrito aquí. Las protecciones de ambas ramas deben configurarse en GitHub: crear una rama local no las activa.
 
 ## Referencias
 
