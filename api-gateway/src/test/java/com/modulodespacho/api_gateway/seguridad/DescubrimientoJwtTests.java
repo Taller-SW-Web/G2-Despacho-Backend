@@ -22,8 +22,23 @@ import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DescubrimientoJwtTests {
+
+    @Test
+    void requiereUrlExplicitaEnModoReal() {
+        assertThrows(IllegalArgumentException.class, () -> new ConfiguracionSeguridad()
+                .decodificadorJwt(WebClient.builder(), " ", "api-despacho", "RS256"));
+    }
+
+    @Test
+    void rechazaUnaUrlQueNoSeaUnOrigenHttp() {
+        for (String url : List.of("seguridad", "ftp://seguridad", "http://seguridad/api/v1/auth")) {
+            assertThrows(IllegalArgumentException.class, () -> new ConfiguracionSeguridad()
+                    .decodificadorJwt(WebClient.builder(), url, "api-despacho", "RS256"));
+        }
+    }
 
     private static final String EMISOR = "https://seguridad-prueba.example/api/v1/auth";
     private static RSAKey clavePublicada;

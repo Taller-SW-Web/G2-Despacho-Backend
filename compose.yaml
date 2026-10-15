@@ -1,8 +1,9 @@
 name: g2-despacho
 
-# Valores compartidos que Compose toma del .env de la raíz.
+# Modo real por defecto. Una URL vacía provoca un error de configuración al iniciar Java.
+# El emisor temporal solo se habilita agregando compose.seguridad-local.yaml de forma explícita.
 x-seguridad: &seguridad
-  SEGURIDAD_URL: ${SEGURIDAD_URL:?Completa SEGURIDAD_URL en el archivo .env de la raiz del backend}
+  SEGURIDAD_URL: "${SEGURIDAD_URL:-}"
   SEGURIDAD_AUDIENCIA: ${SEGURIDAD_AUDIENCIA:-api-despacho}
   SEGURIDAD_ALGORITMO: ${SEGURIDAD_ALGORITMO:-RS256}
 

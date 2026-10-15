@@ -1,6 +1,7 @@
 package com.modulodespacho.api_gateway.seguridad;
 
 import java.time.Duration;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,13 @@ public class ConfiguracionSeguridad {
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        URI origen = URI.create(urlSeguridad);
+        Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null && origen.getRawFragment() == null
+                        && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
+                "SEGURIDAD_URL debe ser un origen HTTP(S), sin rutas, credenciales ni parámetros");
         SignatureAlgorithm algoritmoFirma = SignatureAlgorithm.from(algoritmo);
         Assert.notNull(algoritmoFirma, "Configure un algoritmo de firma asimétrica válido");
         WebClient cliente = constructorCliente

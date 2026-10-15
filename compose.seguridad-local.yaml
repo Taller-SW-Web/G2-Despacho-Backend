@@ -1,0 +1,40 @@
+# TEMPORAL: emisor de pruebas de G2. No representa al servicio real de G7.
+# Activación explícita:
+# docker compose -f compose.yaml -f compose.seguridad-local.yaml up --build -d
+services:
+  seguridad-local:
+    build:
+      context: ./herramientas/seguridad-local
+    environment:
+      HABILITAR_SEGURIDAD_LOCAL: "true"
+      DIRECCION_ESCUCHA: "0.0.0.0"
+      PORT: "8090"
+    ports:
+      - "127.0.0.1:${SEGURIDAD_LOCAL_PORT:-8090}:8090"
+
+  api-gateway:
+    environment:
+      SEGURIDAD_URL: http://seguridad-local:8090
+      SEGURIDAD_AUDIENCIA: api-despacho
+      SEGURIDAD_ALGORITMO: RS256
+    depends_on:
+      seguridad-local:
+        condition: service_healthy
+
+  servicio-gestion-despachos:
+    environment:
+      SEGURIDAD_URL: http://seguridad-local:8090
+      SEGURIDAD_AUDIENCIA: api-despacho
+      SEGURIDAD_ALGORITMO: RS256
+    depends_on:
+      seguridad-local:
+        condition: service_healthy
+
+  servicio-operacion-reparto:
+    environment:
+      SEGURIDAD_URL: http://seguridad-local:8090
+      SEGURIDAD_AUDIENCIA: api-despacho
+      SEGURIDAD_ALGORITMO: RS256
+    depends_on:
+      seguridad-local:
+        condition: service_healthy

@@ -2,6 +2,7 @@ package com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.se
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,13 @@ public class ConfiguracionSeguridad {
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        URI origen = URI.create(urlSeguridad);
+        Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null && origen.getRawFragment() == null
+                        && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
+                "SEGURIDAD_URL debe ser un origen HTTP(S), sin rutas, credenciales ni parámetros");
         SignatureAlgorithm algoritmoFirma = SignatureAlgorithm.from(algoritmo);
         Assert.notNull(algoritmoFirma, "Configure un algoritmo de firma asimétrica válido");
         JdkClientHttpRequestFactory peticiones = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
