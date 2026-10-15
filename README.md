@@ -32,6 +32,8 @@ Cada microservicio es propietario de sus datos. No se comparten tablas ni entida
 
 ```text
 G2-Despacho-Backend/
+├── compose.yaml
+├── .env.example
 ├── api-gateway/
 ├── servicio-gestion-despachos/
 └── servicio-operacion-reparto/
@@ -65,6 +67,22 @@ El paquete `shared` se reserva para componentes transversales del microservicio,
 No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wrapper.
 
 ## Ejecución local
+
+### Con Docker Compose
+
+La configuración de Compose permite iniciar las tres aplicaciones desde la raíz del repositorio. Cada aplicación tiene su propio Dockerfile y el `.env` raíz contiene la configuración local, fuera de Git. La plantilla compartida es `.env.example`.
+
+En este checkout ya se creó `.env`; completar `SEGURIDAD_URL` y confirmar el algoritmo de firma antes de utilizarlo. En otro clon, copiar primero `.env.example` como `.env`. Después, con Docker Desktop iniciado:
+
+```powershell
+docker compose up --build
+```
+
+Los dos microservicios utilizan `integracion-local`, sin PostgreSQL y con JWT habilitado. El Gateway queda en `http://localhost:8080` y Swagger de Gestión en `http://localhost:8081/swagger-ui.html`. La [guía de ejecución con Docker](docs/ejecucion-con-docker.md) detalla variables, salud, registros, apagado y comprobaciones pendientes.
+
+Los archivos Docker están preparados, pero todavía no se han construido imágenes ni ejecutado contenedores.
+
+### Con Maven
 
 Cada aplicación se inicia en una terminal diferente. En Windows PowerShell:
 
@@ -113,7 +131,7 @@ La documentación interactiva con Springdoc está configurada en ambos microserv
 
 Las tres aplicaciones se desplegarán como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
 
-Los Dockerfiles y workflows de GitHub Actions todavía no están implementados. Cuando se incorporen, cada workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
+Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local; el despliegue en Render y los workflows de GitHub Actions todavía están pendientes. Cada futuro workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
 
 El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
 

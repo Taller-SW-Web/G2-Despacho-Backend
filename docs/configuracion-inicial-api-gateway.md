@@ -28,6 +28,8 @@ El Gateway realiza la validación inicial del token. Los microservicios vuelven 
 
 Cada aplicación tiene un `.env.example`. Son plantillas: Spring Boot no carga automáticamente un archivo `.env`; hay que trasladar sus valores a las variables del proceso, al IDE o a la plataforma de despliegue.
 
+Para iniciar las tres aplicaciones con Docker se utiliza un `.env` en la raíz del backend, leído por Compose. Ese flujo no necesita cargar manualmente las variables en cada terminal; consultar la [guía de ejecución con Docker](ejecucion-con-docker.md).
+
 | Variable | Aplicaciones | Uso |
 |---|---|---|
 | `SEGURIDAD_URL` | Las tres | Obligatoria. Origen de Seguridad, sin `/api/v1/auth` al final |
@@ -151,4 +153,4 @@ Cuando se autorice, ejecutar `.\mvnw.cmd test` en cada aplicación. Las pruebas 
 5. Si requiere otro prefijo, incorporarlo explícitamente al Gateway y autorizarlo en el servicio.
 6. Verificar errores, token, scope o rol y probar la llamada utilizando la URL del Gateway.
 
-Cada microservicio y el Gateway se despliegan por separado. Esta entrega no configura Render, Dockerfiles, CI/CD, rate limiting de cotización ni circuit breakers. El límite configurable por consumidor e IP sigue pendiente antes de cerrar la cotización real. Los servicios de negocio deben usar sus conexiones de base de datos independientes y permanecer accesibles por la red interna.
+Cada microservicio y el Gateway se despliegan por separado. La configuración Docker y Compose se incorpora en la [guía de ejecución con Docker](ejecucion-con-docker.md). El despliegue en Render, CI/CD, rate limiting de cotización y circuit breakers siguen pendientes. El límite configurable por consumidor e IP debe resolverse antes de cerrar la cotización real. Los servicios de negocio deben usar sus conexiones de base de datos independientes y permanecer accesibles por la red interna.
