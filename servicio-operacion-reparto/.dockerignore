@@ -1,0 +1,11 @@
+# Configuración privada y artefactos locales fuera del contexto de construcción.
+.env
+.env.*
+**/.env
+**/.env.*
+target
+.git
+.idea
+.vscode
+*.iml
+*.log
