@@ -62,7 +62,7 @@ El kit de integración compartido por G7 define `RS256`, que coincide con la con
 
 ## Enrutamiento y autorización
 
-Los prefijos públicos configurados están en `api-gateway/src/main/resources/application.yaml`. Gestión recibe cotizaciones, despachos, seguimientos y zonas. Operación recibe repartidores, furgonetas, jornadas, flota, operaciones del repartidor, evidencias y el catálogo de motivos de fallo.
+Los prefijos públicos configurados están en `api-gateway/src/main/resources/application.yaml`. Gestión recibe cotizaciones, despachos, seguimientos, zonas y el catálogo de motivos de fallo. Operación recibe repartidores, furgonetas, jornadas, flota, operaciones del repartidor y evidencias.
 
 No se reescriben las rutas de negocio. Los controladores deben exponer el mismo `/api/v1/...` acordado en el contrato. No se crean alias `/vehiculos` o `/rutas` del plan provisional.
 
