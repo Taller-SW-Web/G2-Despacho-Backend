@@ -24,6 +24,8 @@ Invoke-RestMethod -Uri 'http://localhost:8080/api/v1/despachos/fallidos?pagina=1
 
 La respuesta autorizada lleva `Cache-Control: no-store`. La consulta no escribe recepciones, intentos, estados ni eventos. Los errores de base se normalizan sin exponer SQL o credenciales; las inconsistencias de la referencia vigente o de la política de intentos tienen un error distinto de una lectura no disponible.
 
+El Gestor también puede obtener los motivos para el filtro desde la API canónica de [Gestión §4](../../G2-Despacho-Specs/integraciones/api-contract-gestion-despachos.md#4-catálogo-único-de-motivos-de-fallo). El Gateway dirige esa ruta a Gestión y se consulta la misma tabla `motivos_fallo`, con todos los códigos, incluidos inactivos y `NO_INTENTADO`, ordenados por código. No requiere llamar a Operación para el acceso del Gestor. Una lectura no disponible responde `503` normalizado; el cliente debe ofrecer reintentar.
+
 ## Verificación del incremento
 
 Con Java 21, Maven disponible y Docker Desktop iniciado, ejecutar desde cada aplicación:
@@ -43,7 +45,7 @@ Con Java 21, Maven disponible y Docker Desktop iniciado, ejecutar desde cada apl
 - Integrar al final los cambios de `develop` del backend y `main` de especificaciones, conforme a la coordinación de Gerardo. La rama no sustituye las migraciones/escritores compartidos de despachos, incidencias y motivos.
 - Comprobar el lector sobre esas migraciones y los registros generados por F-02/F-03. El SQL de `src/test/resources/incidencias/` es exclusivo de las bases temporales de pruebas; no debe aplicarse como migración del proyecto.
 - Verificar el proveedor real de Operación §5.4, su autorización técnica y el suministro/renovación de la credencial.
-- Concretar el catálogo compartido de motivos de Gestión §4 y revisar su ruta: el Gateway actual aún lo dirige a Operación. Este incremento valida códigos con la tabla canónica, pero no implementa la API compartida ni la autorización de repartidores de ese catálogo.
+- Completar el acceso de repartidores al catálogo compartido con la comprobación de perfil activo de Operación. El acceso del Gestor y la ruta a Gestión ya están implementados; no se concede acceso por un rol ficticio `REPARTIDOR` ni por un identificador enviado por el cliente. Esa integración de campo no es necesaria para el actor Gestor de ES-F04-01, pero el catálogo compartido aún no acredita todos sus consumidores.
 - Ejecutar el recorrido conjunto con Seguridad, Gateway, Gestión, Operación y datos compartidos. Las pruebas con dobles no acreditan esa integración.
 
 El frontend de ES-F04-01 y el detalle ES-F04-02 permanecen pendientes. Se avisará a Gerardo antes de comenzar el frontend.

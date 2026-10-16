@@ -110,6 +110,7 @@ public class ConfiguracionSeguridad {
                                 "/swagger-ui.html").permitAll();
                     }
                     reglas
+                        .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/motivos-fallo").hasRole("GESTOR_DESPACHO")
                         .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones").access(servicioConScope("cotizaciones:calcular"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))

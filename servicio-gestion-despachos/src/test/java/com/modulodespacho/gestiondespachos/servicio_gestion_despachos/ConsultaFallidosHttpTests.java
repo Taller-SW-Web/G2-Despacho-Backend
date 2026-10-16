@@ -51,6 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConsultaFallidosHttpTests {
 
     private static final String RUTA = "/api/v1/despachos/fallidos";
+    private static final String RUTA_CATALOGO = "/api/v1/catalogos/motivos-fallo";
     private static final ExecutorService HILOS = Executors.newVirtualThreadPerTaskExecutor();
     private static final AtomicInteger PETICIONES = new AtomicInteger();
     private static final AtomicReference<String> CREDENCIAL = new AtomicReference<>();
@@ -188,6 +189,50 @@ class ConsultaFallidosHttpTests {
         } finally {
             sql.sql("ALTER TABLE despachos_no_disponible RENAME TO despachos").update();
         }
+    }
+
+    @Test
+    void devuelveCatalogoCompletoOrdenadoConMotivosHistoricosYNoIntentado() throws Exception {
+        sql.sql("""
+                INSERT INTO motivos_fallo (codigo, etiqueta, seleccionable_en_campo, consume_intento, activo)
+                VALUES ('HISTORICO', 'Motivo retirado', true, true, false),
+                       ('AUSENTE', 'Destinatario ausente', true, true, true)
+                """).update();
+        http.perform(get(RUTA_CATALOGO).header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(jsonPath("$.motivos.length()").value(3))
+                .andExpect(jsonPath("$.motivos[0].codigo").value("AUSENTE"))
+                .andExpect(jsonPath("$.motivos[0].etiqueta").value("Destinatario ausente"))
+                .andExpect(jsonPath("$.motivos[0].seleccionableEnCampo").value(true))
+                .andExpect(jsonPath("$.motivos[0].consumeIntento").value(true))
+                .andExpect(jsonPath("$.motivos[1].codigo").value("HISTORICO"))
+                .andExpect(jsonPath("$.motivos[1].activo").value(false))
+                .andExpect(jsonPath("$.motivos[2].codigo").value("NO_INTENTADO"))
+                .andExpect(jsonPath("$.motivos[2].seleccionableEnCampo").value(false))
+                .andExpect(jsonPath("$.motivos[2].consumeIntento").value(false));
+        assertThat(PETICIONES.get()).isZero();
+    }
+
+    @Test
+    void protegeCatalogoAntesDeLeerloYNormalizaIndisponibilidad() throws Exception {
+        sql.sql("ALTER TABLE motivos_fallo RENAME TO motivos_fallo_no_disponible").update();
+        try {
+            http.perform(get(RUTA_CATALOGO)).andExpect(status().isUnauthorized());
+            http.perform(get(RUTA_CATALOGO).header("Authorization", "Bearer invalido"))
+                    .andExpect(status().isUnauthorized());
+            for (String token : List.of("otro", "servicio")) {
+                http.perform(get(RUTA_CATALOGO).header("Authorization", "Bearer " + token))
+                        .andExpect(status().isForbidden()).andExpect(jsonPath("$.motivos").doesNotExist());
+            }
+            http.perform(get(RUTA_CATALOGO).header("Authorization", "Bearer gestor"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("DESP_ERROR_CONSULTA_NO_DISPONIBLE"))
+                    .andExpect(jsonPath("$.motivos").doesNotExist())
+                    .andExpect(content().string(not(containsString("SELECT"))));
+        } finally {
+            sql.sql("ALTER TABLE motivos_fallo_no_disponible RENAME TO motivos_fallo").update();
+        }
+        assertThat(PETICIONES.get()).isZero();
     }
 
     private void sembrar(int numero) {

@@ -28,6 +28,7 @@ class RutaFallidosGatewayTests {
 
     private static final AtomicReference<String> CONSULTA = new AtomicReference<>();
     private static final AtomicReference<String> AUTORIZACION = new AtomicReference<>();
+    private static final AtomicReference<String> RUTA = new AtomicReference<>();
     private static final HttpServer GESTION = crearDestino();
     @LocalServerPort int puerto;
     @MockitoBean ReactiveJwtDecoder decodificador;
@@ -48,6 +49,10 @@ class RutaFallidosGatewayTests {
                 .expectBody().jsonPath("$.pagina").isEqualTo(2);
         assertThat(CONSULTA.get()).isEqualTo("pagina=2&tamanoPagina=3");
         assertThat(AUTORIZACION.get()).isEqualTo("Bearer gestor");
+        cliente.get().uri("/api/v1/catalogos/motivos-fallo").header("Authorization", "Bearer gestor")
+                .exchange().expectStatus().isOk().expectBody().jsonPath("$.motivos").isArray();
+        assertThat(RUTA.get()).isEqualTo("/api/v1/catalogos/motivos-fallo");
+        assertThat(AUTORIZACION.get()).isEqualTo("Bearer gestor");
         CONSULTA.set(null);
         cliente.get().uri("/api/v1/despachos/fallidos").exchange().expectStatus().isUnauthorized();
         assertThat(CONSULTA.get()).isNull();
@@ -62,6 +67,15 @@ class RutaFallidosGatewayTests {
                 CONSULTA.set(intercambio.getRequestURI().getRawQuery());
                 AUTORIZACION.set(intercambio.getRequestHeaders().getFirst("Authorization"));
                 byte[] respuesta = "{\"pagina\":2}".getBytes(StandardCharsets.UTF_8);
+                intercambio.getResponseHeaders().set("Content-Type", "application/json");
+                intercambio.sendResponseHeaders(200, respuesta.length);
+                try (var salida = intercambio.getResponseBody()) { salida.write(respuesta); }
+                intercambio.close();
+            });
+            servidor.createContext("/api/v1/catalogos/motivos-fallo", intercambio -> {
+                RUTA.set(intercambio.getRequestURI().getPath());
+                AUTORIZACION.set(intercambio.getRequestHeaders().getFirst("Authorization"));
+                byte[] respuesta = "{\"motivos\":[]}".getBytes(StandardCharsets.UTF_8);
                 intercambio.getResponseHeaders().set("Content-Type", "application/json");
                 intercambio.sendResponseHeaders(200, respuesta.length);
                 try (var salida = intercambio.getResponseBody()) { salida.write(respuesta); }

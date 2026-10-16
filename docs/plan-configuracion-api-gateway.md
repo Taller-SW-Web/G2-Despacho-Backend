@@ -102,7 +102,7 @@ La tabla inicial es orientativa y debe ajustarse al contrato definitivo:
 | `/api/v1/jornadas/**` | Operación de Reparto |
 | `/api/v1/repartidor/**` | Operación de Reparto |
 | `/api/v1/flota/**` | Operación de Reparto |
-| `/api/v1/catalogos/motivos-fallo` | Operación de Reparto |
+| `/api/v1/catalogos/motivos-fallo` | Gestión de Despachos |
 | `/api/v1/evidencias/**` | Operación de Reparto |
 
 Las comunicaciones privadas entre Gestión y Operación serán directas y no pasarán por el Gateway. El webhook saliente hacia Ventas tampoco se enviará mediante el Gateway [cite: 2].

@@ -11,13 +11,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.CatalogoMotivosFallo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorIncidenciasLocales;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorCatalogoMotivosFallo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosIncidenciaInconsistentesException;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal.Motivo;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.MotivoFallo;
 
 @Repository
 @Profile("!integracion-local")
-public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, CatalogoMotivosFallo {
+public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, CatalogoMotivosFallo, LectorCatalogoMotivosFallo {
 
     private static final ZoneId ZONA_LIMA = ZoneId.of("America/Lima");
     private static final String CONSULTA = """
@@ -47,6 +49,16 @@ public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, Catalog
     public boolean existeCodigo(String codigo) {
         return cliente.sql("SELECT EXISTS (SELECT 1 FROM motivos_fallo WHERE codigo = :codigo)")
                 .param("codigo", codigo).query(Boolean.class).single();
+    }
+
+    @Override
+    public List<MotivoFallo> consultarTodos() {
+        return cliente.sql("""
+                SELECT codigo, etiqueta, seleccionable_en_campo, consume_intento, activo
+                FROM motivos_fallo ORDER BY codigo
+                """).query((fila, indice) -> new MotivoFallo(fila.getString("codigo"), fila.getString("etiqueta"),
+                        fila.getBoolean("seleccionable_en_campo"), fila.getBoolean("consume_intento"),
+                        fila.getBoolean("activo"))).list();
     }
 
     @Override
