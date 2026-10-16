@@ -9,13 +9,14 @@ import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.CatalogoMotivosFallo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorIncidenciasLocales;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal.Motivo;
 
 @Repository
 @Profile("!integracion-local")
-public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales {
+public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, CatalogoMotivosFallo {
 
     private static final ZoneId ZONA_LIMA = ZoneId.of("America/Lima");
     private static final String CONSULTA = """
@@ -39,6 +40,12 @@ public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales {
 
     public IncidenciasLocalesJdbc(JdbcClient cliente) {
         this.cliente = cliente;
+    }
+
+    @Override
+    public boolean existeCodigo(String codigo) {
+        return cliente.sql("SELECT EXISTS (SELECT 1 FROM motivos_fallo WHERE codigo = :codigo)")
+                .param("codigo", codigo).query(Boolean.class).single();
     }
 
     @Override

@@ -103,6 +103,8 @@ class IncidenciasLocalesJdbcTests {
         assertThat(lector.consultarBase(null, null, null)).hasSize(4);
         assertThat(lector.consultarBase("HISTORICO", dia, dia)).extracting(IncidenciaListadoLocal::idDespacho)
                 .containsExactly(id(3).toString());
+        assertThat(lector.existeCodigo("HISTORICO")).isTrue();
+        assertThat(lector.existeCodigo("NO_EXISTE")).isFalse();
         assertThat(lector.consultarBase(null, LocalDate.of(2099, 1, 1), null)).isEmpty();
         assertThatThrownBy(() -> lector.consultarBase(null, dia.plusDays(1), dia))
                 .isInstanceOf(IllegalArgumentException.class);
