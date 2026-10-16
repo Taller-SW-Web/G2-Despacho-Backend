@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.CatalogoMotivosFallo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorIncidenciasLocales;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosIncidenciaInconsistentesException;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal.Motivo;
 
@@ -70,7 +71,7 @@ public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, Catalog
 
     private IncidenciaListadoLocal leerFila(ResultSet fila, int indice) throws SQLException {
         if (fila.getString("id_incidencia") == null || fila.getString("motivo_codigo") == null) {
-            throw new IllegalStateException("La incidencia vigente de un despacho fallido no es coherente");
+            throw new DatosIncidenciaInconsistentesException("La incidencia vigente de un despacho fallido no es coherente");
         }
         return new IncidenciaListadoLocal(
                 fila.getString("id_despacho"), fila.getString("id_incidencia"), fila.getInt("version"),
@@ -87,8 +88,8 @@ public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, Catalog
         try {
             if (valor != null && Integer.parseInt(valor) > 0) return Integer.parseInt(valor);
         } catch (NumberFormatException error) {
-            throw new IllegalStateException("La política MAXIMO_INTENTOS no es válida", error);
+            throw new DatosIncidenciaInconsistentesException("La política MAXIMO_INTENTOS no es válida", error);
         }
-        throw new IllegalStateException("La política MAXIMO_INTENTOS no es válida");
+        throw new DatosIncidenciaInconsistentesException("La política MAXIMO_INTENTOS no es válida");
     }
 }

@@ -1,11 +1,11 @@
 -- Esquema mínimo exclusivo de las pruebas del lector de T-06.
 -- No es una migración de producción ni sustituye las migraciones de F-02/F-03.
-CREATE TABLE parametros_configuracion (
+CREATE TABLE IF NOT EXISTS parametros_configuracion (
     clave varchar(50) PRIMARY KEY,
     valor varchar(100) NOT NULL
 );
 
-CREATE TABLE motivos_fallo (
+CREATE TABLE IF NOT EXISTS motivos_fallo (
     codigo text PRIMARY KEY,
     etiqueta text NOT NULL,
     seleccionable_en_campo boolean NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE motivos_fallo (
     activo boolean NOT NULL
 );
 
-CREATE TABLE despachos (
+CREATE TABLE IF NOT EXISTS despachos (
     id uuid PRIMARY KEY,
     estado text NOT NULL,
     version integer NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE despachos (
     asignacion_diaria_id_externa uuid
 );
 
-CREATE TABLE intentos_entrega (
+CREATE TABLE IF NOT EXISTS intentos_entrega (
     id uuid PRIMARY KEY,
     despacho_id uuid NOT NULL REFERENCES despachos(id),
     resultado text NOT NULL,

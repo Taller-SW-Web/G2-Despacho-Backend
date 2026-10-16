@@ -14,6 +14,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosIncidenciaInconsistentesException;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -114,21 +115,21 @@ class IncidenciasLocalesJdbcTests {
     void rechazaReferenciasVigentesAusentesAjenasOQueNoCorrespondenAUnFallo() {
         crearDespacho(1, "FALLIDO", 1, null, false);
         assertThatThrownBy(() -> lector.consultarBase(null, null, null))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("incidencia vigente");
+                .isInstanceOf(DatosIncidenciaInconsistentesException.class).hasMessageContaining("incidencia vigente");
 
         crearDespacho(2, "ENTREGADO", 1, 21L, false);
         crearIncidencia(21, 2, "CLIENTE_AUSENTE", "2026-10-15T18:00:00Z", false, false);
         cliente.sql("UPDATE despachos SET ultima_incidencia_id = :incidencia WHERE id = :despacho")
                 .param("incidencia", id(21)).param("despacho", id(1)).update();
         assertThatThrownBy(() -> lector.consultarBase(null, null, null))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("incidencia vigente");
+                .isInstanceOf(DatosIncidenciaInconsistentesException.class).hasMessageContaining("incidencia vigente");
 
         crearIncidencia(11, 1, "CLIENTE_AUSENTE", "2026-10-15T18:00:00Z", false, false);
         cliente.sql("UPDATE intentos_entrega SET resultado = 'ENTREGADO' WHERE id = :id").param("id", id(11)).update();
         cliente.sql("UPDATE despachos SET ultima_incidencia_id = :incidencia WHERE id = :despacho")
                 .param("incidencia", id(11)).param("despacho", id(1)).update();
         assertThatThrownBy(() -> lector.consultarBase(null, null, null))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("incidencia vigente");
+                .isInstanceOf(DatosIncidenciaInconsistentesException.class).hasMessageContaining("incidencia vigente");
     }
 
     @Test
@@ -137,7 +138,7 @@ class IncidenciasLocalesJdbcTests {
         crearIncidencia(11, 1, "CLIENTE_AUSENTE", "2026-10-15T18:00:00Z", false, false);
         cliente.sql("DELETE FROM parametros_configuracion").update();
         assertThatThrownBy(() -> lector.consultarBase(null, null, null))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("MAXIMO_INTENTOS");
+                .isInstanceOf(DatosIncidenciaInconsistentesException.class).hasMessageContaining("MAXIMO_INTENTOS");
         for (String valor : List.of("sin-configurar", "0", "3")) {
             cliente.sql("""
                     INSERT INTO parametros_configuracion (clave, valor) VALUES ('MAXIMO_INTENTOS', :valor)
@@ -147,7 +148,7 @@ class IncidenciasLocalesJdbcTests {
                 assertThat(lector.consultarBase(null, null, null).getFirst().maximoIntentos()).isEqualTo(3);
             } else {
                 assertThatThrownBy(() -> lector.consultarBase(null, null, null))
-                        .isInstanceOf(IllegalStateException.class).hasMessageContaining("MAXIMO_INTENTOS");
+                        .isInstanceOf(DatosIncidenciaInconsistentesException.class).hasMessageContaining("MAXIMO_INTENTOS");
             }
         }
     }
