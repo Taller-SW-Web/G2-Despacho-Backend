@@ -36,4 +36,10 @@ public class DistritosAdaptadorJpa implements RepositorioDistritos {
         }
         return encontrados;
     }
+
+    @Override
+    public List<Distrito> catalogo(String nombre) {
+        String filtro = (nombre == null || nombre.isBlank()) ? null : nombre.trim();
+        return distritos.catalogo(filtro);
+    }
 }

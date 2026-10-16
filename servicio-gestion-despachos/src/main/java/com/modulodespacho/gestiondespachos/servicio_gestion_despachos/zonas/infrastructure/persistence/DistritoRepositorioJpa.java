@@ -12,4 +12,13 @@ public interface DistritoRepositorioJpa extends JpaRepository<Distrito, UUID> {
 
     @Query("SELECT d FROM Distrito d WHERE lower(d.nombre) IN :nombres")
     List<Distrito> buscarPorNombres(@Param("nombres") Collection<String> nombres);
+
+    @Query("""
+            SELECT d FROM Distrito d
+            WHERE (lower(d.provincia) = 'lima' OR lower(d.departamento) = 'callao')
+              AND (cast(:nombre as string) IS NULL
+                   OR lower(d.nombre) LIKE lower(concat('%', cast(:nombre as string), '%')))
+            ORDER BY d.nombre ASC
+            """)
+    List<Distrito> catalogo(@Param("nombre") String nombre);
 }

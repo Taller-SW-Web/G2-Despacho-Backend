@@ -28,7 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "SEGURIDAD_URL=http://localhost:9999")
+@SpringBootTest(properties = {
+        "SEGURIDAD_URL=http://localhost:9999",
+        "spring.flyway.enabled=true" })
 @AutoConfigureMockMvc
 class FlujoF01Tests {
 
@@ -192,6 +194,27 @@ class FlujoF01Tests {
                         .contentType("application/json").content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_DESTINO_REQUERIDO"));
+    }
+
+    @Test
+    void consultaCatalogoDeDistritos() throws Exception {
+        cliente.perform(get("/api/v1/distritos")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.nombre=='San Borja')]").exists())
+                .andExpect(jsonPath("$[0].provincia").exists());
+
+        cliente.perform(get("/api/v1/distritos").param("nombre", "surco")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].nombre").value("Santiago de Surco"));
+
+        cliente.perform(get("/api/v1/distritos")).andExpect(status().isUnauthorized());
+
+        cliente.perform(get("/api/v1/distritos").header(HttpHeaders.AUTHORIZATION, "Bearer servicio"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

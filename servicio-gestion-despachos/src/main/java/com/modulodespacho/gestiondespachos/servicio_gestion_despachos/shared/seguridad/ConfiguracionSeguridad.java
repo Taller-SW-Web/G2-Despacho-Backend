@@ -114,7 +114,8 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))
                         .requestMatchers(HttpMethod.GET, "/api/v1/seguimientos/pedidos/*").access(servicioConScope("seguimientos:leer"))
-                        .requestMatchers("/api/v1/zonas/**", "/api/v1/despachos/**").hasRole("GESTOR_DESPACHO")
+                        .requestMatchers("/api/v1/zonas/**", "/api/v1/distritos/**", "/api/v1/despachos/**")
+                        .hasRole("GESTOR_DESPACHO")
                         .anyRequest().denyAll();
                 })
                 .exceptionHandling(errores -> errores

@@ -20,11 +20,11 @@ public interface ZonaRepositorioJpa extends JpaRepository<Zona, UUID> {
 
     @Query("""
             SELECT z FROM Zona z
-            WHERE (:nombre IS NULL OR lower(z.nombre) LIKE lower(concat('%', :nombre, '%')))
+            WHERE (cast(:nombre as string) IS NULL OR lower(z.nombre) LIKE lower(concat('%', cast(:nombre as string), '%')))
               AND (:estado IS NULL OR z.estado = :estado)
-              AND (:distrito IS NULL OR EXISTS (
+              AND (cast(:distrito as string) IS NULL OR EXISTS (
                     SELECT 1 FROM ZonaDistrito c
-                    WHERE c.zona = z AND lower(c.distrito.nombre) = lower(:distrito)))
+                    WHERE c.zona = z AND lower(c.distrito.nombre) = lower(cast(:distrito as string))))
             """)
     Page<Zona> buscar(@Param("nombre") String nombre, @Param("distrito") String distrito,
             @Param("estado") EstadoZona estado, Pageable pageable);
