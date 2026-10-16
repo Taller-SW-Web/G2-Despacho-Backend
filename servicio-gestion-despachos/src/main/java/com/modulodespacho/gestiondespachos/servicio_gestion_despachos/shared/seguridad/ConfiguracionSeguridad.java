@@ -33,9 +33,12 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClient;
+import org.springframework.beans.factory.ObjectProvider;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.infrastructure.FiltroLimiteCotizaciones;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.RespuestasSeguridad;
 
 @Configuration
@@ -88,7 +91,12 @@ public class ConfiguracionSeguridad {
 
     @Bean
     SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+            ObjectProvider<FiltroLimiteCotizaciones> filtroLimite,
             @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada) throws Exception {
+        FiltroLimiteCotizaciones limite = filtroLimite.getIfAvailable();
+        if (limite != null) {
+            http.addFilterAfter(limite, AuthorizationFilter.class);
+        }
         return http.csrf(configuracion -> configuracion.disable())
                 .httpBasic(configuracion -> configuracion.disable())
                 .formLogin(configuracion -> configuracion.disable())

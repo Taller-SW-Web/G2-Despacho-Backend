@@ -33,3 +33,18 @@ despacho:
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+  cotizacion:
+    limite-por-minuto: ${LIMITE_COTIZACIONES_POR_MINUTO:60}
+  productos:
+    stub:
+      catalogo:
+        POL-NEG-M:
+          peso-kg: 0.25
+          largo-cm: 10
+          ancho-cm: 10
+          alto-cm: 10
+        ZAP-RUN-42:
+          peso-kg: 1.40
+          largo-cm: 20
+          ancho-cm: 20
+          alto-cm: 40
