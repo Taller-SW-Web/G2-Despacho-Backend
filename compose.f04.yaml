@@ -1,0 +1,57 @@
+# Añadir a compose.yaml y compose.seguridad-local.yaml para la demo aislada de ES-F04-01.
+# Claves ficticias exclusivamente locales. No conecta a Supabase ni Seguridad real.
+services:
+  api-gateway:
+    environment:
+      JAVA_TOOL_OPTIONS: '-Xms64m -Xmx256m'
+  postgres-gestion-f04:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: f04_gestion_demo
+      POSTGRES_USER: despacho_demo
+      POSTGRES_PASSWORD: demo-local-f04
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U despacho_demo -d f04_gestion_demo']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  postgres-operacion-f04:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: f04_operacion_demo
+      POSTGRES_USER: despacho_demo
+      POSTGRES_PASSWORD: demo-local-f04
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U despacho_demo -d f04_operacion_demo']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  servicio-gestion-despachos:
+    environment:
+      JAVA_TOOL_OPTIONS: '-Xms64m -Xmx384m'
+      SPRING_PROFILES_ACTIVE: f04
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-gestion-f04:5432/f04_gestion_demo
+      SPRING_DATASOURCE_USERNAME: despacho_demo
+      SPRING_DATASOURCE_PASSWORD: demo-local-f04
+      OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
+      OPERACION_TOKEN_SERVICIO: ''
+      OPERACION_CLIENT_ID: modulo-despacho
+      OPERACION_CLIENT_SECRET: despacho-local-no-produccion
+      DOCUMENTACION_HABILITADA: 'true'
+    depends_on:
+      postgres-gestion-f04:
+        condition: service_healthy
+
+  servicio-operacion-reparto:
+    environment:
+      JAVA_TOOL_OPTIONS: '-Xms64m -Xmx384m'
+      SPRING_PROFILES_ACTIVE: f04
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-operacion-f04:5432/f04_operacion_demo
+      SPRING_DATASOURCE_USERNAME: despacho_demo
+      SPRING_DATASOURCE_PASSWORD: demo-local-f04
+      DOCUMENTACION_HABILITADA: 'true'
+    depends_on:
+      postgres-operacion-f04:
+        condition: service_healthy

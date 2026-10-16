@@ -33,8 +33,13 @@ public class ConfiguracionConsultaFallidos {
                 .connectTimeout(Duration.ofSeconds(1)).followRedirects(HttpClient.Redirect.NEVER).build());
         peticiones.setReadTimeout(Duration.ofSeconds(2));
         RestClient cliente = RestClient.builder().baseUrl(url.replaceAll("/+$", "")).requestFactory(peticiones).build();
-        return new OperacionIncidenciasHttp(cliente,
-                () -> entorno.getProperty("despacho.operacion.token-servicio", "").trim());
+        RestClient seguridad = RestClient.builder().baseUrl(entorno.getRequiredProperty("despacho.seguridad.url")
+                .replaceAll("/+$", "")).requestFactory(peticiones).build();
+        ProveedorTokenOperacion credenciales = new ProveedorTokenOperacion(seguridad,
+                entorno.getProperty("despacho.operacion.cliente-id", "modulo-despacho"),
+                () -> entorno.getProperty("despacho.operacion.cliente-secreto", ""),
+                () -> entorno.getProperty("despacho.operacion.token-servicio", ""), Clock.systemUTC());
+        return new OperacionIncidenciasHttp(cliente, credenciales);
     }
 
     @Bean

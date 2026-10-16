@@ -100,6 +100,12 @@ public class ConfiguracionSeguridad {
                                 "/swagger-ui.html").permitAll();
                     }
                     reglas
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/operacion/consulta-incidencias")
+                            .access((autenticacion, contexto) -> new AuthorizationDecision(
+                                    esTokenDeTipo(autenticacion.get(), "servicio")
+                                    && "modulo-despacho".equals(autenticacion.get().getName())
+                                    && autenticacion.get().getAuthorities().stream().anyMatch(permiso ->
+                                            permiso.getAuthority().equals("SCOPE_operacion:incidencias:leer"))))
                         // Cada futuro controlador de campo debe comprobar perfil activo y propiedad local.
                         .requestMatchers("/api/v1/repartidor/**", "/api/v1/catalogos/motivos-fallo",
                                 "/api/v1/evidencias/**").access((autenticacion, contexto) ->

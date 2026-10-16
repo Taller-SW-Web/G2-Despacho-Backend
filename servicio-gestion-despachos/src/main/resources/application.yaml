@@ -36,6 +36,8 @@ despacho:
   operacion:
     url: ${OPERACION_REPARTO_URL:http://localhost:8082}
     token-servicio: ${OPERACION_TOKEN_SERVICIO:}
+    cliente-id: ${OPERACION_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${OPERACION_CLIENT_SECRET:}
   cotizacion:
     limite-por-minuto: ${LIMITE_COTIZACIONES_POR_MINUTO:60}
   productos:

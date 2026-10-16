@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.sql.DataSource;
 import com.jayway.jsonpath.JsonPath;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -24,9 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -60,7 +57,6 @@ class ConsultaFallidosHttpTests {
 
     @Autowired MockMvc http;
     @Autowired JdbcClient sql;
-    @Autowired DataSource fuente;
     @MockitoBean JwtDecoder decodificador;
     @MockitoSpyBean ConsultarEntregasFallidas consulta;
 
@@ -72,7 +68,6 @@ class ConsultaFallidosHttpTests {
 
     @BeforeEach
     void preparar() {
-        new ResourceDatabasePopulator(new ClassPathResource("incidencias/esquema-lectura-fallidos.sql")).execute(fuente);
         sql.sql("TRUNCATE intentos_entrega, despachos, motivos_fallo").update();
         sql.sql("UPDATE parametros_configuracion SET valor = '2' WHERE clave = 'MAXIMO_INTENTOS'").update();
         sql.sql("""
@@ -239,15 +234,17 @@ class ConsultaFallidosHttpTests {
         boolean recibido = numero <= 5;
         OffsetDateTime fecha = OffsetDateTime.parse(recibido ? "2026-10-15T18:00:00Z" : "2026-10-14T18:00:00Z");
         sql.sql("""
-                INSERT INTO despachos (id, estado, version, codigo_rastreo_interno, numero_intentos, ultima_incidencia_id)
-                VALUES (:id, 'FALLIDO', 4, :codigo, 1, :incidencia)
-                """).param("id", id(numero)).param("codigo", "TRK-" + numero).param("incidencia", id(100 + numero)).update();
+                INSERT INTO despachos (id, pedido_id, estado, version, codigo_rastreo_interno, numero_intentos)
+                VALUES (:id, :pedido, 'PENDIENTE_ASIGNACION', 4, :codigo, 1)
+                """).param("id", id(numero)).param("pedido", id(500 + numero)).param("codigo", "TRK-" + numero).update();
         sql.sql("""
                 INSERT INTO intentos_entrega (id, despacho_id, resultado, motivo_codigo, consume_intento,
                     repartidor_id_externo, asignacion_diaria_id_externa, registrado_en, recibido_en_centro_en)
                 VALUES (:id, :despacho, 'FALLIDO', 'NO_INTENTADO', false, :repartidor, :jornada, :fecha, :recepcion)
                 """).param("id", id(100 + numero)).param("despacho", id(numero)).param("repartidor", id(200 + numero))
                 .param("jornada", id(300 + numero)).param("fecha", fecha).param("recepcion", recibido ? fecha : null).update();
+        sql.sql("UPDATE despachos SET estado = 'FALLIDO', ultima_incidencia_id = :incidencia WHERE id = :id")
+                .param("incidencia", id(100 + numero)).param("id", id(numero)).update();
     }
 
     private Jwt token(String tipo, List<String> roles) {
