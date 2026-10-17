@@ -39,6 +39,8 @@ class JornadasHeredadasTests {
             sentencia.execute("ALTER TABLE proyeccion_despacho ALTER COLUMN pedido_id SET NOT NULL");
             sentencia.execute("CREATE VIEW proyecciones_despacho WITH (security_invoker=true) AS SELECT * FROM proyeccion_despacho");
             sentencia.execute(Files.readString(Path.of("../operaciones/sql/F06__jornadas_capacidad_heredada.sql")));
+            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F03__maximo_intentos_heredado.sql")));
+            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F03__maximo_intentos_heredado.sql")));
         }
     }
     @Test void conectaCatalogosJornadasReservasYProyeccionesSinRenombrarTablasOriginales() {

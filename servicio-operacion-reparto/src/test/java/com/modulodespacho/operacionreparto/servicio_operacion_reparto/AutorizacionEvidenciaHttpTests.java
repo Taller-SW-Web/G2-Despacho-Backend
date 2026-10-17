@@ -25,8 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "SEGURIDAD_URL=http://127.0.0.1:1",
         "EVIDENCIAS_TIPOS_PERMITIDOS=image/jpeg",
         "EVIDENCIAS_MAXIMO_BYTES=2000000",
-        "SUPABASE_URL=https://proyecto.supabase.co",
-        "SUPABASE_SERVICE_ROLE_KEY=secreto-de-prueba",
+        "EVIDENCIAS_STORAGE_URL=https://proyecto.supabase.co",
+        "EVIDENCIAS_CLAVE_SERVICIO=secreto-de-prueba",
         "EVIDENCIAS_BUCKET=evidencias"
 })
 @Import(TestcontainersConfiguration.class)

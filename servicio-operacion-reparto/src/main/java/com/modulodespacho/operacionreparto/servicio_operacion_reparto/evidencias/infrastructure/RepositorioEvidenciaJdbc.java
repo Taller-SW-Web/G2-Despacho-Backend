@@ -74,7 +74,7 @@ public class RepositorioEvidenciaJdbc {
                 .param("tamano", tamanioBytes)
                 .param("usuario", usuarioId)
                 .param("idUsuario", idUsuario)
-                .param("venceEn", venceEn)
+                .param("venceEn", java.sql.Timestamp.from(venceEn))
                 .update();
         return filas == 1;
     }

@@ -166,6 +166,8 @@ La documentación interactiva con Springdoc está configurada en ambos microserv
 
 Las tres aplicaciones se despliegan como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
 
+Operación incluye `spring-boot-starter-restclient` en producción para crear el `RestClient.Builder` que necesita la autorización de evidencias. Si el esquema heredado ya recibió F05 y F06, el complemento [F03 de máximo de intentos](operaciones/sql/F03__maximo_intentos_heredado.sql) agrega la nueva columna a la tabla y actualiza su vista sin eliminar registros. Debe aplicarse por separado antes de usar las nuevas proyecciones; este cambio de código no lo ejecuta en Supabase. En una base nueva administrada por Flyway, la migración V5 crea esa columna sobre la tabla normal y no se utiliza ese complemento.
+
 Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local. Los perfiles y las plantillas de variables de Render están descritos en la [guía de flota](docs/gestion-flota.md); la configuración de cada servicio y la revisión efectivamente desplegada deben comprobarse en Render. Los workflows de GitHub Actions deberán ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
 
 El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
