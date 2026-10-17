@@ -12,7 +12,7 @@ spring:
             - id: gestion-despachos
               uri: ${GESTION_DESPACHOS_URL:http://localhost:8081}
               predicates:
-                - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**,/api/v1/catalogos/motivos-fallo
+                - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**,/api/v1/distritos/**,/api/v1/catalogos/motivos-fallo
             - id: operacion-reparto
               uri: ${OPERACION_REPARTO_URL:http://localhost:8082}
               predicates:

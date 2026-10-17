@@ -1,5 +1,24 @@
 # F-01: zonas con códigos postales agrupados por distrito
 
+## Prueba local desde el frontend
+
+El entorno dedicado inicia Gateway, Gestión con Supabase y el emisor temporal:
+
+```bash
+docker compose -f compose.f01.yaml up --build -d --wait
+```
+
+Reutiliza `servicio-gestion-despachos/.env` para las credenciales de Supabase,
+con Flyway y generación de esquema deshabilitados. El Gateway incluye la ruta
+`/api/v1/distritos`. El perfil activo es `default`, que habilita las APIs
+persistidas de F-01.
+
+Desde la raíz del frontend, ejecutar `npm run dev:administrativo` y abrir
+<http://localhost:5173/desarrollo/f01>. La
+[guía de ejecución y evidencia del frontend](../../G2-Despacho-Frontend/docs/F-01-PruebasLocales.md)
+describe las nueve operaciones verificadas desde Chromium, la sesión temporal,
+la cotización con el catálogo de productos de prueba y los resultados reales.
+
 ## Crear o editar una zona
 
 `POST /api/v1/zonas` y `PUT /api/v1/zonas/{idZona}` requieren un token
