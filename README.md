@@ -154,6 +154,18 @@ El API Gateway será la única entrada pública para los frontends y los módulo
 
 Operación de Reparto utilizará un bucket privado de Supabase Storage para las fotografías de evidencia. Los archivos se consultarán mediante acceso autorizado o URLs firmadas temporales; en la base de datos solo se conservarán sus referencias y metadatos relevantes [cite: 4].
 
+La autorización de carga de evidencia se solicita en
+`POST /api/v1/repartidor/evidencias/autorizaciones`. En Operación deben
+configurarse `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EVIDENCIAS_BUCKET`,
+`EVIDENCIAS_TIPOS_PERMITIDOS` y `EVIDENCIAS_MAXIMO_BYTES` fuera de Git. Los
+tipos y el tamaño deben corresponder a la política acordada por el equipo y a
+las restricciones del bucket privado; sin esos valores el endpoint responde
+`503` y no emite enlaces. Las fotografías se cargan directamente a Storage, no
+a través de la API ni del Gateway. Antes de habilitar el endpoint, aplicar la
+migración Flyway `V3__evidencias.sql` a la base exclusiva de Operación y
+configurar en Supabase los mismos tipos MIME y límite de tamaño que en las
+variables del servicio.
+
 Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
 
 La documentación interactiva con Springdoc está configurada en ambos microservicios y apunta a la URL del Gateway. Está deshabilitada por defecto y se habilita con `integracion-local` o `DOCUMENTACION_HABILITADA=true`. El contrato oficial sigue estando en `integraciones/api-contract.md` del repositorio de especificaciones.

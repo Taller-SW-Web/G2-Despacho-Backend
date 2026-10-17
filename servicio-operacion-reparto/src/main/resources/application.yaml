@@ -44,3 +44,9 @@ despacho:
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+  evidencias:
+    supabase-url: ${SUPABASE_URL:}
+    supabase-service-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${EVIDENCIAS_BUCKET:}
+    tipos-permitidos: ${EVIDENCIAS_TIPOS_PERMITIDOS:}
+    maximo-bytes: ${EVIDENCIAS_MAXIMO_BYTES:0}
