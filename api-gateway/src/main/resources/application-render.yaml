@@ -1,4 +1,4 @@
-# Orígenes exactos de los dos clientes publicados; JWT sigue siendo obligatorio.
+# Orígenes exactos de los dos clientes publicados; modo demo desactivado por defecto.
 despacho:
   cors:
     origenes: ${CORS_ORIGENES:https://despacho-administrativo.vercel.app,https://despacho-repartidor.vercel.app}
@@ -11,7 +11,7 @@ spring:
             - id: gestion-despachos
               uri: ${GESTION_DESPACHOS_URL:https://taller-servicio-gestion-despachos.onrender.com}
               predicates:
-                - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**,/api/v1/catalogos/motivos-fallo
+                - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**,/api/v1/distritos/**,/api/v1/catalogos/motivos-fallo
             - id: operacion-reparto
               uri: ${OPERACION_REPARTO_URL:https://taller-servicio-operacion-reparto.onrender.com}
               predicates:
