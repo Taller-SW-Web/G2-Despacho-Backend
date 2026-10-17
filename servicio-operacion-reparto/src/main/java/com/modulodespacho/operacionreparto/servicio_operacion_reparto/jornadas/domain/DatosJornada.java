@@ -60,6 +60,16 @@ public final class DatosJornada {
         public static Detalle de(Jornada j, List<DespachoResumen> despachos) { return new Detalle(j.idJornada,j.idRepartidor,j.idFurgoneta,j.placa,j.idZona,j.fecha,j.estado,j.cerradaEn,j.limites,j.ocupacion,j.capacidadRemanente,j.porcentajeOcupacion,despachos); }
     }
     public record Contexto(UUID idRepartidor, String estadoOperativo, Jornada jornada) {}
+    public record DespachoRuta(UUID idDespacho, String codigoRastreoInterno, String estado,
+            Integer secuenciaRuta, LocalDate fechaProgramada, int numeroIntentos, Integer maximoIntentos,
+            String destinatario, String direccion, String distrito) {}
+    public record RutaRepartidor(UUID idJornada, LocalDate fecha, String estadoOperativo,
+            List<DespachoRuta> despachos) {}
+    public record DetalleDespacho(UUID idJornada, UUID idDespacho, String codigoRastreoInterno, String estado,
+            Integer secuenciaRuta, LocalDate fechaProgramada, int numeroIntentos, Integer maximoIntentos,
+            Destinatario destinatario, Destino destino) {}
+    public record ResumenJornada(UUID idJornada, LocalDate fecha, long asignados, long entregados,
+            long fallidosConIntento, long noIntentados, long pendientes) {}
     public record SolicitudReserva(UUID idDespacho, UUID idRepartidor, UUID idJornada, Capacidad requerido) {}
     public record ConfirmacionReserva(UUID idReserva, String estado, Capacidad capacidadRemanente) {}
     public record Reserva(UUID id, UUID clave, UUID despacho, UUID jornada, UUID repartidor, Capacidad carga, String estado,
@@ -69,5 +79,5 @@ public final class DatosJornada {
     public record Destino(String direccion, String referencia, String departamento, String provincia, String distrito, String codigoPostal, Object coordenadas) {}
     public record Proyeccion(UUID idDespacho, String idPedido, String codigoRastreoInterno, String estado, UUID idJornada,
             UUID idReserva, Integer secuenciaRuta, Destinatario destinatario, Destino destino, LocalDate fechaProgramada,
-            int numeroIntentos, long version, Instant actualizadoEn) {}
+            int numeroIntentos, long version, Instant actualizadoEn, Integer maximoIntentos) {}
 }

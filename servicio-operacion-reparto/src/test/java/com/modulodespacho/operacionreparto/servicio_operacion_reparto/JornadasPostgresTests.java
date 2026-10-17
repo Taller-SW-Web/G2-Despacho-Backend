@@ -193,7 +193,7 @@ class JornadasPostgresTests {
     }
     private void proyectar(UUID jornada,UUID reserva,UUID despacho,String estado,long version) throws Exception {
         var datos=new Proyeccion(despacho,"PED-PRUEBA","TRK-PRUEBA",estado,jornada,reserva,1,new Destinatario("Persona Prueba","999111222"),
-                new Destino("Dirección sintética",null,"Lima","Lima","Prueba","15000",null),LocalDate.of(2026,10,17),0,version,Instant.parse("2026-10-17T15:00:00Z"));
+                new Destino("Dirección sintética",null,"Lima","Lima","Prueba","15000",null),LocalDate.of(2026,10,17),0,version,Instant.parse("2026-10-17T15:00:00Z"),2);
         http.perform(post("/internal/v1/proyecciones/despachos/"+despacho).header("Authorization","Bearer capacidad").contentType("application/json").content(json.writeValueAsString(datos)))
                 .andExpect(status().isNoContent());
     }

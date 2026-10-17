@@ -32,11 +32,12 @@ public final class SolicitudesJornada {
         DatosJornada.Destino datos() { return new DatosJornada.Destino(direccion,referencia,departamento,provincia,distrito,codigoPostal,coordenadas); }
     }
     public record Proyectar(@NotNull UUID idDespacho,@NotBlank @Size(max=50) String idPedido,@NotBlank @Size(max=20) String codigoRastreoInterno,
-            @NotNull @Pattern(regexp="PENDIENTE_ASIGNACION|ASIGNADO|EN_CAMINO|ENTREGADO|FALLIDO|CANCELADO|DEVUELTO_A_ORIGEN") String estado,
+            @NotNull @Pattern(regexp="PENDIENTE_ASIGNACION|ASIGNADO|EN_CAMINO|ENTREGADO|FALLIDO|NO_INTENTADO|CANCELADO|DEVUELTO_A_ORIGEN") String estado,
             @NotNull UUID idJornada,@NotNull UUID idReserva,@Min(1) @Max(32767) Integer secuenciaRuta,
             @NotNull @Valid Destinatario destinatario,@NotNull @Valid Destino destino,@NotNull LocalDate fechaProgramada,
-            @Min(0) int numeroIntentos,@NotNull @Min(0) Long version,@NotNull Instant actualizadoEn) {
+            @Min(0) int numeroIntentos,@NotNull @Min(0) Long version,@NotNull Instant actualizadoEn,
+            @Min(1) Integer maximoIntentos) {
         public DatosJornada.Proyeccion datos() { return new DatosJornada.Proyeccion(idDespacho,idPedido,codigoRastreoInterno,estado,
-                idJornada,idReserva,secuenciaRuta,destinatario.datos(),destino.datos(),fechaProgramada,numeroIntentos,version,actualizadoEn); }
+                idJornada,idReserva,secuenciaRuta,destinatario.datos(),destino.datos(),fechaProgramada,numeroIntentos,version,actualizadoEn,maximoIntentos); }
     }
 }

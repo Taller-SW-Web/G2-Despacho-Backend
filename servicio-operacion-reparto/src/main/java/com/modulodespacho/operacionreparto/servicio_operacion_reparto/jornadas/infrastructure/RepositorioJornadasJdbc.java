@@ -62,6 +62,14 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                 .param("id",id).query(this::fila).optional().map(FilaBase::jornada)
                 .orElseThrow(() -> new ErrorJornada(404,"DESP_ERROR_JORNADA_NO_ENCONTRADA","La jornada no existe."));
     }
+    @Override public Optional<JornadaBase> buscarJornadaDelDia(UUID repartidor, LocalDate fecha) {
+        return sql.sql(CAMPOS + """
+            FROM asignaciones_diarias j JOIN perfiles_flota r ON r.id=j.repartidor_id
+            """ + CARGA + """
+            WHERE j.repartidor_id=:repartidor AND j.fecha_jornada=:fecha
+            ORDER BY (j.estado='ACTIVA') DESC,j.abierta_en DESC,j.id DESC LIMIT 1
+            """).param("repartidor",repartidor).param("fecha",fecha).query(this::fila).optional().map(FilaBase::jornada);
+    }
     private FilaBase fila(ResultSet fila, int indice) throws SQLException {
         Perfil perfil = new Perfil(fila.getObject("repartidor_id",UUID.class),fila.getString("nombre"),fila.getString("estado_registro"),fila.getString("estado_vinculacion"));
         UUID id = fila.getObject("jornada_id",UUID.class);
@@ -129,6 +137,38 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
         return sql.sql("SELECT despacho_id_externo,estado,secuencia_ruta FROM proyecciones_despacho WHERE asignacion_diaria_id=:id ORDER BY secuencia_ruta NULLS LAST,despacho_id_externo")
                 .param("id",id).query((fila,indice) -> new DespachoResumen(fila.getObject("despacho_id_externo",UUID.class),fila.getString("estado"),fila.getObject("secuencia_ruta",Integer.class))).list();
     }
+    private static final String PROYECCION = """
+        SELECT despacho_id_externo,id_pedido,codigo_rastreo_interno,estado,asignacion_diaria_id,
+          reserva_capacidad_id,secuencia_ruta,destinatario_nombre,destinatario_telefono,direccion,
+          referencia,distrito,fecha_programada,numero_intentos,maximo_intentos,version,actualizado_en,
+          payload_proyeccion::text AS payload
+        FROM proyecciones_despacho
+        """;
+    @Override public List<Proyeccion> listarProyecciones(UUID jornada) {
+        return sql.sql(PROYECCION + """
+                WHERE asignacion_diaria_id=:jornada AND estado <> 'CANCELADO'
+                ORDER BY secuencia_ruta NULLS LAST,despacho_id_externo
+                """).param("jornada",jornada).query(this::proyeccion).list();
+        }
+        @Override public Optional<Proyeccion> buscarProyeccion(UUID jornada, UUID despacho) {
+            return sql.sql(PROYECCION + """
+                WHERE asignacion_diaria_id=:jornada AND despacho_id_externo=:despacho AND estado <> 'CANCELADO'
+                """).param("jornada",jornada).param("despacho",despacho).query(this::proyeccion).optional();
+    }
+    private Proyeccion proyeccion(ResultSet fila,int indice) throws SQLException {
+        String payload = fila.getString("payload");
+        if (payload != null) return json.readValue(payload,Proyeccion.class);
+        var actualizado = fila.getTimestamp("actualizado_en");
+        return new Proyeccion(fila.getObject("despacho_id_externo",UUID.class),fila.getString("id_pedido"),
+                fila.getString("codigo_rastreo_interno"),fila.getString("estado"),
+                fila.getObject("asignacion_diaria_id",UUID.class),fila.getObject("reserva_capacidad_id",UUID.class),
+                fila.getObject("secuencia_ruta",Integer.class),
+                new Destinatario(fila.getString("destinatario_nombre"),fila.getString("destinatario_telefono")),
+                new Destino(fila.getString("direccion"),fila.getString("referencia"),null,null,
+                        fila.getString("distrito"),null,null),fila.getObject("fecha_programada",LocalDate.class),
+                fila.getInt("numero_intentos"),fila.getLong("version"),actualizado == null ? null : actualizado.toInstant(),
+                (Integer) fila.getObject("maximo_intentos"));
+    }
     private static final String RESERVA = "SELECT r.*,j.repartidor_id FROM reservas_capacidad r JOIN asignaciones_diarias j ON j.id=r.asignacion_diaria_id ";
     private Reserva mapearReserva(ResultSet fila,int indice) throws SQLException {
         var liberacion = fila.getTimestamp("liberado_en");
@@ -163,20 +203,19 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
               asignacion_diaria_id=:jornada,reserva_capacidad_id=:reserva,secuencia_ruta=:secuencia,estado=:estado,
               destinatario_nombre=:nombre,destinatario_telefono=:telefono,direccion=:direccion,referencia=:referencia,
               distrito=:distrito,fecha_programada=:fecha,numero_intentos=:intentos,version=:version,
-              actualizado_en=:ahora,payload_proyeccion=CAST(:payload AS jsonb),actualizado_por=:actor WHERE despacho_id_externo=:id
+              maximo_intentos=:maximo,actualizado_en=:ahora,payload_proyeccion=CAST(:payload AS jsonb),actualizado_por=:actor WHERE despacho_id_externo=:id
             """ : """
             INSERT INTO proyecciones_despacho (despacho_id_externo,id_pedido,codigo_rastreo_interno,asignacion_diaria_id,
               reserva_capacidad_id,secuencia_ruta,estado,destinatario_nombre,destinatario_telefono,direccion,referencia,
-              distrito,fecha_programada,numero_intentos,version,actualizado_en,payload_proyeccion,actualizado_por)
+              distrito,fecha_programada,numero_intentos,maximo_intentos,version,actualizado_en,payload_proyeccion,actualizado_por)
             VALUES (:id,:pedido,:rastreo,:jornada,:reserva,:secuencia,:estado,:nombre,:telefono,:direccion,:referencia,
-              :distrito,:fecha,:intentos,:version,:ahora,CAST(:payload AS jsonb),:actor)
+              :distrito,:fecha,:intentos,:maximo,:version,:ahora,CAST(:payload AS jsonb),:actor)
             """;
         sql.sql(sentencia).param("id",d.idDespacho()).param("pedido",d.idPedido()).param("rastreo",d.codigoRastreoInterno())
                 .param("jornada",d.idJornada()).param("reserva",d.idReserva()).param("secuencia",d.secuenciaRuta()).param("estado",d.estado())
                 .param("nombre",d.destinatario().nombre()).param("telefono",d.destinatario().telefono()).param("direccion",d.destino().direccion())
                 .param("referencia",d.destino().referencia()).param("distrito",d.destino().distrito()).param("fecha",d.fechaProgramada())
-                .param("intentos",d.numeroIntentos()).param("version",d.version()).param("ahora",java.sql.Timestamp.from(d.actualizadoEn()))
+                .param("intentos",d.numeroIntentos()).param("maximo",d.maximoIntentos()).param("version",d.version()).param("ahora",java.sql.Timestamp.from(d.actualizadoEn()))
                 .param("payload",json.writeValueAsString(d)).param("actor",actor).update();
     }
 }
-

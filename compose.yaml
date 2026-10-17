@@ -17,7 +17,7 @@ services:
       GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
       OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
       # Los Swagger UI locales también necesitan permiso CORS para llamar al Gateway.
-      CORS_ORIGENES: "${CORS_ORIGENES:-http://localhost:5173,http://localhost:5174},http://localhost:${GESTION_DESPACHOS_PORT:-8081},http://localhost:${OPERACION_REPARTO_PORT:-8082}"
+      CORS_ORIGENES: "${CORS_ORIGENES:-http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174},http://localhost:${GESTION_DESPACHOS_PORT:-8081},http://localhost:${OPERACION_REPARTO_PORT:-8082},http://127.0.0.1:${GESTION_DESPACHOS_PORT:-8081},http://127.0.0.1:${OPERACION_REPARTO_PORT:-8082}"
       SOLICITUD_MAXIMO_BYTES: ${SOLICITUD_MAXIMO_BYTES:-1048576}
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
@@ -46,5 +46,10 @@ services:
       PORT: "8082"
       SPRING_PROFILES_ACTIVE: integracion-local
       GATEWAY_PUBLIC_URL: "http://localhost:${GATEWAY_PORT:-8080}"
+      EVIDENCIAS_STORAGE_URL: ${EVIDENCIAS_STORAGE_URL:-}
+      EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
+      EVIDENCIAS_CLAVE_SERVICIO: ${EVIDENCIAS_CLAVE_SERVICIO:-}
+      EVIDENCIAS_TIPOS_PERMITIDOS: ${EVIDENCIAS_TIPOS_PERMITIDOS:-image/jpeg,image/png,image/webp}
+      EVIDENCIAS_MAXIMO_BYTES: ${EVIDENCIAS_MAXIMO_BYTES:-2097152}
     ports:
       - "127.0.0.1:${OPERACION_REPARTO_PORT:-8082}:8082"

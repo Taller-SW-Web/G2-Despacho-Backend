@@ -44,6 +44,10 @@ despacho:
     sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
     usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
   evidencias:
+    supabase-url: ${EVIDENCIAS_STORAGE_URL:}
+    supabase-service-key: ${EVIDENCIAS_CLAVE_SERVICIO:}
+    tipos-permitidos: ${EVIDENCIAS_TIPOS_PERMITIDOS:image/jpeg,image/png,image/webp}
+    maximo-bytes: ${EVIDENCIAS_MAXIMO_BYTES:2097152}
     storage-url: ${EVIDENCIAS_STORAGE_URL:}
     bucket: ${EVIDENCIAS_BUCKET:}
     clave-servicio: ${EVIDENCIAS_CLAVE_SERVICIO:}

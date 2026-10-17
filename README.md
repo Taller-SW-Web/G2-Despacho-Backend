@@ -154,6 +154,10 @@ El API Gateway será la única entrada pública para los frontends y los módulo
 
 Operación de Reparto utilizará un bucket privado de Supabase Storage para las fotografías de evidencia. Los archivos se consultarán mediante acceso autorizado o URLs firmadas temporales; en la base de datos solo se conservarán sus referencias y metadatos relevantes [cite: 4].
 
+CR-17 autoriza cargas `image/jpeg`, `image/png` e `image/webp` de hasta 2.097.152 bytes (2 MiB), conforme a las restricciones del esquema V3 de evidencias. El bucket privado debe aplicar los mismos límites. La autorización usa `EVIDENCIAS_STORAGE_URL`, `EVIDENCIAS_CLAVE_SERVICIO` y `EVIDENCIAS_BUCKET`; no se habilita hasta configurar el almacenamiento privado.
+
+La ruta de autorización CR-17 no se registra con el perfil `integracion-local`; requiere el perfil con PostgreSQL y el almacenamiento privado configurados. Las credenciales de Supabase solo se configuran en Operación y nunca en el frontend.
+
 Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
 
 La documentación interactiva con Springdoc está configurada en ambos microservicios y apunta a la URL del Gateway. Está deshabilitada por defecto y se habilita con `integracion-local` o `DOCUMENTACION_HABILITADA=true`. El contrato oficial sigue estando en `integraciones/api-contract.md` del repositorio de especificaciones.

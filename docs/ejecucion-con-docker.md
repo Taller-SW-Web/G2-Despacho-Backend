@@ -67,7 +67,7 @@ En modo real, una URL vacía provoca un error de configuración al iniciar las a
 | `CORS_ORIGENES` | Orígenes de los frontends separados por comas |
 | `SOLICITUD_MAXIMO_BYTES` | Tamaño máximo del cuerpo; por defecto 1048576 bytes |
 
-Compose agrega a CORS los orígenes de los dos Swagger UI, usando los puertos publicados configurados. También configura el servidor público de Swagger según `GATEWAY_PORT`.
+Compose permite los dos frontends locales tanto desde `localhost` como desde `127.0.0.1`, además de agregar a CORS los orígenes de los dos Swagger UI usando los puertos publicados configurados. También configura el servidor público de Swagger según `GATEWAY_PORT`.
 
 Compose lee el `.env` raíz y pasa explícitamente los valores requeridos mediante `environment`. No es necesario crear un `.env` por aplicación para este flujo [cite: 1].
 
@@ -77,7 +77,7 @@ Los `.env.example` dentro de cada aplicación se conservan como referencia para 
 
 ## CORS y llamadas de otros módulos
 
-`CORS_ORIGENES` contiene los orígenes de páginas web autorizadas para invocar al Gateway desde el navegador: protocolo, dominio y puerto, sin rutas de API. En desarrollo incluye los dos frontends; Compose agrega automáticamente los orígenes de Swagger UI [cite: 5].
+`CORS_ORIGENES` contiene los orígenes de páginas web autorizadas para invocar al Gateway desde el navegador: protocolo, dominio y puerto, sin rutas de API. En desarrollo Compose incluye los dos frontends con `localhost` y `127.0.0.1`; también agrega automáticamente los orígenes de Swagger UI [cite: 5].
 
 Las llamadas habituales de un backend externo al Gateway no necesitan registrar la URL de ese backend en CORS. Por ejemplo, Ventas solicita un token de servicio a Seguridad y llama al Gateway con el scope de la operación. El Gateway y el microservicio validan el token y sus permisos. CORS no sustituye la autenticación ni decide qué módulo puede ejecutar una operación.
 
