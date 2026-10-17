@@ -10,11 +10,15 @@ import static com.modulodespacho.gestiondespachos.servicio_gestion_despachos.pro
 public final class CapacidadProgramacionHttp implements PuertoCapacidad {
     private final RestClient cliente;
     private final Supplier<String> token;
-    public CapacidadProgramacionHttp(RestClient cliente, Supplier<String> token) { this.cliente = cliente; this.token = token; }
+    private final boolean sinAutenticacion;
+    public CapacidadProgramacionHttp(RestClient cliente, Supplier<String> token) { this(cliente, token, false); }
+    public CapacidadProgramacionHttp(RestClient cliente, Supplier<String> token, boolean sinAutenticacion) {
+        this.cliente = cliente; this.token = token; this.sinAutenticacion = sinAutenticacion;
+    }
     @Override public ReservaConfirmada reservar(IntencionAsignacion intencion) {
         try {
             var respuestaJson = cliente.post().uri("/internal/v1/capacidad/reservas")
-                    .headers(cabeceras -> { cabeceras.setBearerAuth(credencial()); cabeceras.set("Idempotency-Key", intencion.id().toString()); })
+                    .headers(cabeceras -> { autorizar(cabeceras); cabeceras.set("Idempotency-Key", intencion.id().toString()); })
                     .body(Map.of("idDespacho", intencion.idDespacho().toString(), "idRepartidor", intencion.idRepartidor(),
                             "idJornada", intencion.idJornada(), "requerido", intencion.carga()))
                     .retrieve().onStatus(estado -> estado.value() != 200, (solicitud, resultado) -> {
@@ -57,7 +61,7 @@ public final class CapacidadProgramacionHttp implements PuertoCapacidad {
     @Override public void compensar(String reserva, String despacho) {
         try {
             Liberacion respuesta = cliente.post().uri("/internal/v1/capacidad/reservas/{id}/liberacion", reserva)
-                    .headers(cabeceras -> cabeceras.setBearerAuth(credencial()))
+                    .headers(this::autorizar)
                     .body(Map.of("motivo", "COMPENSACION", "idDespacho", despacho)).retrieve()
                     .onStatus(estado -> estado.value() != 200, (solicitud, resultado) -> { throw noDisponible(); }).body(Liberacion.class);
             if (respuesta == null || !reserva.equals(respuesta.idReserva()) || !despacho.equals(respuesta.idDespacho())
@@ -65,6 +69,9 @@ public final class CapacidadProgramacionHttp implements PuertoCapacidad {
                     || respuesta.motivoLiberacion() == null || respuesta.motivoLiberacion().isBlank()) throw noDisponible();
             java.time.Instant.parse(respuesta.liberadaEn());
         } catch (RuntimeException error) { throw noDisponible(); }
+    }
+    private void autorizar(org.springframework.http.HttpHeaders cabeceras) {
+        if (!sinAutenticacion) cabeceras.setBearerAuth(credencial());
     }
     private String credencial() { String valor = token.get(); if (valor == null || valor.isBlank()) throw noDisponible(); return valor; }
     private static ErrorDeNegocio noDisponible() { return ErrorDeNegocio.de(503, "DESP_ERROR_OPERACION_NO_DISPONIBLE", "No se pudo confirmar la operación de capacidad"); }

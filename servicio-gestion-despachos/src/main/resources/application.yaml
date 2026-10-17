@@ -41,7 +41,7 @@ despacho:
     token-servicio: ${OPERACION_TOKEN_SERVICIO:}
     cliente-id: ${OPERACION_CLIENT_ID:modulo-despacho}
     cliente-secreto: ${OPERACION_CLIENT_SECRET:}
-    scopes-capacidad: ${OPERACION_CAPACIDAD_SCOPES:}
+    scopes-capacidad: ${OPERACION_CAPACIDAD_SCOPES:operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir}
   ventas:
     url: ${VENTAS_URL:http://127.0.0.1:1}
     token-servicio: ${VENTAS_TOKEN_SERVICIO:}

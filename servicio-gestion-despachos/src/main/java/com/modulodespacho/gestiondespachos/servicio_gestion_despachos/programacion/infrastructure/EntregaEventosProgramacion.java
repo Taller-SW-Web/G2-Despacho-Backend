@@ -15,10 +15,16 @@ public final class EntregaEventosProgramacion {
     private final Supplier<String> tokenVentas;
     private final RestClient operacion;
     private final Supplier<String> tokenOperacion;
+    private final boolean operacionSinAutenticacion;
     public EntregaEventosProgramacion(JdbcClient sql, JsonMapper json, RestClient ventas, Supplier<String> tokenVentas,
             RestClient operacion, Supplier<String> tokenOperacion) {
+        this(sql, json, ventas, tokenVentas, operacion, tokenOperacion, false);
+    }
+    public EntregaEventosProgramacion(JdbcClient sql, JsonMapper json, RestClient ventas, Supplier<String> tokenVentas,
+            RestClient operacion, Supplier<String> tokenOperacion, boolean operacionSinAutenticacion) {
         this.sql = sql; this.json = json; this.ventas = ventas; this.tokenVentas = tokenVentas;
         this.operacion = operacion; this.tokenOperacion = tokenOperacion;
+        this.operacionSinAutenticacion = operacionSinAutenticacion;
     }
     public void ejecutar() {
         var pendientes = sql.sql("""
@@ -39,11 +45,14 @@ public final class EntregaEventosProgramacion {
         Evento evento = reclamada.get();
         try {
             boolean haciaVentas = "VENTAS".equals(evento.destino());
-            String credencial = (haciaVentas ? tokenVentas : tokenOperacion).get();
-            if (credencial == null || credencial.isBlank()) throw new IllegalStateException("Credencial de servicio no disponible");
+            boolean requiereCredencial = haciaVentas || !operacionSinAutenticacion;
+            String credencial = requiereCredencial ? (haciaVentas ? tokenVentas : tokenOperacion).get() : null;
+            if (requiereCredencial && (credencial == null || credencial.isBlank())) throw new IllegalStateException("Credencial de servicio no disponible");
             String ruta = haciaVentas ? "/api/v1/integraciones/despachos/eventos"
                     : "/internal/v1/proyecciones/despachos/" + json.readTree(evento.payload()).path("idDespacho").asText();
-            var respuesta = (haciaVentas ? ventas : operacion).post().uri(ruta).headers(cabeceras -> cabeceras.setBearerAuth(credencial))
+            var respuesta = (haciaVentas ? ventas : operacion).post().uri(ruta).headers(cabeceras -> {
+                        if (requiereCredencial) cabeceras.setBearerAuth(credencial);
+                    })
                     .contentType(MediaType.APPLICATION_JSON).body(evento.payload()).retrieve().toBodilessEntity();
             if (!respuesta.getStatusCode().is2xxSuccessful()) throw new IllegalStateException("El servicio no confirmó la entrega");
             sql.sql("""

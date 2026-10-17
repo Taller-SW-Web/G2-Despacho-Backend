@@ -29,10 +29,17 @@ final class FiltroIdentidadDemo extends OncePerRequestFilter {
         String sujeto = usuario;
         String tipo = "acceso";
         String scope = "";
-        if (ruta.equals("/internal/v1/operacion/consulta-incidencias")) {
+        if ("POST".equals(solicitud.getMethod()) && ruta.equals("/internal/v1/operacion/consulta-incidencias")) {
             sujeto = "modulo-despacho";
             tipo = "servicio";
             scope = "operacion:incidencias:leer";
+        } else if ("POST".equals(solicitud.getMethod()) && (ruta.equals("/internal/v1/capacidad/reservas")
+                || ruta.matches("/internal/v1/capacidad/reservas/[^/]+/liberacion")
+                || ruta.matches("/internal/v1/proyecciones/despachos/[^/]+"))) {
+            sujeto = "modulo-despacho";
+            tipo = "servicio";
+            scope = ruta.equals("/internal/v1/capacidad/reservas") ? "operacion:capacidad:reservar"
+                    : ruta.endsWith("/liberacion") ? "operacion:capacidad:liberar" : "operacion:proyecciones:escribir";
         }
         Instant ahora = Instant.now();
         Jwt identidad = Jwt.withTokenValue("identidad-demo-interna").header("alg", "none")

@@ -38,6 +38,8 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  gestion:
+    url: ${GESTION_DESPACHOS_URL:http://localhost:8081}
   demo:
     sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
     usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
