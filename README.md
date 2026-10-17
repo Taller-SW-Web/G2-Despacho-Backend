@@ -82,6 +82,8 @@ No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wr
 
 ### Con Docker Compose
 
+**Entorno local completo para pruebas y depuración** (PostgreSQL propio, emisor temporal de Seguridad y puertos JDWP): `docker compose -f compose.local.yaml up --build -d`. Ver [docs/entorno-local-docker.md](docs/entorno-local-docker.md).
+
 La configuración de Compose permite iniciar las tres aplicaciones desde la raíz del repositorio. Cada aplicación tiene su propio Dockerfile y el `.env` raíz contiene la configuración local, fuera de Git. La plantilla compartida es `.env.example`.
 
 En este checkout ya se creó `.env`; en otro clon, copiar primero `.env.example` como `.env`. Con Docker Desktop iniciado, para la integración temporal sin URL ni cuentas reales de Seguridad:
