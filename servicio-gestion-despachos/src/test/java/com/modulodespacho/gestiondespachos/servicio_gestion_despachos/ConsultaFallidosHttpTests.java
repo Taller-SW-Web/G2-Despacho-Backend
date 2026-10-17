@@ -68,7 +68,7 @@ class ConsultaFallidosHttpTests {
 
     @BeforeEach
     void preparar() {
-        sql.sql("TRUNCATE intentos_entrega, despachos, motivos_fallo").update();
+        sql.sql("TRUNCATE intentos_entrega, despachos, motivos_fallo CASCADE").update();
         sql.sql("UPDATE parametros_configuracion SET valor = '2' WHERE clave = 'MAXIMO_INTENTOS'").update();
         sql.sql("""
                 INSERT INTO motivos_fallo (codigo, etiqueta, seleccionable_en_campo, consume_intento, activo)
@@ -171,7 +171,7 @@ class ConsultaFallidosHttpTests {
         http.perform(get(RUTA).header("Authorization", "Bearer gestor")).andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_DATOS_INCONSISTENTES"));
         sql.sql("UPDATE parametros_configuracion SET valor = '2' WHERE clave = 'MAXIMO_INTENTOS'").update();
-        sql.sql("TRUNCATE intentos_entrega, despachos").update();
+        sql.sql("TRUNCATE intentos_entrega, despachos CASCADE").update();
         http.perform(get(RUTA).header("Authorization", "Bearer gestor")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido").isEmpty()).andExpect(jsonPath("$.totalPaginas").value(0));
         assertThat(PETICIONES.get()).isZero();

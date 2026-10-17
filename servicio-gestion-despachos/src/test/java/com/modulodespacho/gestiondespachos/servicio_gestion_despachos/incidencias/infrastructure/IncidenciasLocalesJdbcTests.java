@@ -5,14 +5,13 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosIncidenciaInconsistentesException;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.IncidenciaListadoLocal;
@@ -21,22 +20,38 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** PostgreSQL real con esquema de prueba; no acredita las migraciones ni los escritores de producción. */
-@Testcontainers
 class IncidenciasLocalesJdbcTests {
 
-    @Container
     private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17");
     private static JdbcClient cliente;
     private static IncidenciasLocalesJdbc lector;
+    private static DriverManagerDataSource fuente;
+    private static String esquema;
 
     @BeforeAll
     static void prepararEsquemaAislado() {
-        DriverManagerDataSource fuente = new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        if (Boolean.getBoolean("pruebas.postgres.externo")) {
+            fuente = new DriverManagerDataSource(System.getProperty("spring.datasource.url"),
+                    System.getProperty("spring.datasource.username"), System.getProperty("spring.datasource.password", ""));
+            esquema = "prueba_incidencias_" + UUID.randomUUID().toString().replace("-", "");
+            JdbcClient.create(fuente).sql("CREATE SCHEMA " + esquema).update();
+            fuente.setSchema(esquema);
+        } else {
+            POSTGRES.start();
+            fuente = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        }
         new ResourceDatabasePopulator(new ClassPathResource("incidencias/esquema-lectura-fallidos.sql"))
                 .execute(fuente);
         cliente = JdbcClient.create(fuente);
         lector = new IncidenciasLocalesJdbc(cliente);
+    }
+
+    @AfterAll
+    static void cerrarBaseAislada() {
+        if (esquema != null) {
+            fuente.setSchema("public");
+            JdbcClient.create(fuente).sql("DROP SCHEMA " + esquema + " CASCADE").update();
+        } else if (POSTGRES.isRunning()) POSTGRES.stop();
     }
 
     @BeforeEach

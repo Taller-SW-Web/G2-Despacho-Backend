@@ -44,11 +44,16 @@ class FlujoF01Tests {
     @Autowired
     DistritoRepositorioJpa distritos;
 
+    @Autowired
+    org.springframework.jdbc.core.simple.JdbcClient sql;
+
     @MockitoBean
     JwtDecoder decodificadorJwt;
 
     @BeforeEach
     void preparar() {
+        // Cada escenario mantiene su propia base al compartir un PostgreSQL externo de pruebas.
+        sql.sql("TRUNCATE zonas, distrito CASCADE").update();
         sembrarDistrito(SAN_BORJA, "San Borja");
         sembrarDistrito(MIRAFLORES, "Miraflores");
         sembrarDistrito(SURCO, "Santiago de Surco");

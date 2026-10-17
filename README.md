@@ -140,6 +140,8 @@ Las pruebas de integración de los microservicios pueden requerir que Docker se 
 
 El avance backend de ES-F04-01, su configuración de ejecución y las dependencias pendientes para la demo se describen en la [guía de consulta de entregas fallidas](docs/f04-consulta-entregas-fallidas.md). El listado requiere PostgreSQL y no se habilita en `integracion-local`.
 
+El backend de **ES-F02-01 a ES-F02-04** implementa recepción desde Ventas, simulaciones, consulta de pendientes y asignación con reserva/compensación recuperables. Su [guía de ejecución y evidencia](docs/f02-implementacion-especificaciones.md) registra configuración, rutas, decisiones contractuales y las 69 pruebas aprobadas con PostgreSQL real y proveedores externos simulados por HTTP. Estas operaciones requieren PostgreSQL y un perfil distinto de `integracion-local`.
+
 ## API e integraciones
 
 El API Gateway será la única entrada pública para los frontends y los módulos consumidores. Los dos microservicios se comunicarán mediante APIs internas y mantendrán bases de datos aisladas en Supabase.

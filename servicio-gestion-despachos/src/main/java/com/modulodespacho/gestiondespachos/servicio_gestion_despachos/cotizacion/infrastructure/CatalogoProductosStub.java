@@ -15,6 +15,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
  * las propiedades {@code despacho.productos.stub.catalogo.*} mientras no exista la API real.
  */
 @Component
+@org.springframework.context.annotation.Primary
 @Profile("!integracion-local")
 @ConfigurationProperties(prefix = "despacho.productos.stub")
 public class CatalogoProductosStub implements ProveedorDatosFisicos {

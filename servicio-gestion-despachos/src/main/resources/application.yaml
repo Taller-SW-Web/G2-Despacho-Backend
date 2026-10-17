@@ -38,9 +38,19 @@ despacho:
     token-servicio: ${OPERACION_TOKEN_SERVICIO:}
     cliente-id: ${OPERACION_CLIENT_ID:modulo-despacho}
     cliente-secreto: ${OPERACION_CLIENT_SECRET:}
+    scopes-capacidad: ${OPERACION_CAPACIDAD_SCOPES:}
+  ventas:
+    url: ${VENTAS_URL:http://127.0.0.1:1}
+    token-servicio: ${VENTAS_TOKEN_SERVICIO:}
+    cliente-id: ${VENTAS_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${VENTAS_CLIENT_SECRET:}
   cotizacion:
     limite-por-minuto: ${LIMITE_COTIZACIONES_POR_MINUTO:60}
   productos:
+    url: ${PRODUCTOS_URL:http://127.0.0.1:1}
+    token-servicio: ${PRODUCTOS_TOKEN_SERVICIO:}
+    cliente-id: ${PRODUCTOS_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${PRODUCTOS_CLIENT_SECRET:}
     stub:
       catalogo:
         POL-NEG-M:
