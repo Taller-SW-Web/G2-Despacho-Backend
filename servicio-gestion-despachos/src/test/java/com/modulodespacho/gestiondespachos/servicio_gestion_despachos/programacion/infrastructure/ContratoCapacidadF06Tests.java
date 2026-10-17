@@ -3,6 +3,8 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programac
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -14,7 +16,9 @@ import static com.modulodespacho.gestiondespachos.servicio_gestion_despachos.pro
 
 /** Captura producida por JornadasPostgresTests con PostgreSQL real y datos sintéticos. */
 class ContratoCapacidadF06Tests {
-    @Test void clienteF02ConsumeConfirmacionYLiberacionDelProveedorF06() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans={false,true})
+    void clienteF02ConsumeConfirmacionYLiberacionDelProveedorF06(boolean modoDemo) throws Exception {
         var json=JsonMapper.builder().build();
         var captura=json.readTree(getClass().getResourceAsStream("/contratos/f06-respuestas-backend.json"));
         String reserva=captura.path("reserva").path("idReserva").asText();
@@ -24,13 +28,16 @@ class ContratoCapacidadF06Tests {
         var constructor=RestClient.builder().baseUrl("http://operacion-prueba");
         var servidor=MockRestServiceServer.bindTo(constructor).build();
         servidor.expect(requestTo("http://operacion-prueba/internal/v1/capacidad/reservas"))
-                .andExpect(header("Authorization","Bearer token-prueba"))
+                .andExpect(modoDemo ? headerDoesNotExist("Authorization") : header("Authorization","Bearer token-prueba"))
                 .andExpect(header("Idempotency-Key",clave.toString()))
                 .andRespond(withSuccess(json.writeValueAsString(captura.path("reserva")),MediaType.APPLICATION_JSON));
         servidor.expect(requestTo("http://operacion-prueba/internal/v1/capacidad/reservas/"+reserva+"/liberacion"))
-                .andExpect(header("Authorization","Bearer token-prueba"))
+                .andExpect(modoDemo ? headerDoesNotExist("Authorization") : header("Authorization","Bearer token-prueba"))
                 .andRespond(withSuccess(json.writeValueAsString(captura.path("liberacion")),MediaType.APPLICATION_JSON));
-        var cliente=new CapacidadProgramacionHttp(constructor.build(),()->"token-prueba");
+        var cliente=new CapacidadProgramacionHttp(constructor.build(),()-> {
+            if(modoDemo) throw new AssertionError("La demo no debe solicitar credenciales");
+            return "token-prueba";
+        },modoDemo);
         var intencion=new IntencionAsignacion(clave,despacho,1,"gestor-prueba",
                 jornada.path("idRepartidor").asText(),jornada.path("idJornada").asText(),null,"PENDIENTE",null,null,
                 new Carga(new BigDecimal("20"),BigDecimal.ONE,2));

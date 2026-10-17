@@ -24,7 +24,25 @@ En Operación configurar `GESTION_DESPACHOS_URL=https://taller-servicio-gestion-
 
 Las plantillas [Operación](../operaciones/render/operacion.env.example) y [Gestión](../operaciones/render/gestion.env.example) enumeran variables sin secretos. Gestión solicita los scopes técnicos de capacidad y proyección configurados; Seguridad debe concederlos realmente al sujeto `modulo-despacho`, audiencia `api-despacho`. Configurar una cadena de scopes no concede permisos.
 
-El Gateway enruta la API pública y bloquea `/internal`. Los endpoints internos exigen JWT técnico y el scope específico de cada operación; un JWT humano o un permiso de otra operación es insuficiente. No desactivar JWT por la ausencia temporal de Seguridad.
+El Gateway enruta la API pública y bloquea `/internal`. En modo normal los endpoints internos exigen JWT técnico y el scope específico de cada operación; un JWT humano o un permiso de otra operación es insuficiente.
+
+### 3.1. Integración del modo demo
+
+Se conserva el modo temporal incorporado por el equipo para trabajar sin el despliegue de Seguridad. Se activa explícitamente con `DEMO_SIN_AUTENTICACION=true` en Gateway, Gestión y Operación; el valor por defecto sigue siendo `false`. `DEMO_USUARIO_ID` configura un UUID estable para auditoría. Las claves `despacho.demo` y `despacho.gestion` coexisten: la demostración no elimina la consulta real de zonas.
+
+En demo, Operación construye la identidad técnica correspondiente a reserva, liberación y proyección; Gestión puede llamar esas rutas internas sin obtener un token externo. El outbox conserva eventos y reintentos. Este ajuste se limita a la comunicación interna con Operación: no elimina la necesidad de credenciales de Ventas u otros módulos externos.
+
+La demo conserva validaciones de entrada, reglas de capacidad, transacciones y vínculo del repartidor. Desactivar la variable restaura el flujo JWT y sus scopes. No crea tablas ni reemplaza la configuración de Supabase. Las rutas internas continúan bloqueadas en el Gateway en ambos modos.
+
+### 3.2. Verificación del merge con main
+
+Se integró `main` (`e223961`) sobre `develop` (`3ce1964`) conservando ambos bloques del YAML y el historial de los dos desarrollos. Verificación ejecutada:
+
+- Operación: `mvn -B -Dtest=ModoDemoOperacionTests,ModoDemoJornadasTests,JornadasHttpTests,GestorJornadasTests,ValidadorTokenDespachoTests test`: 31 pruebas aprobadas.
+- Gestión: `mvn -B -Dtest=ModoDemoGestionTests,OperacionIncidenciasDemoTests,ContratoCapacidadF06Tests,EntregaEventosDemoTests,ProveedorTokenServicioTests test`: 10 pruebas aprobadas. El outbox se verifica en PostgreSQL temporal, sin Flyway ni Supabase; la proyección interna se entrega en demo, mientras que el modo normal sin credencial conserva el evento pendiente. Ventas sigue requiriendo su credencial.
+- Gateway: `mvn -B verify`: 26 pruebas aprobadas y empaquetado correcto, con demo, autenticación normal y rutas F-06.
+
+Estos resultados cubren el merge y las comunicaciones modificadas. No sustituyen la regresión completa de Gestión, limitada por la colisión V3 ya documentada, ni verifican los despliegues de Render. No se modificaron datos de Supabase durante esta integración.
 
 ## 4. Esquema nuevo y heredado
 

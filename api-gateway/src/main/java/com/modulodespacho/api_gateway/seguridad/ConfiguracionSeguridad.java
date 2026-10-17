@@ -31,6 +31,8 @@ import reactor.core.publisher.Mono;
 public class ConfiguracionSeguridad {
 
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+            name = "despacho.demo.sin-autenticacion", havingValue = "false", matchIfMissing = true)
     ReactiveJwtDecoder decodificadorJwt(
             WebClient.Builder constructorCliente,
             @Value("${despacho.seguridad.url}") String urlSeguridad,
@@ -78,7 +80,8 @@ public class ConfiguracionSeguridad {
 
     @Bean
     SecurityWebFilterChain seguridad(ServerHttpSecurity http, ProblemasGateway problemas,
-            @Value("${despacho.cors.origenes}") String origenes) {
+            @Value("${despacho.cors.origenes}") String origenes,
+            @Value("${despacho.demo.sin-autenticacion:false}") boolean modoDemo) {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(Arrays.stream(origenes.split(",")).map(String::trim)
                 .filter(origen -> !origen.isEmpty()).toList());
@@ -91,27 +94,31 @@ public class ConfiguracionSeguridad {
         UrlBasedCorsConfigurationSource fuenteCors = new UrlBasedCorsConfigurationSource();
         fuenteCors.registerCorsConfiguration("/api/v1/**", cors);
 
-        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+        http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .cors(configuracion -> configuracion.configurationSource(fuenteCors))
-                .authorizeExchange(reglas -> reglas
-                        .pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
-                        .pathMatchers("/api/v1/**").authenticated()
-                        .anyExchange().denyAll())
+                .authorizeExchange(reglas -> {
+                    reglas.pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
+                    if (modoDemo) reglas.pathMatchers("/api/v1/**").permitAll();
+                    else reglas.pathMatchers("/api/v1/**").authenticated();
+                    reglas.anyExchange().denyAll();
+                })
                 .exceptionHandling(errores -> errores
                         .authenticationEntryPoint((intercambio, error) -> problemas.escribir(intercambio,
                                 HttpStatus.UNAUTHORIZED, "DESP_ERROR_TOKEN_INVALIDO",
                                 "Token no aceptado", "No fue posible autenticar la solicitud"))
                         .accessDeniedHandler((intercambio, error) -> problemas.escribir(intercambio,
                                 HttpStatus.FORBIDDEN, "DESP_ERROR_SCOPE_INSUFICIENTE",
-                                "Permiso insuficiente", "El cliente no tiene permiso para realizar esta operación")))
-                .oauth2ResourceServer(oauth -> oauth
+                                "Permiso insuficiente", "El cliente no tiene permiso para realizar esta operación")));
+        if (!modoDemo) {
+            http.oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> {})
                         .authenticationEntryPoint((intercambio, error) -> problemas.escribir(intercambio,
                                 HttpStatus.UNAUTHORIZED, "DESP_ERROR_TOKEN_INVALIDO",
-                                "Token no aceptado", "No fue posible autenticar la solicitud")))
-                .build();
+                                "Token no aceptado", "No fue posible autenticar la solicitud")));
+        }
+        return http.build();
     }
 }

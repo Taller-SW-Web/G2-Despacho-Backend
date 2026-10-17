@@ -47,6 +47,8 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.err
 public class ConfiguracionSeguridad {
 
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+            name = "despacho.demo.sin-autenticacion", havingValue = "false", matchIfMissing = true)
     JwtDecoder decodificadorJwt(
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
@@ -93,12 +95,18 @@ public class ConfiguracionSeguridad {
     @Bean
     SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
             ObjectProvider<FiltroLimiteCotizaciones> filtroLimite,
-            @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada) throws Exception {
+            @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada,
+            @Value("${despacho.demo.sin-autenticacion:false}") boolean modoDemo,
+            @Value("${despacho.demo.usuario-id:00000000-0000-4000-8000-000000000001}") String usuarioDemo) throws Exception {
+        if (modoDemo) {
+            http.addFilterBefore(new FiltroIdentidadDemo(usuarioDemo),
+                    org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
+        }
         FiltroLimiteCotizaciones limite = filtroLimite.getIfAvailable();
         if (limite != null) {
             http.addFilterAfter(limite, AuthorizationFilter.class);
         }
-        return http.csrf(configuracion -> configuracion.disable())
+        http.csrf(configuracion -> configuracion.disable())
                 .httpBasic(configuracion -> configuracion.disable())
                 .formLogin(configuracion -> configuracion.disable())
                 .logout(configuracion -> configuracion.disable())
@@ -122,11 +130,13 @@ public class ConfiguracionSeguridad {
                         .anyRequest().denyAll();
                 })
                 .exceptionHandling(errores -> errores
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas))
-                .oauth2ResourceServer(oauth -> oauth
+                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+        if (!modoDemo) {
+            http.oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidorAutenticacion()))
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas))
-                .build();
+                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+        }
+        return http.build();
     }
 
     private JwtAuthenticationConverter convertidorAutenticacion() {

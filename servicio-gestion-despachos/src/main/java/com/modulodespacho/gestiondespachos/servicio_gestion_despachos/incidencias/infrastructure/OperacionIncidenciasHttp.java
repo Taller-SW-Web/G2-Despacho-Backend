@@ -26,14 +26,20 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
     private static final String RUTA = "/internal/v1/operacion/consulta-incidencias";
     private final RestClient cliente;
     private final Supplier<String> proveedorToken;
+    private final boolean sinAutenticacion;
 
     /**
      * El ensamblaje debe suministrar un cliente interno con URL y tiempos de espera acotados,
      * y un proveedor de credencial técnica vigente. Nunca se reenvía el JWT humano.
      */
     public OperacionIncidenciasHttp(RestClient cliente, Supplier<String> proveedorToken) {
+        this(cliente, proveedorToken, false);
+    }
+
+    public OperacionIncidenciasHttp(RestClient cliente, Supplier<String> proveedorToken, boolean sinAutenticacion) {
         this.cliente = Objects.requireNonNull(cliente);
         this.proveedorToken = Objects.requireNonNull(proveedorToken);
+        this.sinAutenticacion = sinAutenticacion;
     }
 
     @Override
@@ -61,11 +67,13 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
     private Respuesta solicitar(List<String> idsRepartidor, List<String> idsJornada) {
         try {
             String token = proveedorToken.get();
-            if (token == null || token.isBlank()) {
+            if (!sinAutenticacion && (token == null || token.isBlank())) {
                 return null;
             }
             return cliente.post().uri(RUTA)
-                    .headers(encabezados -> encabezados.setBearerAuth(token))
+                    .headers(encabezados -> {
+                        if (!sinAutenticacion) encabezados.setBearerAuth(token);
+                    })
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new Solicitud(idsRepartidor, idsJornada))
                     .retrieve().body(Respuesta.class);

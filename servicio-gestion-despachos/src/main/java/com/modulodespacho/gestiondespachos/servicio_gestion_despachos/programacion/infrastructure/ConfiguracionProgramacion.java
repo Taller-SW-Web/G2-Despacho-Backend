@@ -24,7 +24,8 @@ public class ConfiguracionProgramacion {
     }
     @Bean CapacidadProgramacionHttp capacidadProgramacion(Environment entorno, Clock reloj) {
         return new CapacidadProgramacionHttp(cliente(entorno.getRequiredProperty("despacho.operacion.url")),
-                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj));
+                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj),
+                entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
     }
     @Bean EntregaEventosProgramacion entregaEventosProgramacion(Environment entorno, Clock reloj,
             org.springframework.jdbc.core.simple.JdbcClient sql, tools.jackson.databind.json.JsonMapper json) {
@@ -32,10 +33,14 @@ public class ConfiguracionProgramacion {
                 cliente(entorno.getProperty("despacho.ventas.url", "http://127.0.0.1:1")),
                 credenciales(entorno, "ventas", "ventas:pedidos:estado", reloj),
                 cliente(entorno.getRequiredProperty("despacho.operacion.url")),
-                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj));
+                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj),
+                entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
     }
-    private static ProveedorTokenServicio credenciales(Environment entorno, String dependencia, String scopes, Clock reloj) {
+    private static java.util.function.Supplier<String> credenciales(Environment entorno, String dependencia, String scopes, Clock reloj) {
         String prefijo = "despacho." + dependencia + ".";
+        if (entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false)) {
+            return () -> entorno.getProperty(prefijo + "token-servicio", "");
+        }
         return new ProveedorTokenServicio(cliente(entorno.getRequiredProperty("despacho.seguridad.url")),
                 entorno.getProperty(prefijo + "cliente-id", "modulo-despacho"), entorno.getProperty(prefijo + "cliente-secreto", ""), scopes,
                 () -> entorno.getProperty(prefijo + "token-servicio", ""), reloj);

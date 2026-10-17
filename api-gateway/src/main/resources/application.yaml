@@ -34,8 +34,11 @@ management:
       show-details: never
 
 despacho:
+  demo:
+    sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
+    usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
   seguridad:
-    url: ${SEGURIDAD_URL}
+    url: ${SEGURIDAD_URL:}
     audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   cors:
