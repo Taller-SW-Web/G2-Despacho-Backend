@@ -166,6 +166,8 @@ Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la r
 
 El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
 
+La [guía F-06 de jornadas y capacidad](docs/f06-jornadas-capacidad.md) describe persistencia, reservas, cierre seguro, configuración y límites de integración.
+
 ## Contribución
 
 La [consulta de detalle de incidencia de F-04](docs/f04-detalle-incidencia.md) reúne el alcance de Gestión y Operación, la configuración privada de evidencia, las pruebas locales sin Docker y los pendientes de integración.
