@@ -3,6 +3,12 @@ spring:
     name: servicio-operacion-reparto
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: none
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      accept-float-as-int: false
 
 server:
   port: ${PORT:8082}
