@@ -9,10 +9,10 @@ spring:
         webflux:
           routes:
             - id: gestion-despachos
-              uri: ${GESTION_DESPACHOS_URL:https://servicio-gestion-despachos.onrender.com}
+              uri: ${GESTION_DESPACHOS_URL:https://taller-servicio-gestion-despachos.onrender.com}
               predicates:
                 - Path=/api/v1/cotizaciones,/api/v1/despachos/**,/api/v1/seguimientos/**,/api/v1/zonas/**,/api/v1/catalogos/motivos-fallo
             - id: operacion-reparto
-              uri: ${OPERACION_REPARTO_URL:https://servicio-operacion-reparto.onrender.com}
+              uri: ${OPERACION_REPARTO_URL:https://taller-servicio-operacion-reparto.onrender.com}
               predicates:
                 - Path=/api/v1/repartidores/**,/api/v1/furgonetas/**,/api/v1/jornadas/**,/api/v1/flota/**,/api/v1/repartidor/**,/api/v1/evidencias/**
