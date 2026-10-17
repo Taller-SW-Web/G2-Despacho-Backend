@@ -13,5 +13,7 @@ spring:
       validation-timeout: 5000
       connection-init-sql: SET statement_timeout = '15s'
 despacho:
+  gestion:
+    url: ${GESTION_DESPACHOS_URL:https://taller-servicio-gestion-despachos.onrender.com}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:https://taller-api-gateway.onrender.com}

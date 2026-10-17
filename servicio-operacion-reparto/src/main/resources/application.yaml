@@ -38,6 +38,8 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  gestion:
+    url: ${GESTION_DESPACHOS_URL:http://localhost:8081}
   evidencias:
     storage-url: ${EVIDENCIAS_STORAGE_URL:}
     bucket: ${EVIDENCIAS_BUCKET:}
