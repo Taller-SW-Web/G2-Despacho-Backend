@@ -1,12 +1,16 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores;
 
 import java.net.URI;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +24,21 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web
 @RestControllerAdvice
 @Profile("!integracion-local")
 public class ManejadorErroresApi {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ManejadorErroresApi.class);
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ProblemDetail integridadInvalida(DataIntegrityViolationException error, HttpServletRequest solicitud) {
+        LOG.error("Error de integridad en {}", solicitud.getRequestURI(), error);
+        for (Throwable causa = error; causa != null; causa = causa.getCause()) {
+            if (causa instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
+                return problema(409, CodigosError.CONFLICTO_PERSISTENCIA,
+                        "Los datos entran en conflicto con un registro existente", solicitud);
+            }
+        }
+        return problema(500, CodigosError.ERROR_INTERNO,
+                "No fue posible guardar la operación", solicitud);
+    }
 
     @ExceptionHandler(ErrorDeNegocio.class)
     ProblemDetail errorDeNegocio(ErrorDeNegocio error, HttpServletRequest solicitud) {

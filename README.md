@@ -144,6 +144,10 @@ El avance backend de ES-F04-01, su configuración de ejecución y las dependenci
 
 ## API e integraciones
 
+El formato agrupado de zonas por distrito y códigos postales, el padrón de
+Lima/Callao y sus pruebas breves se describen en la
+[guía F-01 de zonas y códigos postales](docs/f01-zonas-codigos-postales.md).
+
 El API Gateway será la única entrada pública para los frontends y los módulos consumidores. Los dos microservicios se comunicarán mediante APIs internas y mantendrán bases de datos aisladas en Supabase.
 
 Operación de Reparto utilizará un bucket privado de Supabase Storage para las fotografías de evidencia. Los archivos se consultarán mediante acceso autorizado o URLs firmadas temporales; en la base de datos solo se conservarán sus referencias y metadatos relevantes [cite: 4].

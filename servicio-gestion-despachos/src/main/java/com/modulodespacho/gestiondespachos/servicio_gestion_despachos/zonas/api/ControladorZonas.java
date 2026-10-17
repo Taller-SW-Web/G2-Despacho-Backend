@@ -49,7 +49,9 @@ public class ControladorZonas {
     }
 
     @PostMapping
-    @Operation(summary = "Crear una zona de cobertura")
+    @Operation(summary = "Crear una zona de cobertura",
+            description = "Distritos como objetos {distrito, codigosPostales}. Se valida la existencia del distrito, "
+                    + "sin validar aún la pertenencia de los códigos postales.")
     public ResponseEntity<ZonaVista> crear(@RequestBody SolicitudZona solicitud) {
         ZonaVista vista = gestionZonas.crear(solicitud);
         return ResponseEntity.created(URI.create("/api/v1/zonas/" + vista.id())).body(vista);
@@ -62,7 +64,8 @@ public class ControladorZonas {
     }
 
     @PutMapping("/{idZona}")
-    @Operation(summary = "Editar el nombre o la delimitación de una zona")
+    @Operation(summary = "Editar el nombre o la delimitación de una zona",
+            description = "Reemplaza los distritos y sus códigos postales usando el mismo formato que la creación.")
     public ZonaVista editar(@PathVariable UUID idZona, @RequestBody SolicitudZona solicitud) {
         return gestionZonas.editar(idZona, solicitud);
     }

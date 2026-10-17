@@ -7,6 +7,8 @@ public final class CodigosError {
 
     public static final String SOLICITUD_INVALIDA = "DESP_ERROR_SOLICITUD_INVALIDA";
     public static final String CAMPOS_INVALIDOS = "DESP_ERROR_CAMPOS_INVALIDOS";
+    public static final String CONFLICTO_PERSISTENCIA = "DESP_ERROR_CONFLICTO_PERSISTENCIA";
+    public static final String ERROR_INTERNO = "DESP_ERROR_INTERNO";
     public static final String ZONA_NO_ENCONTRADA = "DESP_ERROR_ZONA_NO_ENCONTRADA";
     public static final String ZONA_CONFLICTO = "DESP_ERROR_ZONA_CONFLICTO";
     public static final String DISTRITO_NO_ENCONTRADO = "DESP_ERROR_DISTRITO_NO_ENCONTRADO";

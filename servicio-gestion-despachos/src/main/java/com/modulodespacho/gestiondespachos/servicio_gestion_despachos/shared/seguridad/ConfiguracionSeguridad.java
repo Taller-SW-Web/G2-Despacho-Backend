@@ -6,6 +6,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -104,6 +105,7 @@ public class ConfiguracionSeguridad {
                 .requestCache(configuracion -> configuracion.disable())
                 .sessionManagement(configuracion -> configuracion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(reglas -> {
+                    reglas.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
                     reglas.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
                     if (documentacionHabilitada) {
                         reglas.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",

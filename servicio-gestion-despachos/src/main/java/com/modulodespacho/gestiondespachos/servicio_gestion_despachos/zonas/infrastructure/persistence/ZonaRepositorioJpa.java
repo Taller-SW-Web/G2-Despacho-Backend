@@ -38,14 +38,4 @@ public interface ZonaRepositorioJpa extends JpaRepository<Zona, UUID> {
             """)
     List<com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaDistrito> buscarConflictoPorDistritos(
             @Param("zonaId") UUID zonaId, @Param("distritos") Collection<UUID> distritos);
-
-    @Query("""
-            SELECT DISTINCT c FROM ZonaDistrito c
-            JOIN FETCH c.zona z
-            LEFT JOIN FETCH c.distrito
-            WHERE z.estado = 'ACTIVO' AND z.id <> :zonaId
-              AND c.codigoPostal IN :codigosPostales
-            """)
-    List<com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaDistrito> buscarConflictoPorCodigos(
-            @Param("zonaId") UUID zonaId, @Param("codigosPostales") Collection<String> codigosPostales);
 }
