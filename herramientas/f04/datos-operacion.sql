@@ -15,10 +15,11 @@ BEGIN
         vehiculo := ('00000000-0000-0000-0000-' || lpad((400+n)::text, 12, '0'))::uuid;
         jornada := ('00000000-0000-0000-0000-' || lpad((300+n)::text, 12, '0'))::uuid;
         INSERT INTO repartidores (id, nombres, apellidos, dni, telefono, correo, numero_brevete,
-            turno_habitual, estado_registro, estado_vinculacion, creado_por, actualizado_por)
+            turno_habitual, estado_registro, estado_vinculacion, id_usuario_seguridad, creado_por, actualizado_por)
         VALUES (persona, 'Persona de prueba', n::text, lpad(n::text, 8, '0'), '000000000',
-            'demo-f04-' || n || '@example.invalid', 'DEMO-' || n, 'COMPLETO', 'ACTIVO', 'PENDIENTE', actor, actor)
-        ON CONFLICT (id) DO NOTHING;
+            'demo-f04-' || n || '@example.invalid', 'DEMO-' || n, 'COMPLETO', 'ACTIVO', 'VINCULADO', persona, actor, actor)
+        ON CONFLICT (id) DO UPDATE SET estado_registro = 'ACTIVO',
+            estado_vinculacion = 'VINCULADO', id_usuario_seguridad = EXCLUDED.id_usuario_seguridad;
         INSERT INTO furgonetas (id, placa, estado, capacidad_max_kg, capacidad_max_m3, max_paquetes, creado_por, actualizado_por)
         VALUES (vehiculo, 'DEMO-' || lpad(n::text, 3, '0'), 'DISPONIBLE', 100, 2, 20, actor, actor)
         ON CONFLICT (id) DO NOTHING;
