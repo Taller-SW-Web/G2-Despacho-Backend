@@ -151,6 +151,7 @@ public class ConfiguracionSeguridad {
             Authentication identidad = autenticacion.get();
             boolean autorizado = esTokenDeTipo(identidad, "servicio") && identidad.getAuthorities()
                     .stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope));
+            if (scope.startsWith("despachos:")) autorizado = autorizado && "modulo-ventas".equals(identidad.getName());
             return new AuthorizationDecision(autorizado);
         };
     }
