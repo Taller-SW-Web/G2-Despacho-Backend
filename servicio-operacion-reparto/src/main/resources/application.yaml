@@ -38,12 +38,15 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  demo:
+    sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
+    usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
   evidencias:
     storage-url: ${EVIDENCIAS_STORAGE_URL:}
     bucket: ${EVIDENCIAS_BUCKET:}
     clave-servicio: ${EVIDENCIAS_CLAVE_SERVICIO:}
   seguridad:
-    url: ${SEGURIDAD_URL}
+    url: ${SEGURIDAD_URL:}
     audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:

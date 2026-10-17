@@ -46,6 +46,9 @@ public class ConfiguracionConsultaFallidos {
                 .connectTimeout(Duration.ofSeconds(1)).followRedirects(HttpClient.Redirect.NEVER).build());
         peticiones.setReadTimeout(Duration.ofSeconds(2));
         RestClient cliente = RestClient.builder().baseUrl(url.replaceAll("/+$", "")).requestFactory(peticiones).build();
+        if (entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false)) {
+            return new OperacionIncidenciasHttp(cliente, () -> "", true);
+        }
         RestClient seguridad = RestClient.builder().baseUrl(entorno.getRequiredProperty("despacho.seguridad.url")
                 .replaceAll("/+$", "")).requestFactory(peticiones).build();
         ProveedorTokenOperacion credenciales = new ProveedorTokenOperacion(seguridad,

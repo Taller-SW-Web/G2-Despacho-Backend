@@ -34,8 +34,11 @@ public class ConfiguracionProgramacion {
                 cliente(entorno.getRequiredProperty("despacho.operacion.url")),
                 credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj));
     }
-    private static ProveedorTokenServicio credenciales(Environment entorno, String dependencia, String scopes, Clock reloj) {
+    private static java.util.function.Supplier<String> credenciales(Environment entorno, String dependencia, String scopes, Clock reloj) {
         String prefijo = "despacho." + dependencia + ".";
+        if (entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false)) {
+            return () -> entorno.getProperty(prefijo + "token-servicio", "");
+        }
         return new ProveedorTokenServicio(cliente(entorno.getRequiredProperty("despacho.seguridad.url")),
                 entorno.getProperty(prefijo + "cliente-id", "modulo-despacho"), entorno.getProperty(prefijo + "cliente-secreto", ""), scopes,
                 () -> entorno.getProperty(prefijo + "token-servicio", ""), reloj);
