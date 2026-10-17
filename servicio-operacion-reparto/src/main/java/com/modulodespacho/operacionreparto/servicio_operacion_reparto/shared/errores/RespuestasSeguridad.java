@@ -15,6 +15,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.web.FiltroCorrelacion;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.seguridad.PerfilRepartidorNoDisponible;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
@@ -37,6 +38,11 @@ public class RespuestasSeguridad implements AuthenticationEntryPoint, AccessDeni
     @Override
     public void handle(HttpServletRequest solicitud, HttpServletResponse respuesta,
             AccessDeniedException error) throws IOException {
+        if (error instanceof PerfilRepartidorNoDisponible) {
+            escribir(solicitud, respuesta, HttpStatus.SERVICE_UNAVAILABLE, "DESP_ERROR_OPERACION_NO_DISPONIBLE",
+                    "Perfil no disponible", "No fue posible comprobar el acceso del repartidor. Reintenta más tarde.");
+            return;
+        }
         escribir(solicitud, respuesta, HttpStatus.FORBIDDEN, "DESP_ERROR_SCOPE_INSUFICIENTE",
                 "Permiso insuficiente", "El cliente no tiene permiso para realizar esta operación");
     }
