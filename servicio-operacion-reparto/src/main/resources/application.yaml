@@ -1,6 +1,11 @@
 spring:
   application:
     name: servicio-operacion-reparto
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAXIMO:2}
+      minimum-idle: ${DB_POOL_MINIMO:0}
+      connection-timeout: 10000
   jpa:
     open-in-view: false
     hibernate:

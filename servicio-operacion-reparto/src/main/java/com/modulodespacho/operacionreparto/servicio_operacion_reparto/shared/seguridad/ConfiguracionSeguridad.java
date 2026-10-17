@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
@@ -86,6 +87,7 @@ public class ConfiguracionSeguridad {
 
     @Bean
     SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+            ObjectProvider<ValidadorPerfilRepartidor> perfiles,
             @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada) throws Exception {
         return http.csrf(configuracion -> configuracion.disable())
                 .httpBasic(configuracion -> configuracion.disable())
@@ -106,8 +108,12 @@ public class ConfiguracionSeguridad {
                                     && "modulo-despacho".equals(autenticacion.get().getName())
                                     && autenticacion.get().getAuthorities().stream().anyMatch(permiso ->
                                             permiso.getAuthority().equals("SCOPE_operacion:incidencias:leer"))))
-                        // Cada futuro controlador de campo debe comprobar perfil activo y propiedad local.
-                        .requestMatchers("/api/v1/repartidor/**", "/api/v1/catalogos/motivos-fallo",
+                        // El vínculo activo se exige antes del controlador; la propiedad de cada recurso sigue siendo obligatoria.
+                        .requestMatchers("/api/v1/repartidor/**").access((autenticacion, contexto) -> {
+                            ValidadorPerfilRepartidor perfil = perfiles.getIfAvailable();
+                            return new AuthorizationDecision(perfil != null && perfil.permite(autenticacion.get()));
+                        })
+                        .requestMatchers("/api/v1/catalogos/motivos-fallo",
                                 "/api/v1/evidencias/**").access((autenticacion, contexto) ->
                                         new AuthorizationDecision(esTokenDeTipo(autenticacion.get(), "acceso")))
                         .requestMatchers("/api/v1/repartidores/**", "/api/v1/furgonetas/**",

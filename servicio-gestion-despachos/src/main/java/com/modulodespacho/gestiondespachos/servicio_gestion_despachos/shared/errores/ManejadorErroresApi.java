@@ -45,12 +45,23 @@ public class ManejadorErroresApi {
         ProblemDetail problema = problema(error.getEstado(), error.getCodigo(), error.getMessage(), solicitud);
         problema.setTitle("Operación rechazada");
         problema.setProperty("errores", error.getErrores());
+        if (error.getEstadoActual() != null) problema.setProperty("estadoActual", error.getEstadoActual());
         return problema;
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ProblemDetail cuerpoInvalido(HttpMessageNotReadableException error, HttpServletRequest solicitud) {
         return problema(400, CodigosError.SOLICITUD_INVALIDA, "El cuerpo JSON no es válido", solicitud);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    ProblemDetail persistenciaNoDisponible(org.springframework.dao.DataAccessException error, HttpServletRequest solicitud) {
+        return problema(503, "DESP_ERROR_PERSISTENCIA_NO_DISPONIBLE", "No se pudo confirmar la operación; consulta su resultado antes de reintentar", solicitud);
+    }
+
+    @ExceptionHandler({jakarta.persistence.OptimisticLockException.class, org.springframework.orm.ObjectOptimisticLockingFailureException.class})
+    ProblemDetail versionDesactualizada(Exception error, HttpServletRequest solicitud) {
+        return problema(409, "DESP_ERROR_DESPACHO_DESACTUALIZADO", "El despacho fue modificado; vuelve a consultar", solicitud);
     }
 
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})

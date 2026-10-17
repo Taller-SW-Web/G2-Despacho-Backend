@@ -10,9 +10,10 @@ import org.testcontainers.utility.DockerImageName;
 class TestcontainersConfiguration {
 
 	@Bean
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "pruebas.postgres.externo", havingValue = "false", matchIfMissing = true)
 	@ServiceConnection
 	PostgreSQLContainer postgresContainer() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:latest"));
+		return new PostgreSQLContainer(DockerImageName.parse("postgres:17.11"));
 	}
 
 }

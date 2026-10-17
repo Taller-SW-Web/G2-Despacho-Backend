@@ -207,6 +207,158 @@ class GestionFlotaHttpTests {
         }
         assertThat(sql.sql("SELECT estado FROM furgonetas").query(String.class).single()).isEqualTo("DISPONIBLE");
     }
+    @Test
+    void rechazaEdicionDeIdentidadYRecursosAusentesSinAuditar() throws Exception {
+        UUID repartidor = crearRepartidor(), furgoneta = crearFurgoneta(), ausente = UUID.randomUUID();
+        for (String campo : List.of("\"dni\":\"87654321\"", "\"nombres\":\"Otro\"", "\"estadoRegistro\":\"INACTIVO\"")) {
+            http.perform(put("/api/v1/repartidores/" + repartidor).header("Authorization", "Bearer gestor")
+                    .contentType("application/json").content(CONTACTO.strip().replaceFirst("\\}$", "," + campo + "}")))
+                    .andExpect(status().isBadRequest());
+        }
+        http.perform(put("/api/v1/furgonetas/" + furgoneta).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content("""
+                    {"placa":"OTRA-001","capacidadPesoKg":20,"capacidadVolumenM3":1,"maximoPaquetes":2}
+                    """)).andExpect(status().isBadRequest());
+        http.perform(put("/api/v1/repartidores/" + ausente).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content(CONTACTO)).andExpect(status().isNotFound());
+        http.perform(put("/api/v1/furgonetas/" + ausente).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content("""
+                    {"capacidadPesoKg":20,"capacidadVolumenM3":1,"maximoPaquetes":2}
+                    """)).andExpect(status().isNotFound());
+        baja(ausente, 404);
+        cambiar(ausente, "EN_MANTENIMIENTO", 404);
+        vincular(ausente, UUID.randomUUID(), 404);
+        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(2);
+        assertThat(sql.sql("SELECT dni FROM repartidores").query(String.class).single()).isEqualTo("12345678");
+        assertThat(sql.sql("SELECT placa FROM furgonetas").query(String.class).single()).isEqualTo("ABC-123");
+    }
+
+    @Test
+    void validaVinculacionManualSinAceptarCredencialesYConservaEstadoPendiente() throws Exception {
+        UUID repartidor = crearRepartidor();
+        for (String cuerpo : List.of("{}", "{\"usuarioId\":null}", "{\"usuarioId\":\"invalido\"}",
+                "{\"usuarioId\":\"" + UUID.randomUUID() + "\",\"password\":\"no-transmitir\"}")) {
+            http.perform(put("/api/v1/repartidores/" + repartidor + "/vinculacion").header("Authorization", "Bearer gestor")
+                    .contentType("application/json").content(cuerpo)).andExpect(status().isBadRequest());
+        }
+        assertThat(sql.sql("SELECT estado_vinculacion FROM repartidores").query(String.class).single()).isEqualTo("PENDIENTE");
+        assertThat(sql.sql("SELECT id_usuario_seguridad IS NULL FROM repartidores").query(Boolean.class).single()).isTrue();
+        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void exigeGestorEnTodasLasOperacionesDeCatalogo() throws Exception {
+        UUID id = UUID.randomUUID();
+        for (String token : List.of("otro", "servicio")) {
+            for (String ruta : List.of("/api/v1/repartidores", "/api/v1/repartidores/" + id, "/api/v1/furgonetas")) {
+                http.perform(get(ruta).header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
+            }
+            http.perform(post("/api/v1/furgonetas").header("Authorization", "Bearer " + token)
+                    .contentType("application/json").content(NUEVA_FURGONETA)).andExpect(status().isForbidden());
+            http.perform(put("/api/v1/repartidores/" + id).header("Authorization", "Bearer " + token)
+                    .contentType("application/json").content(CONTACTO)).andExpect(status().isForbidden());
+            http.perform(put("/api/v1/repartidores/" + id + "/vinculacion").header("Authorization", "Bearer " + token)
+                    .contentType("application/json").content("{\"usuarioId\":\"" + UUID.randomUUID() + "\"}"))
+                    .andExpect(status().isForbidden());
+            for (String ruta : List.of("/api/v1/repartidores/" + id + "/estado", "/api/v1/furgonetas/" + id + "/estado")) {
+                http.perform(patch(ruta).header("Authorization", "Bearer " + token)
+                        .contentType("application/json").content("{\"estado\":\"INACTIVO\"}")).andExpect(status().isForbidden());
+            }
+            http.perform(put("/api/v1/furgonetas/" + id).header("Authorization", "Bearer " + token)
+                    .contentType("application/json").content("{}")).andExpect(status().isForbidden());
+        }
+        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void conservaPrecisionExtremaYNormalizaFiltrosSinFabricarResultados() throws Exception {
+        http.perform(post("/api/v1/furgonetas").header("Authorization", "Bearer gestor").contentType("application/json")
+                .content("""
+                    {"placa":"MAX-001","capacidadPesoKg":9999999.999,"capacidadVolumenM3":999999.9999,"maximoPaquetes":32767}
+                    """)).andExpect(status().isCreated()).andExpect(jsonPath("$.maximoPaquetes").value(32767));
+        assertThat(sql.sql("SELECT capacidad_max_kg::text FROM furgonetas").query(String.class).single()).isEqualTo("9999999.999");
+        assertThat(sql.sql("SELECT capacidad_max_m3::text FROM furgonetas").query(String.class).single()).isEqualTo("999999.9999");
+        http.perform(get("/api/v1/furgonetas?placa=ausente").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contenido.length()").value(0))
+                .andExpect(jsonPath("$.totalElementos").value(0)).andExpect(jsonPath("$.totalPaginas").value(0));
+        http.perform(get("/api/v1/repartidores").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.pagina").value(1))
+                .andExpect(jsonPath("$.tamanoPagina").value(50)).andExpect(jsonPath("$.totalPaginas").value(0));
+        for (String consulta : List.of("estado=DESCONOCIDO", "placa=ABCDEFGHIJK", "pagina=0", "tamanoPagina=101")) {
+            http.perform(get("/api/v1/furgonetas?" + consulta).header("Authorization", "Bearer gestor"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    void exportaRespuestasRealesParaVerificarElConsumidorFrontend() throws Exception {
+        UUID repartidor = crearRepartidor();
+        String perfil = http.perform(get("/api/v1/repartidores/" + repartidor).header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String vehiculo = http.perform(post("/api/v1/furgonetas").header("Authorization", "Bearer gestor")
+                .contentType("application/json").content(NUEVA_FURGONETA)).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String perfiles = http.perform(get("/api/v1/repartidores").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String vehiculos = http.perform(get("/api/v1/furgonetas").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String error = http.perform(post("/api/v1/furgonetas").header("Authorization", "Bearer gestor")
+                .contentType("application/json").content("{}")).andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target/f05-respuestas-backend.json"),
+                "{\"repartidor\":" + perfil + ",\"furgoneta\":" + vehiculo + ",\"paginaRepartidores\":" + perfiles
+                        + ",\"paginaFurgonetas\":" + vehiculos + ",\"errorCampos\":" + error + "}");
+    }
+
+    @Test
+    void bajaCierraLaJornadaVaciaEImpideAbrirOtraConElVehiculoDisponible() throws Exception {
+        UUID repartidor = crearRepartidor();
+        vincular(repartidor, UUID.randomUUID(), 204);
+        UUID furgoneta = crearFurgoneta();
+        abrirJornada(repartidor, furgoneta);
+        baja(repartidor, 204);
+        assertThat(sql.sql("SELECT estado FROM asignaciones_diarias").query(String.class).single()).isEqualTo("CERRADA");
+        assertThat(sql.sql("SELECT cerrada_en IS NOT NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
+        assertThat(sql.sql("SELECT estado FROM furgonetas").query(String.class).single()).isEqualTo("DISPONIBLE");
+        assertThatThrownBy(() -> abrirJornada(repartidor, furgoneta))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(sql.sql("SELECT count(*) FROM asignaciones_diarias").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void registraRendimientoLocalDePaginasDeCincuentaSinAcreditarLaNube() throws Exception {
+        sql.sql("""
+                INSERT INTO repartidores (nombres,apellidos,dni,telefono,correo,numero_brevete,turno_habitual,
+                    estado_registro,estado_vinculacion,creado_por,actualizado_por)
+                SELECT 'Carga','Sintética',lpad(serie::text,8,'0'),'999111222',
+                    'carga-' || serie || '@example.invalid','PER-' || serie,'COMPLETO','ACTIVO','PENDIENTE',:actor,:actor
+                FROM generate_series(1,100) AS serie
+                """).param("actor", ACTOR).update();
+        sql.sql("""
+                INSERT INTO furgonetas (placa,estado,capacidad_max_kg,capacidad_max_m3,max_paquetes,creado_por,actualizado_por)
+                SELECT 'PER-' || lpad(serie::text,3,'0'),'DISPONIBLE',500,4,80,:actor,:actor
+                FROM generate_series(1,100) AS serie
+                """).param("actor", ACTOR).update();
+        java.util.Map<String, Double> percentiles = new java.util.LinkedHashMap<>();
+        for (String recurso : List.of("repartidores", "furgonetas")) {
+            java.util.List<Double> muestras = new java.util.ArrayList<>();
+            for (int iteracion = 0; iteracion < 25; iteracion++) {
+                long inicio = System.nanoTime();
+                http.perform(get("/api/v1/" + recurso).header("Authorization", "Bearer gestor"))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.contenido.length()").value(50))
+                        .andExpect(jsonPath("$.totalElementos").value(100)).andExpect(jsonPath("$.totalPaginas").value(2));
+                if (iteracion >= 5) muestras.add((System.nanoTime() - inicio) / 1_000_000.0);
+            }
+            muestras.sort(Double::compare);
+            percentiles.put(recurso, muestras.get(18));
+        }
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target/f05-rendimiento-local.json"),
+                "{\"entorno\":\"MockMvc y PostgreSQL aislado; JWT doble; sin red de Render\","
+                + "\"registrosPorCatalogo\":100,\"tamanoPagina\":50,\"calentamiento\":5,\"muestras\":20,"
+                + "\"p95RepartidoresMs\":" + percentiles.get("repartidores")
+                + ",\"p95FurgonetasMs\":" + percentiles.get("furgonetas") + "}");
+    }
+
     UUID crearRepartidor() throws Exception {
         http.perform(post("/api/v1/repartidores").header("Authorization", "Bearer gestor").contentType("application/json")
                 .content(NUEVO_REPARTIDOR)).andExpect(status().isCreated()).andExpect(header().exists("Location"));

@@ -19,8 +19,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Distrito;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Zona;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RepositorioZonas;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence.DistritoRepositorioJpa;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
@@ -41,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FlujoF01Tests {
 
     private static final UUID SAN_BORJA = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID MIRAFLORES = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    private static final UUID SURCO = UUID.fromString("00000000-0000-0000-0000-000000000003");
 
     @Autowired
     MockMvc cliente;
@@ -48,13 +52,35 @@ class FlujoF01Tests {
     @MockitoSpyBean
     RepositorioZonas zonas;
 
+    @Autowired
+    DistritoRepositorioJpa distritos;
+
+    @Autowired
+    org.springframework.jdbc.core.simple.JdbcClient sql;
+
     @MockitoBean
     JwtDecoder decodificadorJwt;
 
     @BeforeEach
     void preparar() {
+        // Cada escenario mantiene su propia base al compartir un PostgreSQL externo de pruebas.
+        sql.sql("TRUNCATE zonas, distrito CASCADE").update();
+        sembrarDistrito(SAN_BORJA, "San Borja");
+        sembrarDistrito(MIRAFLORES, "Miraflores");
+        sembrarDistrito(SURCO, "Santiago de Surco");
         when(decodificadorJwt.decode("gestor")).thenReturn(tokenGestor());
         when(decodificadorJwt.decode("servicio")).thenReturn(tokenServicio());
+    }
+
+    private void sembrarDistrito(UUID id, String nombre) {
+        if (distritos.findById(id).isEmpty()) {
+            Distrito distrito = new Distrito();
+            distrito.setId(id);
+            distrito.setNombre(nombre);
+            distrito.setProvincia("Lima");
+            distrito.setDepartamento("Lima");
+            distritos.save(distrito);
+        }
     }
 
     private Jwt tokenGestor() {

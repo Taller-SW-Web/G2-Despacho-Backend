@@ -8,6 +8,7 @@ public class ErrorDeNegocio extends RuntimeException {
     private final int estado;
     private final String codigo;
     private final List<ErrorDeCampo> errores;
+    private String estadoActual;
 
     private ErrorDeNegocio(int estado, String codigo, String mensaje, List<ErrorDeCampo> errores) {
         super(mensaje);
@@ -35,4 +36,11 @@ public class ErrorDeNegocio extends RuntimeException {
     public List<ErrorDeCampo> getErrores() {
         return errores;
     }
+
+    public ErrorDeNegocio conEstadoActual(String estadoActual) {
+        this.estadoActual = estadoActual;
+        return this;
+    }
+
+    public String getEstadoActual() { return estadoActual; }
 }

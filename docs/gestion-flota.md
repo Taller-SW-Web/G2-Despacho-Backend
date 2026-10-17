@@ -16,7 +16,7 @@ F-05 corresponde a Rhamses según el índice de funcionalidades de las especific
 | ES-F05-08 | Edición de capacidad maestra sin modificar placa ni instantáneas de jornadas |
 | ES-F05-09 | Transiciones de estado y cierre atómico de jornadas vacías |
 
-La especificación antigua ES-F05-05 describe creación automática, rol global `REPARTIDOR` y activación. Ese flujo contradice el contrato externo vigente, apartado 8.4, que acuerda creación manual en Seguridad y asociación de `usuario_id` [cite: 2]. Se implementa este último acuerdo, igual que el frontend existente. No se afirma haber verificado los criterios antiguos de creación automática ni la existencia remota de una cuenta a partir de su UUID. La documentación funcional pendiente debe armonizarse en el repositorio de especificaciones.
+Las nueve carpetas SDD y el contrato de Operación §4.1 se alinean con registro local y asociación manual de UUID. Seguridad §8.4 conserva la propiedad de cuentas, activación y credenciales [cite: 2]. No se acredita existencia remota de una cuenta solo por recibir su UUID.
 
 No se implementan las pantallas de monitoreo, las APIs de jornada de F-06 ni la ejecución de entregas de F-03. Se agregan las restricciones de persistencia necesarias para que esos futuros escritores no reabran una jornada con recursos inhabilitados.
 
@@ -58,7 +58,7 @@ El archivo [de adaptación](../operaciones/sql/F05__compatibilidad_operadores_fl
 
 Las vistas usan `security_invoker`; además se retiran permisos de los roles HTTP públicos de Supabase sobre los nuevos accesos y la función de bloqueo. Los datos se consultan a través del backend autenticado.
 
-El 16 de octubre de 2026 se validó el archivo contra la base real con rollback y después se confirmó su aplicación en Operadores y Flota. **No volver a ejecutarlo**: es una adaptación de una sola aplicación, no una migración idempotente. Servicio Logístico no se modificó.
+La revisión de compatibilidad `1d71b84` registra la validación con rollback y la aplicación previa en Operadores y Flota. **No volver a ejecutarlo**: es una adaptación de una sola aplicación, no una migración idempotente. Servicio Logístico no se modificó.
 
 Para otros entornos heredados, revisar primero las estructuras y sus datos. Con las variables PostgreSQL configuradas fuera de Git, ejecutar desde la raíz del backend:
 
@@ -78,13 +78,13 @@ Las [plantillas de variables](../operaciones/render/) contienen marcadores, sin 
 | Gestión | `render` | Servicio Logístico, pooler de región oeste |
 | Gateway | `render` | URLs HTTPS independientes de Gestión y Operación |
 
-Los perfiles de los dos servicios mantienen `SPRING_FLYWAY_ENABLED=false` por defecto en Render, desactivan generación de esquema y limitan el pool JDBC a cinco conexiones. La conexión se configura mediante URL privada con `sslmode=require`, usuario y contraseña en Render [cite: 5]. `PORT` lo proporciona la plataforma; el Dockerfile ya lo utiliza [cite: 6].
+Los perfiles de los dos servicios mantienen `SPRING_FLYWAY_ENABLED=false` por defecto en Render, desactivan generación de esquema y limitan por defecto el pool JDBC a dos conexiones, sin conexiones mínimas ociosas. La conexión se configura mediante URL privada con `sslmode=require`, usuario y contraseña en Render [cite: 5]. `PORT` lo proporciona la plataforma; el Dockerfile ya lo utiliza [cite: 6].
 
 El perfil del gateway admite los dos orígenes exactos de Vercel y apunta a los servicios Render indicados. Un valor explícito de `CORS_ORIGENES` reemplaza esos valores; deben incluirse los clientes que realmente se publican. Las peticiones del navegador siguen pasando por el gateway.
 
-El backend necesita `SEGURIDAD_URL` real en los tres servicios, con audiencia y algoritmo acordados. El 16 de octubre el descubrimiento de `seguridad-ejemplo.onrender.com` devolvió 404; el usuario confirmó que Seguridad aún no está desplegado. No se activa el emisor temporal local en producción ni se omite JWT.
+El backend necesita `SEGURIDAD_URL` real en los tres servicios, con audiencia y algoritmo acordados. La comprobación previa del descubrimiento de `seguridad-ejemplo.onrender.com` devolvió 404; el usuario confirmó que Seguridad aún no está desplegado. No se activa el emisor temporal local en producción ni se omite JWT.
 
-## Verificación ejecutada
+## Verificación histórica del incremento `8f8282a`
 
 - `mvn verify` en Operación: 15 pruebas, sin fallos ni omisiones, y paquete generado.
 - Siete pruebas HTTP de F-05 con PostgreSQL real: altas, filtros, paginación, edición, bajas, vinculación, capacidades, estados, validación, permisos y errores.
@@ -112,3 +112,19 @@ La implementación y el esquema se pueden verificar sin el despliegue de Segurid
 - [cite: 4] [Modelo de datos](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/arquitectura/modelo-datos.md).
 - [cite: 5] [Conexiones PostgreSQL de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).
 - [cite: 6] [Despliegue Docker en Render](https://render.com/docs/docker).
+
+## Revisión de alineación F-05
+
+Las rutas `/api/v1/repartidor/**` comprueban antes del controlador el perfil local `ACTIVO` y `VINCULADO` resuelto por el `sub`. Una caída de datos responde `503` sin exponer SQL; perfil ausente o no habilitado responde `403`. La propiedad de cada despacho sigue siendo responsabilidad del caso de uso F-03. No se impone este filtro indiscriminadamente a las rutas compartidas de evidencia que también consume el Gestor.
+
+Se añaden pruebas HTTP de campos inmutables, permisos, recursos ausentes, precisión, cierre de jornada vacía y rechazo de nuevas jornadas con perfil inactivo. También se preparan exportación de respuestas y medición local de páginas de 50; estas salidas solo existen al ejecutar sus pruebas. No se declara cumplimiento del objetivo de 200 ms en Render.
+
+La compilación de producción y pruebas pasó con `mvn -DskipTests test-compile`. La ejecución adicional de PostgreSQL queda pendiente: Docker se mantiene apagado por indicación del usuario. No se ejecutaron las pruebas de limpieza contra Supabase. Las pruebas unitarias usan dobles JDBC/JWT: `mvn -Dtest=ValidadorTokenDespachoTests,ValidadorPerfilRepartidorTests test` aprobó siete pruebas sin errores. El Gateway aprobó `mvn verify` con 23 pruebas; la primera ejecución quedó limitada por los sockets locales del sandbox y la ejecución con permisos locales completó sin errores.
+
+Destinos de Render actualizados:
+
+- Gateway: `https://taller-api-gateway.onrender.com`.
+- Gestión: `https://taller-servicio-gestion-despachos.onrender.com`.
+- Operación: `https://taller-servicio-operacion-reparto.onrender.com`.
+
+Las variables explícitas del panel de Render prevalecen sobre estos valores por defecto. Gestión también necesita `OPERACION_REPARTO_URL`; ambos servicios usan `GATEWAY_PUBLIC_URL`. No se modificaron variables del panel ni se aplicaron nuevas migraciones en esta revisión.

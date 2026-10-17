@@ -7,11 +7,11 @@ spring:
       ddl-auto: none
   datasource:
     hikari:
-      maximum-pool-size: ${DB_POOL_MAXIMO:5}
-      minimum-idle: ${DB_POOL_MINIMO:1}
+      maximum-pool-size: ${DB_POOL_MAXIMO:2}
+      minimum-idle: ${DB_POOL_MINIMO:0}
       connection-timeout: 10000
       validation-timeout: 5000
       connection-init-sql: SET statement_timeout = '15s'
 despacho:
   gateway:
-    url-publica: ${GATEWAY_PUBLIC_URL:https://g2-despacho-backend.onrender.com}
+    url-publica: ${GATEWAY_PUBLIC_URL:https://taller-api-gateway.onrender.com}
