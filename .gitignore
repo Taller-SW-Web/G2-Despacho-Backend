@@ -1,0 +1,5 @@
+# Variables locales y credenciales
+.env
+.env.*
+!.env.example
+!.env.f04-demo.example

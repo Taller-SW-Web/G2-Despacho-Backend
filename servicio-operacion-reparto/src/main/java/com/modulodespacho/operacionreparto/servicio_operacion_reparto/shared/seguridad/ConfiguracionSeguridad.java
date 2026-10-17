@@ -1,0 +1,152 @@
+package com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.seguridad;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoderInitializationException;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.SupplierJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.util.Assert;
+import org.springframework.web.client.RestClient;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.errores.RespuestasSeguridad;
+
+@Configuration
+@EnableMethodSecurity
+public class ConfiguracionSeguridad {
+
+    @Bean
+    JwtDecoder decodificadorJwt(
+            @Value("${despacho.seguridad.url}") String urlSeguridad,
+            @Value("${despacho.seguridad.audiencia}") String audiencia,
+            @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        URI origen = URI.create(urlSeguridad);
+        Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null && origen.getRawFragment() == null
+                        && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
+                "SEGURIDAD_URL debe ser un origen HTTP(S), sin rutas, credenciales ni parámetros");
+        SignatureAlgorithm algoritmoFirma = SignatureAlgorithm.from(algoritmo);
+        Assert.notNull(algoritmoFirma, "Configure un algoritmo de firma asimétrica válido");
+        JdkClientHttpRequestFactory peticiones = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5)).build());
+        peticiones.setReadTimeout(Duration.ofSeconds(5));
+        RestClient cliente = RestClient.builder().requestFactory(peticiones)
+                .baseUrl(urlSeguridad.replaceAll("/+$", "")).build();
+        JwtDecoder diferido = new SupplierJwtDecoder(() -> {
+            Map<String, Object> configuracion = cliente.get()
+                    .uri("/api/v1/auth/.well-known/openid-configuration").retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            Assert.notNull(configuracion, "Seguridad debe publicar su configuración");
+            String emisor = (String) configuracion.get("issuer");
+            String claves = (String) configuracion.get("jwks_uri");
+            Assert.hasText(emisor, "Seguridad debe publicar issuer");
+            Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
+            NimbusJwtDecoder resultado = NimbusJwtDecoder.withJwkSetUri(claves)
+                    .jwsAlgorithm(algoritmoFirma).restOperations(
+                            new org.springframework.web.client.RestTemplate(peticiones)).build();
+            resultado.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                    JwtValidators.createDefaultWithIssuer(emisor), new ValidadorTokenDespacho(audiencia)));
+            return resultado;
+        });
+        return token -> {
+            try {
+                return diferido.decode(token);
+            } catch (JwtException | JwtDecoderInitializationException error) {
+                throw new BadJwtException("No fue posible validar el token", error);
+            }
+        };
+    }
+
+    @Bean
+    SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+            ObjectProvider<ValidadorPerfilRepartidor> perfiles,
+            @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada) throws Exception {
+        return http.csrf(configuracion -> configuracion.disable())
+                .httpBasic(configuracion -> configuracion.disable())
+                .formLogin(configuracion -> configuracion.disable())
+                .logout(configuracion -> configuracion.disable())
+                .requestCache(configuracion -> configuracion.disable())
+                .sessionManagement(configuracion -> configuracion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(reglas -> {
+                    reglas.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
+                    if (documentacionHabilitada) {
+                        reglas.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
+                                "/swagger-ui.html").permitAll();
+                    }
+                    reglas
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/operacion/consulta-incidencias")
+                            .access((autenticacion, contexto) -> new AuthorizationDecision(
+                                    esTokenDeTipo(autenticacion.get(), "servicio")
+                                    && "modulo-despacho".equals(autenticacion.get().getName())
+                                    && autenticacion.get().getAuthorities().stream().anyMatch(permiso ->
+                                            permiso.getAuthority().equals("SCOPE_operacion:incidencias:leer"))))
+                        // El vínculo activo se exige antes del controlador; la propiedad de cada recurso sigue siendo obligatoria.
+                        .requestMatchers("/api/v1/repartidor/**").access((autenticacion, contexto) -> {
+                            ValidadorPerfilRepartidor perfil = perfiles.getIfAvailable();
+                            return new AuthorizationDecision(perfil != null && perfil.permite(autenticacion.get()));
+                        })
+                        .requestMatchers("/api/v1/catalogos/motivos-fallo",
+                                "/api/v1/evidencias/**").access((autenticacion, contexto) ->
+                                        new AuthorizationDecision(esTokenDeTipo(autenticacion.get(), "acceso")))
+                        .requestMatchers("/api/v1/repartidores/**", "/api/v1/furgonetas/**",
+                                "/api/v1/jornadas/**", "/api/v1/flota/**").hasRole("GESTOR_DESPACHO")
+                        .anyRequest().denyAll();
+                })
+                .exceptionHandling(errores -> errores
+                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas))
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidorAutenticacion()))
+                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas))
+                .build();
+    }
+
+    private JwtAuthenticationConverter convertidorAutenticacion() {
+        JwtAuthenticationConverter convertidor = new JwtAuthenticationConverter();
+        convertidor.setJwtGrantedAuthoritiesConverter(token -> {
+            List<GrantedAuthority> permisos = new ArrayList<>();
+            if ("servicio".equals(token.getClaimAsString("tipo"))) {
+                permisos.addAll(new JwtGrantedAuthoritiesConverter().convert(token));
+            } else if ("acceso".equals(token.getClaimAsString("tipo"))) {
+                List<String> roles = token.getClaimAsStringList("roles");
+                if (roles != null) {
+                    roles.forEach(rol -> permisos.add(new SimpleGrantedAuthority("ROLE_" + rol)));
+                }
+            }
+            return permisos;
+        });
+        return convertidor;
+    }
+
+    private boolean esTokenDeTipo(Authentication identidad, String tipo) {
+        return identidad instanceof JwtAuthenticationToken jwt && identidad.isAuthenticated()
+                && tipo.equals(jwt.getToken().getClaimAsString("tipo"));
+    }
+}

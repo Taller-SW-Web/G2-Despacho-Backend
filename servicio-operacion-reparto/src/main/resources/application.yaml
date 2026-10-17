@@ -1,3 +1,50 @@
 spring:
   application:
     name: servicio-operacion-reparto
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAXIMO:2}
+      minimum-idle: ${DB_POOL_MINIMO:0}
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      accept-float-as-int: false
+
+server:
+  port: ${PORT:8082}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+  swagger-ui:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+    persist-authorization: false
+
+despacho:
+  evidencias:
+    storage-url: ${EVIDENCIAS_STORAGE_URL:}
+    bucket: ${EVIDENCIAS_BUCKET:}
+    clave-servicio: ${EVIDENCIAS_CLAVE_SERVICIO:}
+  seguridad:
+    url: ${SEGURIDAD_URL}
+    audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
+    algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
+  gateway:
+    url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}

@@ -1,3 +1,65 @@
 spring:
   application:
     name: servicio-gestion-despachos
+  jpa:
+    open-in-view: false
+
+server:
+  port: ${PORT:8081}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+  swagger-ui:
+    enabled: ${DOCUMENTACION_HABILITADA:false}
+    persist-authorization: false
+
+despacho:
+  seguridad:
+    url: ${SEGURIDAD_URL}
+    audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
+    algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
+  gateway:
+    url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+  operacion:
+    url: ${OPERACION_REPARTO_URL:http://localhost:8082}
+    token-servicio: ${OPERACION_TOKEN_SERVICIO:}
+    cliente-id: ${OPERACION_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${OPERACION_CLIENT_SECRET:}
+    scopes-capacidad: ${OPERACION_CAPACIDAD_SCOPES:}
+  ventas:
+    url: ${VENTAS_URL:http://127.0.0.1:1}
+    token-servicio: ${VENTAS_TOKEN_SERVICIO:}
+    cliente-id: ${VENTAS_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${VENTAS_CLIENT_SECRET:}
+  cotizacion:
+    limite-por-minuto: ${LIMITE_COTIZACIONES_POR_MINUTO:60}
+  productos:
+    url: ${PRODUCTOS_URL:http://127.0.0.1:1}
+    token-servicio: ${PRODUCTOS_TOKEN_SERVICIO:}
+    cliente-id: ${PRODUCTOS_CLIENT_ID:modulo-despacho}
+    cliente-secreto: ${PRODUCTOS_CLIENT_SECRET:}
+    stub:
+      catalogo:
+        POL-NEG-M:
+          peso-kg: 0.25
+          largo-cm: 10
+          ancho-cm: 10
+          alto-cm: 10
+        ZAP-RUN-42:
+          peso-kg: 1.40
+          largo-cm: 20
+          ancho-cm: 20
+          alto-cm: 40
