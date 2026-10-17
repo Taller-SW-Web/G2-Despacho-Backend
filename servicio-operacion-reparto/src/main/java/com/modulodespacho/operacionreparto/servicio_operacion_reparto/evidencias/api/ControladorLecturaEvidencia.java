@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.AutorizarLecturaEvidencia;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.ErrorEvidencia;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.web.FiltroCorrelacion;
 
 @RestController
 @Profile("!integracion-local")
@@ -36,7 +37,7 @@ public class ControladorLecturaEvidencia {
         problema.setInstance(java.net.URI.create(solicitud.getRequestURI()));
         problema.setProperty("code", evidencia.codigo());
         problema.setProperty("timestamp", Instant.now());
-        problema.setProperty("correlationId", solicitud.getAttribute("correlationId"));
+        problema.setProperty("correlationId", solicitud.getAttribute(FiltroCorrelacion.ATRIBUTO));
         problema.setProperty("errores", evidencia.estado() == 400 ? List.of(Map.of("campo", "consulta", "motivo", "Retira cuerpo y parámetros")) : List.of());
         return ResponseEntity.status(evidencia.estado()).cacheControl(CacheControl.noStore()).body(problema);
     }

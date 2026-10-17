@@ -42,6 +42,8 @@ public class DetalleIncidenciaJdbc implements LectorDetalleIncidencia {
                   m.codigo AS motivo_codigo, m.etiqueta AS motivo_etiqueta,
                   l.id AS id_liberacion, l.estado AS estado_liberacion, l.requiere_revision,
                   l.actualizado_en AS liberacion_actualizada_en, l.confirmada_en AS liberacion_confirmada_en,
+                  EXISTS(SELECT 1 FROM intentos_entrega previa WHERE previa.despacho_id = d.id
+                    AND previa.resultado = 'FALLIDO') AS tiene_incidencias,
                   (SELECT valor FROM parametros_configuracion WHERE clave = 'MAXIMO_INTENTOS') AS maximo_intentos,
                   (SELECT max(h.registrado_en) FROM historial_estados_despacho h
                     WHERE h.despacho_id = d.id AND h.tipo_operacion = 'TRANSICION') AS ultimo_cambio_estado_en
@@ -74,13 +76,14 @@ public class DetalleIncidenciaJdbc implements LectorDetalleIncidencia {
 
     private DetalleIncidencia leerBase(ResultSet fila) throws SQLException {
         if (fila.getString("id_incidencia") == null) {
-            if (fila.getString("ultima_incidencia_id") != null || "FALLIDO".equals(fila.getString("estado"))) throw inconsistencia();
+            if (fila.getString("ultima_incidencia_id") != null || fila.getBoolean("tiene_incidencias")
+                    || "FALLIDO".equals(fila.getString("estado"))) throw inconsistencia();
             throw ErrorDeNegocio.de(404, "DESP_ERROR_INCIDENCIA_NO_ENCONTRADA", "El despacho no tiene una incidencia registrada");
         }
         String politica = fila.getString("maximo_intentos");
         int maximo;
         try { maximo = Integer.parseInt(politica); } catch (RuntimeException error) { throw inconsistencia(); }
-        if (maximo < 1 || fila.getString("codigo_rastreo_interno") == null || motivo(fila) == null
+        if (maximo < 1 || fila.getString("codigo_rastreo_interno") == null || motivo(fila) == null || fila.getString("motivo_etiqueta") == null
                 || fila.getString("repartidor_id_externo") == null || fila.getString("asignacion_diaria_id_externa") == null
                 || instante(fila, "ultimo_cambio_estado_en") == null) throw inconsistencia();
         boolean recibido = instante(fila, "recibido_en_centro_en") != null;
@@ -112,7 +115,8 @@ public class DetalleIncidenciaJdbc implements LectorDetalleIncidencia {
 
     /** Solo campos contractuales, con tipos comprobados; jamás payloads internos o credenciales. */
     Map<String, Object> datosPresentacion(String contenido, String operacion, String estadoNuevo) {
-        var origen = json.readTree(contenido);
+        tools.jackson.databind.JsonNode origen;
+        try { origen = json.readTree(contenido); } catch (RuntimeException error) { throw inconsistencia(); }
         if (origen == null || !origen.isObject()) throw inconsistencia();
         List<String> permitidos = switch (operacion) {
             case "RECEPCION_EN_CENTRO" -> List.of("idIncidencia", "idReserva", "selloIntacto", "observacionRecepcion");

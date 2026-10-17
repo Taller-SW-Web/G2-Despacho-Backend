@@ -20,10 +20,10 @@ public class AutorizarLecturaEvidencia {
         if (!"ASOCIADA".equals(referencia.estado())) throw new ErrorEvidencia(409,
                 "DESP_ERROR_EVIDENCIA_NO_ASOCIADA", "La evidencia todavía no está asociada al despacho");
         int vigencia = lector.vigenciaSegundos();
-        if (vigencia < 1 || vigencia > 604800) throw ErrorEvidencia.noDisponible();
+        if (vigencia < 1) throw ErrorEvidencia.noDisponible();
         var acceso = firmador.firmar(referencia.rutaObjeto(), vigencia);
         return new AccesoEvidencia(referencia.idEvidencia(), referencia.idDespacho(), acceso.urlLectura(), acceso.venceEn());
     }
-    private ErrorEvidencia denegado() { return new ErrorEvidencia(403, "DESP_ERROR_ACCESO_DENEGADO", "No tienes permiso para consultar esta evidencia"); }
+    private ErrorEvidencia denegado() { return new ErrorEvidencia(403, "DESP_ERROR_SCOPE_INSUFICIENTE", "No tienes permiso para consultar esta evidencia"); }
     public record AccesoEvidencia(String idEvidencia, String idDespacho, String urlLectura, Instant venceEn) {}
 }
