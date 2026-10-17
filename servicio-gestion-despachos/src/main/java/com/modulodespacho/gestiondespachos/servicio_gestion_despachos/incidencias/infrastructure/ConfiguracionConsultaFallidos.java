@@ -16,10 +16,23 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencia
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.ConsultarEntregasFallidas;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorDatosOperativos;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorIncidenciasLocales;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.ConsultarDetalleIncidencia;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorDetalleIncidencia;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Configuration(proxyBeanMethods = false)
 @Profile("!integracion-local")
 public class ConfiguracionConsultaFallidos {
+
+    @Bean(destroyMethod = "close")
+    ExecutorService consultasDetalle() { return Executors.newVirtualThreadPerTaskExecutor(); }
+
+    @Bean
+    ConsultarDetalleIncidencia consultarDetalleIncidencia(LectorDetalleIncidencia locales,
+            LectorDatosOperativos operacion, ExecutorService consultasDetalle) {
+        return new ConsultarDetalleIncidencia(locales, operacion, Clock.systemUTC(), consultasDetalle);
+    }
 
     @Bean
     LectorDatosOperativos lectorDatosOperativos(@Value("${despacho.operacion.url}") String url, Environment entorno) {

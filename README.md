@@ -168,6 +168,8 @@ El trabajo incremental previsto para el Gateway se encuentra en el [plan de conf
 
 ## Contribución
 
+La [consulta de detalle de incidencia de F-04](docs/f04-detalle-incidencia.md) reúne el alcance de Gestión y Operación, la configuración privada de evidencia, las pruebas locales sin Docker y los pendientes de integración.
+
 El equipo utiliza ramas de trabajo y Conventional Commits en español:
 
 - Funcionalidad: `feature/f<XX>-<descripcion-corta>`.
