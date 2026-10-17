@@ -10,9 +10,11 @@ Las reglas funcionales, los estados y los contratos de integración se mantienen
 
 El modo temporal conserva la validación JWT y los permisos implementados, utilizando claves y tokens ficticios RS256. No se activa automáticamente si Seguridad falla: hay que seleccionarlo con `compose.seguridad-local.yaml`. El modo real requiere una URL configurada y no omite la autenticación.
 
-La [guía de seguridad temporal](docs/seguridad-temporal-local.md) explica cómo iniciar el entorno, obtener tokens para Swagger y otros consumidores, registrar las limitaciones y migrar a Seguridad real. Los archivos y pruebas están escritos, pero todavía no se han compilado ni ejecutado. La cotización sigue siendo simulada y los otros endpoints deben implementarse progresivamente.
+La [guía de seguridad temporal](docs/seguridad-temporal-local.md) explica cómo iniciar el entorno, obtener tokens para Swagger y otros consumidores, registrar las limitaciones y migrar a Seguridad real. La [guía de flota](docs/gestion-flota.md) registra las verificaciones ejecutadas del backend. La integración con cuentas y claves reales de Seguridad sigue pendiente de su despliegue.
 
 ## Aplicaciones desplegables
+
+La implementación F-05 de Rhamses, sus pruebas y la adaptación del esquema de Operadores y Flota están descritas en la [guía de gestión de flota](docs/gestion-flota.md). Incluye las variables para Render, los orígenes de Vercel y la dependencia pendiente del despliegue real de Seguridad.
 
 | Aplicación | Responsabilidad principal | Stack web |
 |---|---|---|
@@ -152,9 +154,9 @@ La documentación interactiva con Springdoc está configurada en ambos microserv
 
 ## Despliegue y CI/CD
 
-Las tres aplicaciones se desplegarán como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
+Las tres aplicaciones se despliegan como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
 
-Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local; el despliegue en Render y los workflows de GitHub Actions todavía están pendientes. Cada futuro workflow deberá ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
+Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local. Los perfiles y las plantillas de variables de Render están descritos en la [guía de flota](docs/gestion-flota.md); la configuración de cada servicio y la revisión efectivamente desplegada deben comprobarse en Render. Los workflows de GitHub Actions deberán ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
 
 El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
 
