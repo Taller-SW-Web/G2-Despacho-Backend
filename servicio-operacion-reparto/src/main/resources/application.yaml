@@ -33,6 +33,10 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  evidencias:
+    storage-url: ${EVIDENCIAS_STORAGE_URL:}
+    bucket: ${EVIDENCIAS_BUCKET:}
+    clave-servicio: ${EVIDENCIAS_CLAVE_SERVICIO:}
   seguridad:
     url: ${SEGURIDAD_URL}
     audiencia: ${SEGURIDAD_AUDIENCIA:api-despacho}
