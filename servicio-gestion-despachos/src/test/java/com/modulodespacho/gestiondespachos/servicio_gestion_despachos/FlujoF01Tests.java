@@ -1,12 +1,15 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos;
 
 import java.time.Instant;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.DispatcherType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -14,11 +17,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Distrito;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Zona;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RepositorioZonas;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence.DistritoRepositorioJpa;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,6 +48,9 @@ class FlujoF01Tests {
 
     @Autowired
     MockMvc cliente;
+
+    @MockitoSpyBean
+    RepositorioZonas zonas;
 
     @Autowired
     DistritoRepositorioJpa distritos;
@@ -89,7 +100,7 @@ class FlujoF01Tests {
     @Test
     void flujoCompletoCreacionTarifaYCotizacion() throws Exception {
         String zona = """
-                {"nombre":"Lima Centro","distritos":["San Borja"],"codigosPostales":["15037"],
+                {"nombre":"Lima Centro","distritos":[{"distrito":"San Borja","codigosPostales":["15037"]}],
                  "estado":"ACTIVO"}
                 """;
         String respuesta = cliente.perform(post("/api/v1/zonas")
@@ -99,7 +110,8 @@ class FlujoF01Tests {
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.nombre").value("Lima Centro"))
                 .andExpect(jsonPath("$.distritos[0].nombre").value("San Borja"))
-                .andExpect(jsonPath("$.codigosPostales[0]").value("15037"))
+                .andExpect(jsonPath("$.distritos[0].codigosPostales[0]").value("15037"))
+                .andExpect(jsonPath("$.codigosPostales").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
         String idZona = JsonPath.read(respuesta, "$.id");
 
@@ -146,7 +158,9 @@ class FlujoF01Tests {
 
     @Test
     void rechazaDuplicadoYSolapamiento() throws Exception {
-        String zona = "{\"nombre\":\"Lima Norte\",\"distritos\":[\"Miraflores\"]}";
+        String zona = """
+                {"nombre":"Lima Norte","distritos":[{"distrito":"Miraflores","codigosPostales":["15074"]}]}
+                """;
         cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
                         .contentType("application/json").content(zona))
                 .andExpect(status().isCreated());
@@ -158,9 +172,15 @@ class FlujoF01Tests {
 
         cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
                         .contentType("application/json")
-                        .content("{\"nombre\":\"Otra zona\",\"distritos\":[\"Miraflores\"]}"))
+                         .content("{\"nombre\":\"Otra zona\",\"distritos\":[{\"distrito\":\"Miraflores\"}]}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_ZONA_CONFLICTO"));
+
+        cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content("""
+                                {"nombre":"CP solapado","distritos":[{"distrito":"Ate","codigosPostales":["15074"]}]}
+                                """))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -170,7 +190,14 @@ class FlujoF01Tests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_CAMPOS_INVALIDOS"));
 
-        String zona = "{\"nombre\":\"Lima Sur\",\"distritos\":[\"Santiago de Surco\"]}";
+        cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content("""
+                                {"nombre":"Distrito inválido","distritos":[{"distrito":"No existe"}]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_DISTRITO_NO_ENCONTRADO"));
+
+        String zona = "{\"nombre\":\"Lima Sur\",\"distritos\":[{\"distrito\":\"Santiago de Surco\"}]}";
         String respuesta = cliente.perform(post("/api/v1/zonas")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
                         .contentType("application/json").content(zona))
@@ -207,8 +234,14 @@ class FlujoF01Tests {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(50))
                 .andExpect(jsonPath("$[?(@.nombre=='San Borja')]").exists())
                 .andExpect(jsonPath("$[0].provincia").exists());
+
+        cliente.perform(get("/api/v1/distritos").param("nombre", "comas")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].ubigeo").value("150110"));
 
         cliente.perform(get("/api/v1/distritos").param("nombre", "surco")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
@@ -234,5 +267,83 @@ class FlujoF01Tests {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
                         .contentType("application/json").content("{\"destino\":{\"distrito\":\"San Borja\"}}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void guardaConsultaYReemplazaCodigosAgrupadosPorDistrito() throws Exception {
+        String respuesta = cliente.perform(post("/api/v1/zonas")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content("""
+                                {"nombre":"Norte agrupado","distritos":[
+                                  {"distrito":"Comas","codigosPostales":["15311","15312","15313","15314","15316",
+                                    "15324","15326","15327","15328","15332"," 15311 "]},
+                                  {"distrito":"Ancón","codigosPostales":["99999","99998"]}]}
+                                """))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(respuesta, "$.id");
+
+        cliente.perform(get("/api/v1/zonas/{id}", id).header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.distritos.length()").value(2))
+                .andExpect(jsonPath("$.distritos[0].nombre").value("Ancón"))
+                .andExpect(jsonPath("$.distritos[0].codigosPostales.length()").value(2))
+                .andExpect(jsonPath("$.distritos[1].nombre").value("Comas"))
+                .andExpect(jsonPath("$.distritos[1].codigosPostales.length()").value(10));
+
+        cliente.perform(get("/api/v1/zonas").param("distrito", "Comas")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].distritos[1].codigosPostales.length()").value(10));
+
+        // Distrito sin cobertura propia: obliga a resolver usando el CP de la tabla nueva.
+        cliente.perform(post("/api/v1/cotizaciones").header(HttpHeaders.AUTHORIZATION, "Bearer servicio")
+                        .contentType("application/json")
+                        .content("{\"destino\":{\"distrito\":\"Carabayllo\",\"codigoPostal\":\"15311\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombreZona").value("Norte agrupado"));
+
+        cliente.perform(put("/api/v1/zonas/{id}", id).header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content("""
+                                {"nombre":"Norte editado","distritos":[
+                                  {"distrito":"Comas","codigosPostales":["15332"]}]}
+                                """))
+                .andExpect(status().isOk());
+
+        cliente.perform(get("/api/v1/zonas/{id}", id).header(HttpHeaders.AUTHORIZATION, "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.distritos.length()").value(1))
+                .andExpect(jsonPath("$.distritos[0].codigosPostales.length()").value(1))
+                .andExpect(jsonPath("$.distritos[0].codigosPostales[0]").value("15332"));
+
+        cliente.perform(post("/api/v1/cotizaciones").header(HttpHeaders.AUTHORIZATION, "Bearer servicio")
+                        .contentType("application/json")
+                        .content("{\"destino\":{\"distrito\":\"Carabayllo\",\"codigoPostal\":\"15311\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coberturaDisponible").value(false));
+    }
+
+    @Test
+    void erroresDePersistenciaNoSeConfundenConPermisos() throws Exception {
+        String cuerpo = "{\"nombre\":\"Fallo BD\",\"distritos\":[{\"distrito\":\"La Punta\"}]}";
+        doThrow(new DataIntegrityViolationException("Detalle SQL interno"))
+                .when(zonas).guardar(any(Zona.class));
+        cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content(cuerpo))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_INTERNO"))
+                .andExpect(jsonPath("$.detail").value("No fue posible guardar la operación"));
+
+        doThrow(new DataIntegrityViolationException("Duplicado", new SQLException("SQL interno", "23505")))
+                .when(zonas).guardar(any(Zona.class));
+        cliente.perform(post("/api/v1/zonas").header(HttpHeaders.AUTHORIZATION, "Bearer gestor")
+                        .contentType("application/json").content(cuerpo))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_CONFLICTO_PERSISTENCIA"));
+
+        cliente.perform(get("/error").with(solicitud -> {
+                    solicitud.setDispatcherType(DispatcherType.ERROR);
+                    return solicitud;
+                }))
+                .andExpect(status().isInternalServerError());
     }
 }

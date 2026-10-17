@@ -12,7 +12,6 @@ public record ZonaVista(
         EstadoZona estado,
         OrigenDelimitacion origenDelimitacion,
         List<DistritoVista> distritos,
-        List<String> codigosPostales,
         TarifaVista tarifaVigente,
         Instant creadoEn,
         Instant actualizadoEn) {

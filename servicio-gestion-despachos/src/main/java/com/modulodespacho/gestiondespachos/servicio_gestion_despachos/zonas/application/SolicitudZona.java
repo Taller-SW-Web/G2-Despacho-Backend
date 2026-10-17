@@ -6,6 +6,5 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.doma
 public record SolicitudZona(
         String nombre,
         EstadoZona estado,
-        List<String> distritos,
-        List<String> codigosPostales) {
+        List<SolicitudDistritoZona> distritos) {
 }

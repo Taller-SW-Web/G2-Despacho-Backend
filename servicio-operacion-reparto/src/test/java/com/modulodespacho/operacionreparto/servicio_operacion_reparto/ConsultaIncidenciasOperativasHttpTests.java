@@ -34,12 +34,12 @@ class ConsultaIncidenciasOperativasHttpTests {
 
     @BeforeEach
     void preparar() {
-        sql.sql("TRUNCATE asignaciones_diarias, repartidores, furgonetas").update();
+        sql.sql("TRUNCATE proyecciones_despacho, reservas_capacidad, asignaciones_diarias, repartidores, furgonetas").update();
         sql.sql("""
                 INSERT INTO repartidores (id, nombres, apellidos, dni, telefono, correo, numero_brevete,
-                    turno_habitual, estado_registro, estado_vinculacion, creado_por, actualizado_por)
+                    turno_habitual, estado_registro, estado_vinculacion, id_usuario_seguridad, creado_por, actualizado_por)
                 VALUES (:id, 'Nombre', 'Histórico', '00000001', '000000000', 'ficticio@example.invalid',
-                    'PRUEBA', 'COMPLETO', 'INACTIVO', 'PENDIENTE', :actor, :actor)
+                    'PRUEBA', 'COMPLETO', 'ACTIVO', 'VINCULADO', :id, :actor, :actor)
                 """).param("id", id(1)).param("actor", id(999)).update();
         sql.sql("""
                 INSERT INTO furgonetas (id, placa, estado, capacidad_max_kg, capacidad_max_m3, max_paquetes, creado_por, actualizado_por)
@@ -54,6 +54,7 @@ class ConsultaIncidenciasOperativasHttpTests {
                     .param("zona", id(99)).param("actor", id(999)).param("estado", numero == 31 ? "CERRADA" : "ACTIVA")
                     .param("cierre", numero == 31 ? java.time.OffsetDateTime.parse("2026-10-15T23:00:00Z") : null).update();
         }
+        sql.sql("UPDATE repartidores SET estado_registro = 'INACTIVO'").update();
         when(decodificador.decode("servicio")).thenReturn(token("servicio", "modulo-despacho", SCOPE));
         when(decodificador.decode("gestor")).thenReturn(token("acceso", id(999).toString(), SCOPE));
         when(decodificador.decode("sin-scope")).thenReturn(token("servicio", "modulo-despacho", "otro"));

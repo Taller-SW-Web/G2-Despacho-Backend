@@ -25,20 +25,10 @@ public class ZonaDistrito extends EntidadConFechas {
     @JoinColumn(name = "distrito_id")
     private Distrito distrito;
 
-    @Column(name = "codigo_postal")
-    private String codigoPostal;
-
     public static ZonaDistrito deDistrito(Distrito distrito) {
         ZonaDistrito cobertura = new ZonaDistrito();
         cobertura.setId(UUID.randomUUID());
         cobertura.setDistrito(distrito);
-        return cobertura;
-    }
-
-    public static ZonaDistrito deCodigoPostal(String codigoPostal) {
-        ZonaDistrito cobertura = new ZonaDistrito();
-        cobertura.setId(UUID.randomUUID());
-        cobertura.setCodigoPostal(codigoPostal);
         return cobertura;
     }
 
@@ -64,13 +54,5 @@ public class ZonaDistrito extends EntidadConFechas {
 
     public void setDistrito(Distrito distrito) {
         this.distrito = distrito;
-    }
-
-    public String getCodigoPostal() {
-        return codigoPostal;
-    }
-
-    public void setCodigoPostal(String codigoPostal) {
-        this.codigoPostal = codigoPostal;
     }
 }

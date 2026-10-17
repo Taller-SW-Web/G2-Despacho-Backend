@@ -15,6 +15,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.appl
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.EstadoZona;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Zona;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaDistrito;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaCodigoPostal;
 
 @Component
 @Profile("!integracion-local")
@@ -22,10 +23,13 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
 
     private final ZonaRepositorioJpa zonas;
     private final ZonaDistritoRepositorioJpa coberturas;
+    private final ZonaCodigoPostalRepositorioJpa codigosPostales;
 
-    public ZonasAdaptadorJpa(ZonaRepositorioJpa zonas, ZonaDistritoRepositorioJpa coberturas) {
+    public ZonasAdaptadorJpa(ZonaRepositorioJpa zonas, ZonaDistritoRepositorioJpa coberturas,
+            ZonaCodigoPostalRepositorioJpa codigosPostales) {
         this.zonas = zonas;
         this.coberturas = coberturas;
+        this.codigosPostales = codigosPostales;
     }
 
     @Override
@@ -34,17 +38,19 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
     }
 
     @Override
-    public void agregarCoberturas(Zona zona, List<ZonaDistrito> nuevas) {
+    public void agregarCoberturas(Zona zona, List<ZonaDistrito> nuevas, List<ZonaCodigoPostal> nuevosCodigos) {
         nuevas.forEach(cobertura -> cobertura.setZona(zona));
         coberturas.saveAll(nuevas);
+        nuevosCodigos.forEach(codigo -> codigo.setZona(zona));
+        codigosPostales.saveAll(nuevosCodigos);
     }
 
     @Override
-    public void reemplazarCoberturas(UUID zonaId, List<ZonaDistrito> nuevas) {
+    public void reemplazarCoberturas(UUID zonaId, List<ZonaDistrito> nuevas, List<ZonaCodigoPostal> nuevosCodigos) {
+        codigosPostales.eliminarPorZona(zonaId);
         coberturas.eliminarPorZona(zonaId);
         Zona referencia = zonas.getReferenceById(zonaId);
-        nuevas.forEach(cobertura -> cobertura.setZona(referencia));
-        coberturas.saveAll(nuevas);
+        agregarCoberturas(referencia, nuevas, nuevosCodigos);
     }
 
     @Override
@@ -75,20 +81,24 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
 
     @Override
     public Optional<Zona> resolverCobertura(String distrito, String codigoPostal) {
-        return coberturas.buscarCobertura(distrito, codigoPostal).stream()
-                .map(ZonaDistrito::getZona)
-                .findFirst();
+        Optional<Zona> porDistrito = distrito == null ? Optional.empty()
+                : coberturas.buscarCobertura(distrito).stream().map(ZonaDistrito::getZona).findFirst();
+        if (porDistrito.isPresent() || codigoPostal == null) {
+            return porDistrito;
+        }
+        return codigosPostales.buscarCobertura(codigoPostal).stream().findFirst();
     }
 
     @Override
-    public List<ZonaDistrito> buscarConflicto(UUID zonaId, Collection<UUID> distritos,
+    public List<Zona> buscarConflicto(UUID zonaId, Collection<UUID> distritos,
             Collection<String> codigosPostales) {
-        List<ZonaDistrito> conflictos = new ArrayList<>();
+        List<Zona> conflictos = new ArrayList<>();
         if (distritos != null && !distritos.isEmpty()) {
-            conflictos.addAll(zonas.buscarConflictoPorDistritos(zonaId, distritos));
+            conflictos.addAll(zonas.buscarConflictoPorDistritos(zonaId, distritos).stream()
+                    .map(ZonaDistrito::getZona).toList());
         }
         if (codigosPostales != null && !codigosPostales.isEmpty()) {
-            conflictos.addAll(zonas.buscarConflictoPorCodigos(zonaId, codigosPostales));
+            conflictos.addAll(this.codigosPostales.buscarConflicto(zonaId, codigosPostales));
         }
         return conflictos;
     }
@@ -99,5 +109,10 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
             return List.of();
         }
         return coberturas.buscarPorZonas(zonaIds);
+    }
+
+    @Override
+    public List<ZonaCodigoPostal> codigosPostalesDe(Collection<UUID> zonaIds) {
+        return zonaIds.isEmpty() ? List.of() : codigosPostales.buscarPorZonas(zonaIds);
     }
 }
