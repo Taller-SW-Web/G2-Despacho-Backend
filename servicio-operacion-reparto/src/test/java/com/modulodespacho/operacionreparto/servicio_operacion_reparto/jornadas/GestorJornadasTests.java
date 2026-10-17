@@ -104,14 +104,14 @@ class GestorJornadasTests {
     }
     @Test void proyeccionesAntiguasNoReemplazanLaVersionActualNiConsultanReferenciasViejas() {
         UUID despacho=UUID.randomUUID();when(repositorio.buscarVersionProyeccion(despacho)).thenReturn(Optional.of(3L));
-        gestor.proyectar(despacho,new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,UUID.randomUUID(),1,null,null,hoy,0,2,reloj.instant()),"modulo-despacho");
+        gestor.proyectar(despacho,new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,UUID.randomUUID(),1,null,null,hoy,0,2,reloj.instant(),2),"modulo-despacho");
         verify(repositorio,never()).guardarProyeccion(any(),any());verify(repositorio,never()).obtenerReserva(any());
     }
     @Test void proyeccionNuevaRechazaReservaDeOtroDespachoSinEscrituras() {
         UUID despacho=UUID.randomUUID(),reserva=UUID.randomUUID();
         when(repositorio.buscarVersionProyeccion(despacho)).thenReturn(Optional.empty());
         when(repositorio.obtenerReserva(reserva)).thenReturn(new Reserva(reserva,null,UUID.randomUUID(),id,perfil,limites,"ACTIVA",null,null,null));
-        var datos=new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,reserva,1,null,null,hoy,0,1,reloj.instant());
+        var datos=new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,reserva,1,null,null,hoy,0,1,reloj.instant(),2);
         assertThatThrownBy(() -> gestor.proyectar(despacho,datos,"modulo-despacho"))
                 .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.codigo()).isEqualTo("DESP_ERROR_PROYECCION_INCOMPATIBLE"));
         verify(repositorio,never()).guardarProyeccion(any(),any());
@@ -120,6 +120,57 @@ class GestorJornadasTests {
         when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
         when(repositorio.consultarMonitoreo(hoy)).thenReturn(List.of(new FilaBase(new Perfil(UUID.randomUUID(),"Otro","ACTIVO","VINCULADO"),disponible,base("ACTIVA",false,Capacidad.cero()))));
         Contexto contexto=gestor.consultarContexto(actor);assertThat(contexto.idRepartidor()).isEqualTo(perfil);assertThat(contexto.jornada()).isNull();
+    }
+    @Test void rutaPropiaSoloEntregaCamposOperativosMinimosDeLaJornadaActiva() {
+        UUID despacho=UUID.randomUUID();
+        when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
+        when(repositorio.buscarJornadaDelDia(perfil,hoy)).thenReturn(Optional.of(base("ACTIVA",false,Capacidad.cero())));
+        when(repositorio.listarProyecciones(id)).thenReturn(List.of(proyeccion(despacho,"ASIGNADO",0)));
+
+        RutaRepartidor ruta=gestor.consultarRuta(actor);
+
+        assertThat(ruta.idJornada()).isEqualTo(id);
+        assertThat(ruta.despachos()).singleElement().satisfies(fila -> {
+            assertThat(fila.idDespacho()).isEqualTo(despacho);
+            assertThat(fila.maximoIntentos()).isEqualTo(2);
+            assertThat(fila.direccion()).isEqualTo("Dirección de prueba");
+        });
+        verify(repositorio).listarProyecciones(id);
+    }
+    @Test void detallePropioNoPermiteConsultarDespachosAjenoNiDeJornadaCerrada() {
+        UUID despacho=UUID.randomUUID();
+        when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
+        when(repositorio.buscarJornadaDelDia(perfil,hoy)).thenReturn(Optional.of(base("CERRADA",false,Capacidad.cero())));
+        assertThatThrownBy(() -> gestor.consultarDespachoPropio(actor,despacho))
+                .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(404));
+        verify(repositorio,never()).buscarProyeccion(any(),any());
+    }
+    @Test void detalleDeDespachoResueltoOmiteDatosPersonales() {
+        UUID despacho=UUID.randomUUID();
+        when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
+        when(repositorio.buscarJornadaDelDia(perfil,hoy)).thenReturn(Optional.of(base("ACTIVA",false,Capacidad.cero())));
+        when(repositorio.buscarProyeccion(id,despacho)).thenReturn(Optional.of(proyeccion(despacho,"ENTREGADO",1)));
+
+        DetalleDespacho detalle=gestor.consultarDespachoPropio(actor,despacho);
+
+        assertThat(detalle.idDespacho()).isEqualTo(despacho);
+        assertThat(detalle.destinatario()).isNull();
+        assertThat(detalle.destino()).isNull();
+    }
+    @Test void resumenPropioClasificaIntentosFallidosYNoIntentadosSinExponerDatosPersonales() {
+        when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
+        when(repositorio.buscarJornadaDelDia(perfil,hoy)).thenReturn(Optional.of(base("CERRADA",false,Capacidad.cero())));
+        when(repositorio.listarProyecciones(id)).thenReturn(List.of(proyeccion(UUID.randomUUID(),"ENTREGADO",1),
+                proyeccion(UUID.randomUUID(),"FALLIDO",1),proyeccion(UUID.randomUUID(),"NO_INTENTADO",0),
+                proyeccion(UUID.randomUUID(),"EN_CAMINO",0)));
+
+        ResumenJornada resumen=gestor.consultarResumenPropio(actor);
+
+        assertThat(resumen.asignados()).isEqualTo(4);
+        assertThat(resumen.entregados()).isEqualTo(1);
+        assertThat(resumen.fallidosConIntento()).isEqualTo(1);
+        assertThat(resumen.noIntentados()).isEqualTo(1);
+        assertThat(resumen.pendientes()).isEqualTo(1);
     }
     @Test void elCierrePropioConservaLaJornadaSolicitadaYNoPuedeCerrarUnaAjena() {
         when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
@@ -132,4 +183,9 @@ class GestorJornadasTests {
     }
     private JornadaBase base(String estado,boolean enCamino,Capacidad carga) { return new JornadaBase(id,perfil,vehiculo,"TEST-01",zona,hoy,estado,
             "CERRADA".equals(estado)?reloj.instant():null,limites,carga,enCamino,enCamino); }
+    private Proyeccion proyeccion(UUID despacho,String estado,int intentos) {
+        return new Proyeccion(despacho,"pedido","TRK",estado,id,UUID.randomUUID(),1,
+                new Destinatario("Persona Prueba","999111222"),
+                new Destino("Dirección de prueba",null,null,null,"Prueba",null,null),hoy,intentos,1,reloj.instant(),2);
+    }
 }

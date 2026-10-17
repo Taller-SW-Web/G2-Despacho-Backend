@@ -52,7 +52,7 @@ class JornadasHeredadasTests {
         var reserva=jornadas.reservar(UUID.randomUUID(),solicitud,"modulo-despacho");
         jornadas.proyectar(despacho,new DatosJornada.Proyeccion(despacho,"PED-HEREDADO","TRK-PRUEBA","FALLIDO",jornada.idJornada(),reserva.idReserva(),1,
                 new DatosJornada.Destinatario("Persona Prueba","999111222"),new DatosJornada.Destino("Dirección sintética",null,null,null,"Prueba",null,null),
-                LocalDate.of(2026,10,17),0,1,java.time.Instant.parse("2026-10-17T15:00:00Z")),"modulo-despacho");
+                LocalDate.of(2026,10,17),0,1,java.time.Instant.parse("2026-10-17T15:00:00Z"),2),"modulo-despacho");
         assertThat(sql.sql("SELECT id_pedido FROM proyeccion_despacho").query(String.class).single()).isEqualTo("PED-HEREDADO");
         assertThat(jornadas.consultarDetalle(jornada.idJornada()).ocupacion().pesoKg()).isEqualByComparingTo("10");
         assertThatThrownBy(() -> flota.cambiarEstado(vehiculo.idFurgoneta(),EstadoFurgoneta.EN_MANTENIMIENTO,actor))

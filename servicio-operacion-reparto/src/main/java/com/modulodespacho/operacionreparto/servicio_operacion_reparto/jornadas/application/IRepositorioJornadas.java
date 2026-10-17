@@ -14,12 +14,15 @@ public interface IRepositorioJornadas {
     Optional<Perfil> buscarPerfilDeUsuario(UUID usuario);
     Vehiculo obtenerVehiculo(UUID id);
     JornadaBase obtenerJornada(UUID id);
+    Optional<JornadaBase> buscarJornadaDelDia(UUID repartidor, LocalDate fecha);
     boolean tieneRecursoOcupado(UUID repartidor, UUID furgoneta);
     UUID crear(Apertura datos, Capacidad capacidad, UUID actor, Instant ahora);
     void cerrar(UUID jornada, String tipo, Instant ahora);
     void auditar(UUID jornada, String accion, UUID actor, String anterior);
     String fotografiar(UUID jornada);
     List<DespachoResumen> listarDespachos(UUID jornada);
+    List<Proyeccion> listarProyecciones(UUID jornada);
+    Optional<Proyeccion> buscarProyeccion(UUID jornada, UUID despacho);
     Optional<Reserva> buscarReservaPorClave(UUID clave);
     Reserva obtenerReserva(UUID id);
     boolean tieneReservaActiva(UUID despacho);

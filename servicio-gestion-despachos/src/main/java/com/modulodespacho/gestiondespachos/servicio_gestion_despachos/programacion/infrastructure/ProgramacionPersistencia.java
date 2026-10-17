@@ -199,6 +199,8 @@ public class ProgramacionPersistencia implements AlmacenProgramacion {
         proyeccion.put("secuenciaRuta", posicion); proyeccion.put("destinatario", new Destinatario(despacho.getDestinatarioNombre(), despacho.getDestinatarioTelefono()));
         proyeccion.put("destino", new Destino(despacho.getDireccion(), despacho.getReferencia(), despacho.getDepartamento(), despacho.getProvincia(), despacho.getDistrito(), despacho.getCodigoPostal(), null));
         proyeccion.put("fechaProgramada", despacho.getFechaProgramada()); proyeccion.put("numeroIntentos", despacho.getNumeroIntentos());
+        proyeccion.put("maximoIntentos", sql.sql("SELECT CAST(valor AS integer) FROM parametros_configuracion WHERE clave='MAXIMO_INTENTOS'")
+                .query(Integer.class).single());
         proyeccion.put("version", despacho.getVersion()); proyeccion.put("actualizadoEn", ahora);
         guardarEvento(UUID.randomUUID(), despacho.getId(), "OPERACION", "PROYECCION_DESPACHO", proyeccion);
         return respuesta;
