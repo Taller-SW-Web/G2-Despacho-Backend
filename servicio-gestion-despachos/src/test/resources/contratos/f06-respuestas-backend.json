@@ -1,0 +1,129 @@
+{
+  "monitoreo" : {
+    "contenido" : [ {
+      "idRepartidor" : "63dc7c2d-673b-40d0-ac40-1b016435f233",
+      "nombre" : "Jornada Prueba",
+      "estadoOperativo" : "DISPONIBLE",
+      "jornada" : {
+        "idJornada" : "9d4d5aed-9641-4bb5-a655-00384b2b7ad3",
+        "idRepartidor" : "63dc7c2d-673b-40d0-ac40-1b016435f233",
+        "idFurgoneta" : "4d810f6a-2d86-47a8-9fe5-ca122f9ec667",
+        "placa" : "TEST-01",
+        "idZona" : "9c7c63e0-1069-4add-8fe9-15343bf0d69e",
+        "fecha" : "2026-10-17",
+        "estado" : "ACTIVA",
+        "cerradaEn" : null,
+        "limites" : {
+          "pesoKg" : 500.0,
+          "volumenM3" : 4.0,
+          "paquetes" : 80
+        },
+        "ocupacion" : {
+          "pesoKg" : 0,
+          "volumenM3" : 0,
+          "paquetes" : 0
+        },
+        "capacidadRemanente" : {
+          "pesoKg" : 500.0,
+          "volumenM3" : 4.0,
+          "paquetes" : 80
+        },
+        "porcentajeOcupacion" : {
+          "peso" : 0.0,
+          "volumen" : 0.0,
+          "paquetes" : 0.0
+        }
+      }
+    } ],
+    "pagina" : 1,
+    "tamanoPagina" : 50,
+    "totalElementos" : 1,
+    "totalPaginas" : 1,
+    "resumen" : {
+      "disponible" : 1,
+      "enRuta" : 0,
+      "saturado" : 0,
+      "fueraDeTurno" : 0
+    },
+    "consultadoEn" : "2026-10-17T15:00:00Z"
+  },
+  "disponibilidad" : {
+    "repartidores" : [ {
+      "idRepartidor" : "63dc7c2d-673b-40d0-ac40-1b016435f233",
+      "idJornada" : "9d4d5aed-9641-4bb5-a655-00384b2b7ad3",
+      "nombre" : "Jornada Prueba",
+      "idZona" : "9c7c63e0-1069-4add-8fe9-15343bf0d69e",
+      "idFurgoneta" : "4d810f6a-2d86-47a8-9fe5-ca122f9ec667",
+      "placa" : "TEST-01",
+      "estadoOperativo" : "DISPONIBLE",
+      "limites" : {
+        "pesoKg" : 500.0,
+        "volumenM3" : 4.0,
+        "paquetes" : 80
+      },
+      "ocupacion" : {
+        "pesoKg" : 0,
+        "volumenM3" : 0,
+        "paquetes" : 0
+      },
+      "capacidadRemanente" : {
+        "pesoKg" : 500.0,
+        "volumenM3" : 4.0,
+        "paquetes" : 80
+      },
+      "porcentajeOcupacion" : {
+        "peso" : 0.0,
+        "volumen" : 0.0,
+        "paquetes" : 0.0
+      }
+    } ]
+  },
+  "detalle" : {
+    "idJornada" : "9d4d5aed-9641-4bb5-a655-00384b2b7ad3",
+    "idRepartidor" : "63dc7c2d-673b-40d0-ac40-1b016435f233",
+    "idFurgoneta" : "4d810f6a-2d86-47a8-9fe5-ca122f9ec667",
+    "placa" : "TEST-01",
+    "idZona" : "9c7c63e0-1069-4add-8fe9-15343bf0d69e",
+    "fecha" : "2026-10-17",
+    "estado" : "ACTIVA",
+    "cerradaEn" : null,
+    "limites" : {
+      "pesoKg" : 500.0,
+      "volumenM3" : 4.0,
+      "paquetes" : 80
+    },
+    "ocupacion" : {
+      "pesoKg" : 0,
+      "volumenM3" : 0,
+      "paquetes" : 0
+    },
+    "capacidadRemanente" : {
+      "pesoKg" : 500.0,
+      "volumenM3" : 4.0,
+      "paquetes" : 80
+    },
+    "porcentajeOcupacion" : {
+      "peso" : 0.0,
+      "volumen" : 0.0,
+      "paquetes" : 0.0
+    },
+    "despachos" : [ ]
+  },
+  "reserva" : {
+    "idReserva" : "9d4848bf-08d8-437b-85a7-e2fe69081c37",
+    "estado" : "CONFIRMADA",
+    "capacidadRemanente" : {
+      "pesoKg" : 480.0,
+      "volumenM3" : 3.0,
+      "paquetes" : 78
+    }
+  },
+  "liberacion" : {
+    "idReserva" : "9d4848bf-08d8-437b-85a7-e2fe69081c37",
+    "idDespacho" : "93dd1051-bb5d-4865-871f-b8649224e4fb",
+    "estado" : "LIBERADA",
+    "motivoLiberacion" : "COMPENSACION",
+    "liberadaEn" : "2026-10-17T15:00:00Z"
+  },
+  "dependencias" : "PostgreSQL aislado real; JWT y consulta de zona como dobles; datos sintéticos"
+}

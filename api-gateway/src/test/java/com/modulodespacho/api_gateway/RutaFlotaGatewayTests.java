@@ -58,6 +58,25 @@ class RutaFlotaGatewayTests {
         cliente.get().uri("/api/v1/repartidores").exchange().expectStatus().isUnauthorized();
         assertThat(RECIBIDO.get()).isNull();
     }
+    @Test
+    void enrutaJornadasMonitoreoYDisponibilidadSinPublicarLosComandosTecnicos() {
+        when(decodificador.decode("gestor-f06")).thenReturn(Mono.just(Jwt.withTokenValue("gestor-f06")
+                .header("alg","RS256").subject("gestor").claim("tipo","acceso")
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build()));
+        WebTestClient cliente=WebTestClient.bindToServer().baseUrl("http://127.0.0.1:"+puerto).build();
+        for(String ruta:java.util.List.of("/api/v1/flota/monitoreo?fecha=2026-10-17&pagina=2",
+                "/api/v1/repartidores/disponibles","/api/v1/jornadas/jornada-prueba","/api/v1/repartidor/jornada")) {
+            cliente.get().uri(ruta).header("Authorization","Bearer gestor-f06").exchange().expectStatus().isOk();
+            assertThat(RECIBIDO.get()).contains("GET "+ruta,"Bearer gestor-f06");
+        }
+        cliente.post().uri("/api/v1/jornadas").header("Authorization","Bearer gestor-f06")
+                .header("Content-Type","application/json").bodyValue("{\"fecha\":\"2026-10-17\"}").exchange().expectStatus().isOk();
+        assertThat(RECIBIDO.get()).contains("POST /api/v1/jornadas","2026-10-17");
+        RECIBIDO.set(null);
+        cliente.post().uri("/internal/v1/capacidad/reservas").header("Authorization","Bearer gestor-f06")
+                .header("Content-Type","application/json").bodyValue("{}").exchange().expectStatus().isForbidden();
+        assertThat(RECIBIDO.get()).isNull();
+    }
     static HttpServer crearDestino() {
         try {
             HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
