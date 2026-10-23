@@ -4,6 +4,8 @@ Tres aplicaciones Spring Boot independientes y un emisor temporal de Seguridad. 
 
 El arranque local y las migraciones se comprobaron manualmente el 23/10/2026: Gestión aplicó V1/V2 y Operación V1 a V5. También se verificaron por el Gateway el listado y el detalle de un despacho fallido de prueba y su sincronización con Operación. La suite automatizada completa y el resto de los recorridos siguen pendientes.
 
+Las instrucciones de trabajo están en [AGENTS.md](AGENTS.md) y los cambios de cada entrega en [CHANGELOG.md](CHANGELOG.md).
+
 ## Estructura
 
 ```text
@@ -209,5 +211,22 @@ Para ejecutar Maven Wrapper fuera de Docker se necesita Java 21. Las suites de i
 Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up --build` no ejecuta estas suites. El recorrido manual registrado arriba tampoco sustituye sus resultados.
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
+
+## Integración continua
+
+[CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
+
+Una cuarta comprobación compila y ejecuta las pruebas propias de `seguridad-local`, que levantan su emisor aislado con puerto efímero. El workflow no despliega servicios, no publica releases y no crea tags.
+
+Para exigir el resultado antes de integrar, configurar la protección de `develop` y `main` en GitHub y seleccionar estas cuatro comprobaciones cuando hayan aparecido en una ejecución:
+
+- `Pruebas (api-gateway)`
+- `Pruebas (servicio-gestion-despachos)`
+- `Pruebas (servicio-operacion-reparto)`
+- `Pruebas (seguridad-local)`
+
+La protección de ramas se configura en GitHub; añadir el workflow por sí solo no impide un merge. Se propone exigir PR, una aprobación de otro compañero, comprobaciones aprobadas y conversaciones resueltas, sin force push ni eliminación de las ramas protegidas.
+
+El changelog se prepara en `develop` y llega a `main` en el PR de entrega. Mantener los cambios aún no publicados en `Sin publicar`, cerrar el corte aproximadamente cada dos semanas con su versión y fecha, y crear manualmente el tag sobre el commit aprobado de `main`. No es necesario adoptar Scrum para usar esta cadencia. La referencia de `0.1.0` está identificada en el changelog; no se ha creado su tag automáticamente.
 
 Los requisitos, contratos de integración y modelo de datos se mantienen en [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs). Las comprobaciones históricas de las guías retiradas pueden consultarse en Git; no acreditan esta reorganización ni sustituyen su validación manual.
