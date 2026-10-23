@@ -2,13 +2,12 @@ package com.modulodespacho.operacionreparto.servicio_operacion_reparto;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,13 +33,13 @@ class JornadasHeredadasTests {
     @BeforeAll void preparar() throws Exception {
         try(var conexion=origen.getConnection();var sentencia=conexion.createStatement();var recurso=getClass().getResourceAsStream("/flota/esquema-heredado.sql")) {
             sentencia.execute(new String(recurso.readAllBytes(),StandardCharsets.UTF_8));
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F05__compatibilidad_operadores_flota.sql")));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F05__compatibilidad_operadores_flota.sql").getContentAsString(StandardCharsets.UTF_8));
             // La inspección de solo estructura detectó esta vista existente en el entorno publicado.
             sentencia.execute("ALTER TABLE proyeccion_despacho ALTER COLUMN pedido_id SET NOT NULL");
             sentencia.execute("CREATE VIEW proyecciones_despacho WITH (security_invoker=true) AS SELECT * FROM proyeccion_despacho");
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F06__jornadas_capacidad_heredada.sql")));
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F03__maximo_intentos_heredado.sql")));
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F03__maximo_intentos_heredado.sql")));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F06__jornadas_capacidad_heredada.sql").getContentAsString(StandardCharsets.UTF_8));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F03__maximo_intentos_heredado.sql").getContentAsString(StandardCharsets.UTF_8));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F03__maximo_intentos_heredado.sql").getContentAsString(StandardCharsets.UTF_8));
         }
     }
     @Test void conectaCatalogosJornadasReservasYProyeccionesSinRenombrarTablasOriginales() {

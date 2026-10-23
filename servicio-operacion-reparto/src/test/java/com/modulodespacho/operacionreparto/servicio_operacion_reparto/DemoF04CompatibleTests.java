@@ -1,10 +1,10 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,7 +16,7 @@ class DemoF04CompatibleTests {
             Flyway.configure().dataSource(base.getJdbcUrl(), base.getUsername(), base.getPassword()).load().migrate();
             try (var conexion = DriverManager.getConnection(base.getJdbcUrl(), base.getUsername(), base.getPassword());
                     var sentencia = conexion.createStatement()) {
-                String datos = Files.readString(Path.of("../herramientas/f04/datos-operacion.sql"));
+                String datos = new ClassPathResource("flota/datos-demo-f04.sql").getContentAsString(StandardCharsets.UTF_8);
                 sentencia.execute(datos);
                 sentencia.execute(datos);
                 try (var filas = sentencia.executeQuery("""
