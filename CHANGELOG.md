@@ -18,6 +18,11 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 - Recursos de compatibilidad y datos utilizados por pruebas de Operación reubicados dentro del servicio.
 - Documentación de ejecución y configuración consolidada en el README; eliminación de Compose y guías redundantes.
 
+### Corregido
+
+- Preparación de las pruebas F01: conservar el catálogo de distritos creado por Flyway al limpiar los escenarios.
+- Generación de despachos simulados: consultar también `zonas_codigos_postales` y conservar la correspondencia entre distrito y código postal; adaptar la prueba de cobertura postal a las restricciones del esquema vigente.
+
 ## 0.1.0
 
 Primera línea base de código documentada. Se toma como referencia el commit [0ab1609](https://github.com/Taller-SW-Web/G2-Despacho-Backend/tree/0ab16093007401cbfbe61027ea31b2cf0e7ad2c2), actualmente en `main`, del 17/10/2026. Esa fecha identifica el commit de referencia, no una publicación ni un tag ya creado. Los cambios posteriores de `develop` figuran arriba en `Sin publicar`.
