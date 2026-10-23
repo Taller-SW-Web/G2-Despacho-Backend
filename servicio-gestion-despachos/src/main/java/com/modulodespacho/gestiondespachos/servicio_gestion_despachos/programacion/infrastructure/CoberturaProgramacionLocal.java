@@ -31,14 +31,19 @@ public class CoberturaProgramacionLocal implements CoberturaProgramacion {
     }
     @Override public ZonaDisponible paraSimulacion(String idZona) {
         return sql.sql("""
-                SELECT z.id, z.nombre, min(d.nombre) AS distrito, min(zd.codigo_postal) AS codigo_postal FROM zonas z
-                JOIN zonas_distritos zd ON zd.zona_id = z.id
-                LEFT JOIN distrito d ON d.id = zd.distrito_id
+                SELECT z.id, z.nombre, d.nombre AS distrito, cobertura.codigo_postal FROM zonas z
+                JOIN LATERAL (
+                    SELECT zd.distrito_id, zd.codigo_postal FROM zonas_distritos zd WHERE zd.zona_id = z.id
+                    UNION ALL
+                    SELECT cp.distrito_id, cp.codigo_postal FROM zonas_codigos_postales cp WHERE cp.zona_id = z.id
+                    ORDER BY codigo_postal NULLS LAST, distrito_id LIMIT 1
+                ) cobertura ON true
+                JOIN distrito d ON d.id = cobertura.distrito_id
                 WHERE z.estado = 'ACTIVO' AND (:id IS NULL OR z.id::text = :id)
-                GROUP BY z.id, z.nombre ORDER BY random() LIMIT 1
+                ORDER BY random() LIMIT 1
                 """).param("id", idZona, java.sql.Types.VARCHAR)
                 .query((fila, indice) -> new ZonaDisponible(fila.getObject("id", UUID.class), fila.getString("nombre"),
-                        fila.getString("distrito") == null ? "Distrito de prueba" : fila.getString("distrito"), fila.getString("codigo_postal"), 0))
+                        fila.getString("distrito"), fila.getString("codigo_postal"), 0))
                 .optional().orElseThrow(() -> ErrorDeNegocio.de(422, "DESP_ERROR_SIN_COBERTURA", "No hay una zona activa para generar el despacho de prueba"));
     }
     private static ErrorDeNegocio sinPlazo() { return ErrorDeNegocio.de(503, "DESP_ERROR_PROGRAMACION_NO_DISPONIBLE", "La zona no tiene un plazo operativo configurado"); }

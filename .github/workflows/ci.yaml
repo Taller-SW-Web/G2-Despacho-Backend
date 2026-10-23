@@ -1,0 +1,93 @@
+name: CI backend
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  servicios:
+    name: Pruebas (${{ matrix.servicio }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio:
+          - api-gateway
+          - servicio-gestion-despachos
+          - servicio-operacion-reparto
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.servicio }}
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Java 21 y la caché de Maven
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: ${{ matrix.servicio }}/pom.xml
+
+      - name: Comprobar Docker para las bases temporales
+        if: matrix.servicio != 'api-gateway'
+        run: docker info > /dev/null
+
+      # Testcontainers crea PostgreSQL/PostGIS aislado; no se usa el Compose ni Supabase.
+      - name: Compilar y ejecutar las pruebas unitarias y de integración
+        run: bash ./mvnw --batch-mode --no-transfer-progress -Dpruebas.postgres.externo=false clean verify
+
+      - name: Conservar los informes de pruebas
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: pruebas-${{ matrix.servicio }}
+          path: |
+            ${{ matrix.servicio }}/target/surefire-reports/
+            ${{ matrix.servicio }}/target/failsafe-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  seguridad-local:
+    name: Pruebas (seguridad-local)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Java 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compilar y probar el emisor temporal
+        run: |
+          mkdir -p "$RUNNER_TEMP/seguridad-local-pruebas"
+          javac --add-modules jdk.httpserver -encoding UTF-8 \
+            -d "$RUNNER_TEMP/seguridad-local-pruebas" \
+            seguridad-local/src/EmisorSeguridadLocal.java \
+            seguridad-local/pruebas/EmisorSeguridadLocalPruebas.java
+          java --add-modules jdk.httpserver \
+            -cp "$RUNNER_TEMP/seguridad-local-pruebas" EmisorSeguridadLocalPruebas
