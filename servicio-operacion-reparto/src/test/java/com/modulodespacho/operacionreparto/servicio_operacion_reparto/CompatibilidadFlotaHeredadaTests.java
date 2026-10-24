@@ -1,12 +1,11 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +30,7 @@ class CompatibilidadFlotaHeredadaTests {
                 var recurso = getClass().getResourceAsStream("/flota/esquema-heredado.sql")) {
             sentencia.execute(new String(recurso.readAllBytes(), StandardCharsets.UTF_8));
             // La prueba ejecuta el mismo archivo operativo, sin una segunda copia del SQL.
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F05__compatibilidad_operadores_flota.sql")));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F05__compatibilidad_operadores_flota.sql").getContentAsString(StandardCharsets.UTF_8));
         }
     }
     @Test

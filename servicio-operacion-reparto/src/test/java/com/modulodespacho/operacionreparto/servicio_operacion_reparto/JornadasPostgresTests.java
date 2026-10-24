@@ -136,11 +136,13 @@ class JornadasPostgresTests {
         } finally {sql.sql("ALTER TABLE auditoria_no_disponible RENAME TO auditoria_configuracion").update();}
     }
     @Test void unReintentoDeCierrePropioNoCierraUnaNuevaJornadaDelMismoRepartidor() throws Exception {
-        UUID primera=abrir();String cuerpo=json.writeValueAsString(Map.of("idJornada",primera));
-        http.perform(post("/api/v1/repartidor/jornada/cierre").header("Authorization","Bearer gestor").contentType("application/json").content(cuerpo))
+        UUID primera=abrir();String cuerpo=json.writeValueAsString(Map.of("idJornada",primera));UUID clave=UUID.randomUUID();
+        http.perform(post("/api/v1/repartidor/jornada/cierre").header("Authorization","Bearer gestor").header("Idempotency-Key",clave)
+                .contentType("application/json").content(cuerpo))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.idJornada").value(primera.toString()));
         UUID segunda=abrir();
-        http.perform(post("/api/v1/repartidor/jornada/cierre").header("Authorization","Bearer gestor").contentType("application/json").content(cuerpo))
+        http.perform(post("/api/v1/repartidor/jornada/cierre").header("Authorization","Bearer gestor").header("Idempotency-Key",clave)
+                .contentType("application/json").content(cuerpo))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.idJornada").value(primera.toString()));
         assertThat(sql.sql("SELECT estado FROM asignaciones_diarias WHERE id=:id").param("id",segunda).query(String.class).single()).isEqualTo("ACTIVA");
     }
@@ -193,7 +195,7 @@ class JornadasPostgresTests {
     }
     private void proyectar(UUID jornada,UUID reserva,UUID despacho,String estado,long version) throws Exception {
         var datos=new Proyeccion(despacho,"PED-PRUEBA","TRK-PRUEBA",estado,jornada,reserva,1,new Destinatario("Persona Prueba","999111222"),
-                new Destino("Dirección sintética",null,"Lima","Lima","Prueba","15000",null),LocalDate.of(2026,10,17),0,version,Instant.parse("2026-10-17T15:00:00Z"),2);
+                new Destino("Dirección sintética",null,"Lima","Lima","Prueba","15000",null),LocalDate.of(2026,10,17),0,version,Instant.parse("2026-10-17T15:00:00Z"),2,null,null);
         http.perform(post("/internal/v1/proyecciones/despachos/"+despacho).header("Authorization","Bearer capacidad").contentType("application/json").content(json.writeValueAsString(datos)))
                 .andExpect(status().isNoContent());
     }

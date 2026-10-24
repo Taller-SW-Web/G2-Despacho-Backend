@@ -53,7 +53,7 @@ public class ConfiguracionSeguridad {
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
-        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
         URI origen = URI.create(urlSeguridad);
         Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
                         && origen.getHost() != null && origen.getRawUserInfo() == null
@@ -121,6 +121,8 @@ public class ConfiguracionSeguridad {
                     }
                     reglas
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/motivos-fallo").hasRole("GESTOR_DESPACHO")
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/despachos/*/transiciones").access(operacionConScope("gestion:despachos:transicionar"))
+                        .requestMatchers(HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo").access(operacionConScope("gestion:catalogos:leer"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones").access(servicioConScope("cotizaciones:calcular"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))
@@ -163,6 +165,15 @@ public class ConfiguracionSeguridad {
                     .stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope));
             if (scope.startsWith("despachos:")) autorizado = autorizado && "modulo-ventas".equals(identidad.getName());
             return new AuthorizationDecision(autorizado);
+        };
+    }
+
+    /** Rutas /internal: solo el cliente técnico del propio módulo, con el scope de la operación. */
+    private AuthorizationManager<RequestAuthorizationContext> operacionConScope(String scope) {
+        return (autenticacion, contexto) -> {
+            Authentication identidad = autenticacion.get();
+            return new AuthorizationDecision(esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName())
+                    && identidad.getAuthorities().stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope)));
         };
     }
 

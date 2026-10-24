@@ -1,51 +1,91 @@
 name: g2-despacho
 
-# Modo real por defecto. Una URL vacía provoca un error de configuración al iniciar Java.
-# El emisor temporal solo se habilita agregando compose.seguridad-local.yaml de forma explícita.
+# Entorno local: los tres backends, Seguridad temporal y PostgreSQL.
+# Arranque manual: docker compose up --build
 x-seguridad: &seguridad
-  SEGURIDAD_URL: "${SEGURIDAD_URL:-}"
-  SEGURIDAD_AUDIENCIA: ${SEGURIDAD_AUDIENCIA:-api-despacho}
-  SEGURIDAD_ALGORITMO: ${SEGURIDAD_ALGORITMO:-RS256}
+  SEGURIDAD_URL: http://seguridad-local:8090
+  SEGURIDAD_AUDIENCIA: api-despacho
+  SEGURIDAD_ALGORITMO: RS256
+
+x-base-datos: &base-datos
+  SPRING_PROFILES_ACTIVE: default
+  SPRING_DATASOURCE_USERNAME: ${LOCAL_DB_USUARIO:-despacho_local}
+  SPRING_DATASOURCE_PASSWORD: ${LOCAL_DB_CLAVE:-despacho-local-no-produccion}
+  SPRING_FLYWAY_ENABLED: "true"
+  SPRING_FLYWAY_DEFAULT_SCHEMA: public
+  SPRING_FLYWAY_SCHEMAS: public
+  SPRING_FLYWAY_BASELINE_ON_MIGRATE: "false"
+  SPRING_FLYWAY_CLEAN_DISABLED: "true"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: none
+  DOCUMENTACION_HABILITADA: "true"
+  GATEWAY_PUBLIC_URL: "http://localhost:${GATEWAY_PORT:-8080}"
+  JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m"
 
 services:
-  api-gateway:
-    build:
-      context: ./api-gateway
+  postgres:
+    # V1 de Gestión conserva las columnas geom del esquema original.
+    image: postgis/postgis:17-3.6
     environment:
-      <<: *seguridad
-      PORT: "8080"
-      GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
-      OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
-      # Los Swagger UI locales también necesitan permiso CORS para llamar al Gateway.
-      CORS_ORIGENES: "${CORS_ORIGENES:-http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174},http://localhost:${GESTION_DESPACHOS_PORT:-8081},http://localhost:${OPERACION_REPARTO_PORT:-8082},http://127.0.0.1:${GESTION_DESPACHOS_PORT:-8081},http://127.0.0.1:${OPERACION_REPARTO_PORT:-8082}"
-      SOLICITUD_MAXIMO_BYTES: ${SOLICITUD_MAXIMO_BYTES:-1048576}
+      POSTGRES_USER: ${LOCAL_DB_USUARIO:-despacho_local}
+      POSTGRES_PASSWORD: ${LOCAL_DB_CLAVE:-despacho-local-no-produccion}
+      POSTGRES_DB: postgres
+    volumes:
+      - datos-postgres-local:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/20-bases.sql:ro
     ports:
-      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
-    depends_on:
-      servicio-gestion-despachos:
-        condition: service_healthy
-      servicio-operacion-reparto:
-        condition: service_healthy
+      - "127.0.0.1:${LOCAL_DB_PORT:-15432}:5432"
+    healthcheck:
+      # TCP se habilita después de que termina el inicializador de la imagen.
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d postgres']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  seguridad-local:
+    build: ./seguridad-local
+    environment:
+      HABILITAR_SEGURIDAD_LOCAL: "true"
+      DIRECCION_ESCUCHA: 0.0.0.0
+      PORT: "8090"
+    ports:
+      - "127.0.0.1:${SEGURIDAD_LOCAL_PORT:-8090}:8090"
 
   servicio-gestion-despachos:
-    build:
-      context: ./servicio-gestion-despachos
+    build: ./servicio-gestion-despachos
     environment:
-      <<: *seguridad
+      <<: [*seguridad, *base-datos]
       PORT: "8081"
-      SPRING_PROFILES_ACTIVE: integracion-local
-      GATEWAY_PUBLIC_URL: "http://localhost:${GATEWAY_PORT:-8080}"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/despacho_gestion
+      OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
+      OPERACION_CLIENT_ID: modulo-despacho
+      OPERACION_CLIENT_SECRET: despacho-local-no-produccion
+      OPERACION_CAPACIDAD_SCOPES: operacion:incidencias:leer operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir
+      PRODUCTOS_URL: ${PRODUCTOS_URL:-http://host.docker.internal:8083}
+      PRODUCTOS_CLIENT_ID: ${PRODUCTOS_CLIENT_ID:-modulo-despacho}
+      PRODUCTOS_CLIENT_SECRET: ${PRODUCTOS_CLIENT_SECRET:-}
+      PRODUCTOS_TOKEN_SERVICIO: ${PRODUCTOS_TOKEN_SERVICIO:-}
+      VENTAS_URL: ${VENTAS_URL:-http://host.docker.internal:8084}
+      VENTAS_CLIENT_ID: ${VENTAS_CLIENT_ID:-modulo-despacho}
+      VENTAS_CLIENT_SECRET: ${VENTAS_CLIENT_SECRET:-}
+      VENTAS_TOKEN_SERVICIO: ${VENTAS_TOKEN_SERVICIO:-}
     ports:
       - "127.0.0.1:${GESTION_DESPACHOS_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seguridad-local:
+        condition: service_healthy
 
   servicio-operacion-reparto:
-    build:
-      context: ./servicio-operacion-reparto
+    build: ./servicio-operacion-reparto
     environment:
-      <<: *seguridad
+      <<: [*seguridad, *base-datos]
       PORT: "8082"
-      SPRING_PROFILES_ACTIVE: integracion-local
-      GATEWAY_PUBLIC_URL: "http://localhost:${GATEWAY_PORT:-8080}"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/despacho_operacion
+      GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
+      GESTION_CLIENT_ID: modulo-despacho
+      GESTION_CLIENT_SECRET: despacho-local-no-produccion
+      GESTION_SCOPES: gestion:despachos:transicionar gestion:catalogos:leer
       EVIDENCIAS_STORAGE_URL: ${EVIDENCIAS_STORAGE_URL:-}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
       EVIDENCIAS_CLAVE_SERVICIO: ${EVIDENCIAS_CLAVE_SERVICIO:-}
@@ -53,3 +93,31 @@ services:
       EVIDENCIAS_MAXIMO_BYTES: ${EVIDENCIAS_MAXIMO_BYTES:-2097152}
     ports:
       - "127.0.0.1:${OPERACION_REPARTO_PORT:-8082}:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seguridad-local:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    environment:
+      <<: *seguridad
+      PORT: "8080"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m"
+      GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
+      OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
+      CORS_ORIGENES: "${CORS_ORIGENES:-http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174},http://localhost:${GESTION_DESPACHOS_PORT:-8081},http://localhost:${OPERACION_REPARTO_PORT:-8082},http://127.0.0.1:${GESTION_DESPACHOS_PORT:-8081},http://127.0.0.1:${OPERACION_REPARTO_PORT:-8082}"
+      SOLICITUD_MAXIMO_BYTES: ${SOLICITUD_MAXIMO_BYTES:-1048576}
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      seguridad-local:
+        condition: service_healthy
+      servicio-gestion-despachos:
+        condition: service_healthy
+      servicio-operacion-reparto:
+        condition: service_healthy
+
+volumes:
+  datos-postgres-local:

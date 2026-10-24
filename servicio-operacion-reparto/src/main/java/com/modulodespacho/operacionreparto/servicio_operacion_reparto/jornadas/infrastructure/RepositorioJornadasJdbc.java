@@ -167,7 +167,7 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                 new Destino(fila.getString("direccion"),fila.getString("referencia"),null,null,
                         fila.getString("distrito"),null,null),fila.getObject("fecha_programada",LocalDate.class),
                 fila.getInt("numero_intentos"),fila.getLong("version"),actualizado == null ? null : actualizado.toInstant(),
-                (Integer) fila.getObject("maximo_intentos"));
+                (Integer) fila.getObject("maximo_intentos"),null,null);
     }
     private static final String RESERVA = "SELECT r.*,j.repartidor_id FROM reservas_capacidad r JOIN asignaciones_diarias j ON j.id=r.asignacion_diaria_id ";
     private Reserva mapearReserva(ResultSet fila,int indice) throws SQLException {

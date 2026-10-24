@@ -38,7 +38,7 @@ public class ConfiguracionSeguridad {
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
-        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
         URI origen = URI.create(urlSeguridad);
         Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
                         && origen.getHost() != null && origen.getRawUserInfo() == null
@@ -101,6 +101,7 @@ public class ConfiguracionSeguridad {
                 .cors(configuracion -> configuracion.configurationSource(fuenteCors))
                 .authorizeExchange(reglas -> {
                     reglas.pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
+                    reglas.pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll();
                     if (modoDemo) reglas.pathMatchers("/api/v1/**").permitAll();
                     else reglas.pathMatchers("/api/v1/**").authenticated();
                     reglas.anyExchange().denyAll();

@@ -1,203 +1,241 @@
 # G2 — Backend de Despacho y Entrega a Domicilio
 
-Backend del módulo encargado de planificar, ejecutar y dar seguimiento al despacho de pedidos. El repositorio contiene tres aplicaciones Spring Boot independientes que se compilan y despliegan por separado.
+Tres aplicaciones Spring Boot independientes y un emisor temporal de Seguridad. El único `compose.yaml` prepara un entorno completamente local con dos bases PostgreSQL separadas. No necesita credenciales ni conexiones a Supabase para arrancar.
 
-Las reglas funcionales, los estados y los contratos de integración se mantienen en el repositorio [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs) [cite: 1].
+El arranque local y las migraciones se comprobaron manualmente el 23/10/2026: Gestión aplicó V1/V2 y Operación V1 a V5. También se verificaron por el Gateway el listado y el detalle de un despacho fallido de prueba y su sincronización con Operación. La suite automatizada completa y el resto de los recorridos siguen pendientes.
 
-## Estado temporal de la integración con Seguridad
+Las instrucciones de trabajo están en [AGENTS.md](AGENTS.md) y los cambios de cada entrega en [CHANGELOG.md](CHANGELOG.md).
 
-> **Aviso para el equipo y los módulos consumidores:** se dispone de un emisor local de pruebas de G2 para avanzar sin un entorno operativo de Seguridad. No es el servicio real de G7. La integración con las cuentas, credenciales y claves reales permanece pendiente.
-
-El modo temporal conserva la validación JWT y los permisos implementados, utilizando claves y tokens ficticios RS256. No se activa automáticamente si Seguridad falla: hay que seleccionarlo con `compose.seguridad-local.yaml`. El modo real requiere una URL configurada y no omite la autenticación.
-
-La [guía de seguridad temporal](docs/seguridad-temporal-local.md) explica cómo iniciar el entorno, obtener tokens para Swagger y otros consumidores, registrar las limitaciones y migrar a Seguridad real. La [guía de flota](docs/gestion-flota.md) registra las verificaciones ejecutadas del backend. La integración con cuentas y claves reales de Seguridad sigue pendiente de su despliegue.
-
-## Aplicaciones desplegables
-
-La implementación F-05 de Rhamses, sus pruebas y la adaptación del esquema de Operadores y Flota están descritas en la [guía de gestión de flota](docs/gestion-flota.md). Incluye las variables para Render, los orígenes de Vercel y la dependencia pendiente del despliegue real de Seguridad.
-
-| Aplicación | Responsabilidad principal | Stack web |
-|---|---|---|
-| `api-gateway` | Punto de entrada público, enrutamiento, CORS, seguridad inicial y correlación de solicitudes | Spring Cloud Gateway WebFlux |
-| `servicio-gestion-despachos` | Zonas, tarifas, cotización, estado del despacho, asignación, incidencias, seguimiento y eventos hacia Ventas | Spring Web MVC |
-| `servicio-operacion-reparto` | Repartidores, vehículos, jornadas, capacidad, rutas y evidencias de entrega | Spring Web MVC |
-
-Cada microservicio es propietario de sus datos. No se comparten tablas ni entidades JPA entre Gestión de Despachos y Operación de Reparto.
-
-## Tecnologías principales
-
-- Java 21.
-- Maven Wrapper.
-- Spring Boot 4.1.1.
-- Spring Cloud 2025.1.3 para el API Gateway.
-- Spring Security y OAuth2 Resource Server.
-- Spring Data JPA en los microservicios.
-- PostgreSQL 17.11 administrado por Supabase y Flyway.
-- Supabase Storage con bucket privado para evidencias de entrega.
-- Testcontainers para pruebas de integración.
-- Springdoc OpenAPI para documentar las APIs.
-- Hibernate Spatial y JTS en Gestión de Despachos para zonas geográficas.
-
-## Estructura del repositorio
+## Estructura
 
 ```text
 G2-Despacho-Backend/
-├── compose.yaml
-├── compose.seguridad-local.yaml
-├── .env.example
-├── herramientas/seguridad-local/
 ├── api-gateway/
 ├── servicio-gestion-despachos/
-└── servicio-operacion-reparto/
+├── servicio-operacion-reparto/
+├── seguridad-local/
+├── compose.yaml
+├── init-db.sql
+├── .env.example
+├── README.md
+├── LICENSE
+├── .gitignore
+└── .gitattributes
 ```
 
-No existe un proyecto Maven raíz: cada directorio posee su propio `pom.xml` y Maven Wrapper. Esto permite construir, probar y desplegar cada aplicación de manera independiente.
+Cada aplicación conserva su código, pruebas, recursos, `pom.xml`, Maven Wrapper y Dockerfile. El emisor temporal usa Java directamente y tiene su propio Dockerfile. `.env` y los archivos personales del IDE quedan fuera de Git.
 
-## Arquitectura interna
+## Servicios y puertos
 
-Los microservicios se organizarán por funcionalidad y aplicarán una arquitectura hexagonal pragmática. Cada funcionalidad podrá contener las siguientes áreas cuando sean necesarias:
+| Servicio | Responsabilidad | Dirección local |
+|---|---|---|
+| Gateway | Entrada pública, rutas, JWT y CORS | `http://localhost:8080` |
+| Gestión | Zonas, tarifas, cotización, programación y consultas de despachos e incidencias | `http://localhost:8081/swagger-ui.html` |
+| Operación | Repartidores, vehículos, jornadas, reservas y evidencias | `http://localhost:8082/swagger-ui.html` |
+| Seguridad temporal | Emisión de tokens de prueba y claves públicas | `http://localhost:8090` |
+| PostgreSQL | Bases `despacho_gestion` y `despacho_operacion` | `localhost:15432` |
 
-```text
-funcionalidad/
-├── api/               # Controladores y DTO
-├── application/       # Casos de uso
-├── domain/            # Entidades y reglas de negocio
-└── infrastructure/    # JPA, HTTP, Storage y configuración
-```
+Las APIs de negocio se consumen mediante el Gateway, bajo `/api/v1`. Las rutas internas entre microservicios no se publican por el Gateway. Los puertos se exponen únicamente en `127.0.0.1`.
 
-Los controladores son adaptadores de entrada. PostgreSQL, los clientes HTTP, el almacenamiento de evidencias y los webhooks son adaptadores de salida. Las interfaces o puertos mantienen los casos de uso separados de esas tecnologías.
+## Arranque local
 
-El paquete `shared` se reserva para componentes transversales del microservicio, como el manejo uniforme de errores, seguridad, auditoría y configuración común. No debe utilizarse como depósito de lógica funcional.
+Requisitos: Docker Desktop iniciado, contenedores Linux y arquitectura `amd64` (x86-64) para la imagen PostGIS. Docker compila Java 21 dentro de las imágenes; no hace falta instalar Java o Maven en el equipo para este arranque.
 
-## Requisitos
-
-- JDK 21.
-- Git.
-- Docker para ejecutar las pruebas que utilizan Testcontainers.
-- Dos persistencias PostgreSQL aisladas en Supabase: una para Gestión de Despachos y otra para Operación de Reparto.
-
-No es necesario instalar Maven globalmente porque cada proyecto incluye Maven Wrapper.
-
-## Ejecución local
-
-### Con Docker Compose
-
-La configuración de Compose permite iniciar las tres aplicaciones desde la raíz del repositorio. Cada aplicación tiene su propio Dockerfile y el `.env` raíz contiene la configuración local, fuera de Git. La plantilla compartida es `.env.example`.
-
-En este checkout ya se creó `.env`; en otro clon, copiar primero `.env.example` como `.env`. Con Docker Desktop iniciado, para la integración temporal sin URL ni cuentas reales de Seguridad:
+Desde la raíz de este repositorio:
 
 ```powershell
-docker compose -f compose.yaml -f compose.seguridad-local.yaml up --build -d
+docker compose up --build
 ```
 
-Ese comando construye e inicia los cuatro contenedores: Gateway, Gestión, Operación y emisor temporal. `-d` los deja en segundo plano; se puede omitir para ver los registros durante el arranque. Para consultar su estado y después seguir sus registros:
+El comando construye e inicia los cinco contenedores y muestra sus registros. `Ctrl+C` los detiene; el volumen conserva la base de datos. La primera construcción descarga las imágenes y dependencias.
+
+Para ejecutarlos en segundo plano y revisar el estado:
 
 ```powershell
-docker compose -f compose.yaml -f compose.seguridad-local.yaml ps
-docker compose -f compose.yaml -f compose.seguridad-local.yaml logs -f
+docker compose up --build -d
+docker compose ps
+docker compose logs --tail=100 servicio-gestion-despachos servicio-operacion-reparto
+docker compose logs -f
 ```
 
-`logs -f` solo muestra registros de contenedores existentes: no construye imágenes ni inicia el backend. `Ctrl+C` deja de seguir los registros, pero no apaga los servicios iniciados con `-d`.
-
-Para utilizar Seguridad real, completar `SEGURIDAD_URL` y ejecutar `docker compose up --build` sin el archivo adicional. No es necesario que el emisor real esté en la nube: puede ser un backend local accesible. Usar los mismos archivos Compose al consultar registros o detener el entorno seleccionado.
-
-Los dos microservicios utilizan `integracion-local`, sin PostgreSQL y con JWT habilitado. El Gateway queda en `http://localhost:8080` y Swagger de Gestión en `http://localhost:8081/swagger-ui.html`. La [guía de ejecución con Docker](docs/ejecucion-con-docker.md) detalla variables, salud, registros, apagado y comprobaciones pendientes.
-
-Los archivos Docker están preparados, pero todavía no se han construido imágenes ni ejecutado contenedores.
-
-### Con Maven
-
-Cada aplicación se inicia en una terminal diferente. En Windows PowerShell:
+Para detenerlos:
 
 ```powershell
-cd api-gateway
-.\mvnw.cmd spring-boot:run
+docker compose stop
 ```
+
+`docker compose down` elimina los contenedores y la red, conservando el volumen. `docker compose down -v` elimina también todos los datos locales de este proyecto; usarlo únicamente si se quiere reconstruir desde cero.
+
+El proyecto se llama `g2-despacho` y utiliza el volumen `datos-postgres-local`. Así se separa de los volúmenes `datos-postgres` de los entornos locales anteriores; no se elimina ninguno de ellos. Si otros contenedores ocupan los mismos puertos, detenerlos antes desde Docker Desktop. La nueva configuración espera una base nueva; no convierte una historia Flyway anterior.
+
+## Variables locales
+
+El Compose contiene valores locales por defecto y funciona sin crear un `.env`. Para cambiar puertos, credenciales ficticias o integraciones, copiar la plantilla si el archivo no existe:
 
 ```powershell
-cd servicio-gestion-despachos
-.\mvnw.cmd spring-boot:run
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
+
+Editar `.env` y usar los mismos comandos de arranque. Un único `.env` raíz configura este Compose; no hace falta crear otro por servicio. Las variables de la terminal pueden prevalecer sobre ese archivo. Nunca publicar `.env` ni la salida completa de `docker compose config`, que puede contener contraseñas.
+
+## Bases y migraciones
+
+`init-db.sql` crea únicamente las dos bases locales durante el primer arranque de un volumen vacío. Cada microservicio aplica sus propias migraciones mediante Flyway:
+
+| Servicio | Migraciones activas | Estado inicial esperado |
+|---|---|---|
+| Gestión | [V1 original](servicio-gestion-despachos/src/main/resources/db/migration/V1__esquema_original_gestion.sql) y [V2 acumulada](servicio-gestion-despachos/src/main/resources/db/migration/V2__actualizacion_esquema_gestion.sql) | 17 tablas de negocio, parámetros, motivos de fallo y 50 distritos de Lima/Callao. |
+| Operación | V1 a V5 existentes en `servicio-operacion-reparto/src/main/resources/db/migration` | Tablas, funciones y parámetros de perfiles, flota, jornadas, reservas, proyecciones y evidencias; sin datos de negocio de prueba. |
+
+Flyway queda habilitado para ambas bases locales, con esquema `public`, baseline automática desactivada y limpieza de Flyway desactivada. Hibernate mantiene `ddl-auto=none`. Las modificaciones futuras de Gestión se agregan desde V3; no editar archivos que ya se hayan aplicado a una base persistente.
+
+PostgreSQL usa `postgis/postgis:17-3.6` porque V1 de Gestión conserva `zonas.geom`, `distrito.geom` y sus índices del esquema original. La cobertura actual se resuelve por distrito y código postal; no utiliza esas geometrías. Retirar PostGIS requiere una decisión de esquema posterior. El inicializador de la imagen instala extensiones en `postgres` y `template_postgis`; nuestras bases se crean desde `template1`, y V1 instala PostGIS en `extensions` de Gestión.
+
+Las migraciones anteriores de Gestión, incluidas las dos V3 que colisionaban, se retiraron del classpath. Los archivos originales ya versionados se pueden consultar en el historial Git. V2 reproduce la estructura observada, conservando `cotizaciones.pedido_id` como UUID y sin añadir los `CHECK` más estrictos que no estaban desplegados. No se copiaron datos de negocio de Supabase.
+
+Con las credenciales predeterminadas:
+
+| Campo | Valor |
+|---|---|
+| Servidor y puerto | `localhost:15432` |
+| Usuario | `despacho_local` |
+| Contraseña local | `despacho-local-no-produccion` |
+| Bases | `despacho_gestion`, `despacho_operacion` |
+
+Comprobar las versiones aplicadas en Gestión:
 
 ```powershell
-cd servicio-operacion-reparto
-.\mvnw.cmd spring-boot:run
+docker compose exec postgres psql -U despacho_local -d despacho_gestion -c "SELECT version, description, success FROM public.flyway_schema_history ORDER BY installed_rank;"
 ```
 
-Antes de ejecutar estas instrucciones, configurar `SEGURIDAD_URL` con el origen real de Seguridad. Los puertos locales ya están definidos como 8080, 8081 y 8082. Cada aplicación incluye un `.env.example` como referencia; estos archivos no se cargan automáticamente.
+Se esperan versiones 1 y 2 con `success=true`; Operación debe registrar 1 a 5 en su propia base. Ambas historias se comprobaron en el entorno local el 23/10/2026. Esto confirma las migraciones locales, no una sincronización automática con Supabase.
 
-Para la primera integración, los microservicios disponen del perfil `integracion-local`, que habilita Swagger UI y permite arrancar sin PostgreSQL. En Gestión también habilita una cotización simulada protegida por JWT. Fuera de ese perfil se requiere configurar la conexión de base de datos propia de cada microservicio mediante las variables habituales de Spring Boot. No se deben guardar credenciales ni secretos en Git.
-
-La [guía de configuración inicial](docs/configuracion-inicial-api-gateway.md) explica las variables, las rutas, el alcance de la simulación y las comprobaciones pendientes. El código de esta entrega todavía no se ha compilado ni ejecutado.
-
-## Pruebas
-
-Las pruebas se ejecutan desde el directorio de cada aplicación:
+## Salud y primeras consultas
 
 ```powershell
-.\mvnw.cmd test
+Invoke-RestMethod http://localhost:8080/actuator/health
+Invoke-RestMethod http://localhost:8081/actuator/health
+Invoke-RestMethod http://localhost:8082/actuator/health
 ```
 
-Las pruebas de integración de los microservicios pueden requerir que Docker se encuentre iniciado para levantar PostgreSQL mediante Testcontainers.
+Un estado `UP` confirma la salud informada por la aplicación; no acredita todos los recorridos de negocio. Para comprobar consultas protegidas, obtener un token temporal:
 
-El avance backend de ES-F04-01, su configuración de ejecución y las dependencias pendientes para la demo se describen en la [guía de consulta de entregas fallidas](docs/f04-consulta-entregas-fallidas.md). El listado requiere PostgreSQL y no se habilita en `integracion-local`.
+```powershell
+$token = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/pruebas/token-usuario' -ContentType 'application/x-www-form-urlencoded' -Body @{ perfil = 'gestor' }).accessToken
+Invoke-RestMethod http://localhost:8080/api/v1/distritos -Headers @{ Authorization = "Bearer $token" }
+```
 
-El backend de **ES-F02-01 a ES-F02-04** implementa recepción desde Ventas, simulaciones, consulta de pendientes y asignación con reserva/compensación recuperables. Su [guía de ejecución y evidencia](docs/f02-implementacion-especificaciones.md) registra configuración, rutas, decisiones contractuales y las 69 pruebas aprobadas con PostgreSQL real y proveedores externos simulados por HTTP. Estas operaciones requieren PostgreSQL y un perfil distinto de `integracion-local`.
+El mismo token se puede introducir en `Authorize` de Swagger. Rutas iniciales para revisar: `/api/v1/zonas`, `/api/v1/catalogos/motivos-fallo`, `/api/v1/despachos/pendientes`, `/api/v1/repartidores`, `/api/v1/furgonetas` y `/api/v1/flota/monitoreo`. Las listas de negocio parten vacías; registrar zonas, tarifas y flota antes de probar escrituras y asignaciones.
 
-## API e integraciones
+## Seguridad temporal
 
-El formato agrupado de zonas por distrito y códigos postales, el padrón de
-Lima/Callao y sus pruebas breves se describen en la
-[guía F-01 de zonas y códigos postales](docs/f01-zonas-codigos-postales.md).
+Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Implementa el login propuesto a Seguridad (contrato externo §8.6) con cuentas ficticias para probar la app del repartidor. No utilizar el emisor temporal para un despliegue público.
 
-El API Gateway será la única entrada pública para los frontends y los módulos consumidores. Los dos microservicios se comunicarán mediante APIs internas y mantendrán bases de datos aisladas en Supabase.
+| Usuario de prueba (`POST /api/v1/auth/login`) | Clave | Perfil emitido |
+|---|---|---|
+| `repartidor.prueba` o `mrojas@despacho.pe` | `Ruta2026!` | `repartidor` |
+| `gestor.prueba` | `Ruta2026!` | `gestor` |
 
-Operación de Reparto utilizará un bucket privado de Supabase Storage para las fotografías de evidencia. Los archivos se consultarán mediante acceso autorizado o URLs firmadas temporales; en la base de datos solo se conservarán sus referencias y metadatos relevantes [cite: 4].
+| Perfil de prueba | Identificador | Uso |
+|---|---|---|
+| `gestor` | `11111111-1111-4111-8111-111111111111` | Rol `GESTOR_DESPACHO`. |
+| `repartidor` | `22222222-2222-4222-8222-222222222222` | Requiere perfil local activo, vínculo con ese usuario y propiedad del recurso. |
+| `sin-rol` | `33333333-3333-4333-8333-333333333333` | Comprobaciones de denegación de permisos. |
 
-CR-17 autoriza cargas `image/jpeg`, `image/png` e `image/webp` de hasta 2.097.152 bytes (2 MiB), conforme a las restricciones del esquema V3 de evidencias. El bucket privado debe aplicar los mismos límites. La autorización usa `EVIDENCIAS_STORAGE_URL`, `EVIDENCIAS_CLAVE_SERVICIO` y `EVIDENCIAS_BUCKET`; no se habilita hasta configurar el almacenamiento privado.
+Los tokens de usuario duran 15 minutos. Las claves RSA se generan en memoria al arrancar; al reiniciar Seguridad, obtener tokens nuevos y reiniciar los consumidores si conservan las claves en caché. El emisor interno es `http://seguridad-local:8090/api/v1/auth`.
 
-La ruta de autorización CR-17 no se registra con el perfil `integracion-local`; requiere el perfil con PostgreSQL y el almacenamiento privado configurados. Las credenciales de Supabase solo se configuran en Operación y nunca en el frontend.
+Para un token de servicio de cotización:
 
-Los comandos que requieren respuesta inmediata utilizan REST. Los cambios de estado confirmados se notificarán a Ventas y Postventa mediante webhook HTTPS, aplicando bandeja de salida, idempotencia y reintentos [cite: 2].
+```powershell
+$tokenServicio = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/api/v1/auth/token' -ContentType 'application/x-www-form-urlencoded' -Body @{ grant_type = 'client_credentials'; client_id = 'modulo-marketplace'; client_secret = 'despacho-local-no-produccion'; scope = 'cotizaciones:calcular' }).accessToken
+```
 
-La documentación interactiva con Springdoc está configurada en ambos microservicios y apunta a la URL del Gateway. Está deshabilitada por defecto y se habilita con `integracion-local` o `DOCUMENTACION_HABILITADA=true`. El contrato oficial sigue estando en `integraciones/api-contract.md` del repositorio de especificaciones.
+El secreto es ficticio y solo pertenece al emisor local. Los clientes de prueba incluyen `modulo-marketplace`, `modulo-chatbot`, `modulo-ventas` y `modulo-despacho`. Gestión tiene configurado el cliente técnico para consultar incidencias y reservar/liberar capacidad y publicar proyecciones en Operación.
 
-## Despliegue y CI/CD
+## Probar desde el administrador
 
-Las tres aplicaciones se despliegan como servicios independientes en Render, indicando como directorio raíz la carpeta correspondiente.
+El Compose levanta únicamente los servicios del backend y PostgreSQL. El frontend se ejecuta por separado desde la raíz de `G2-Despacho-Frontend`, con Node.js 20 o superior y npm 10 o superior:
 
-Operación incluye `spring-boot-starter-restclient` en producción para crear el `RestClient.Builder` que necesita la autorización de evidencias. Si el esquema heredado ya recibió F05 y F06, el complemento [F03 de máximo de intentos](operaciones/sql/F03__maximo_intentos_heredado.sql) agrega la nueva columna a la tabla y actualiza su vista sin eliminar registros. Debe aplicarse por separado antes de usar las nuevas proyecciones; este cambio de código no lo ejecuta en Supabase. En una base nueva administrada por Flyway, la migración V5 crea esa columna sobre la tabla normal y no se utiliza ese complemento.
+```powershell
+npm install
+npm run dev:administrativo
+```
 
-Cada aplicación incluye un Dockerfile independiente. El archivo Compose de la raíz está destinado a integración local. Los perfiles y las plantillas de variables de Render están descritos en la [guía de flota](docs/gestion-flota.md); la configuración de cada servicio y la revisión efectivamente desplegada deben comprobarse en Render. Los workflows de GitHub Actions deberán ejecutarse únicamente cuando cambie su aplicación o archivos compartidos relevantes.
+`npm install` prepara las dependencias al comenzar o cuando cambian. El administrativo queda en `http://localhost:5173`. Para configurar explícitamente su conexión, copiar `apps/despacho-administrativo/.env.example` a `.env` dentro de esa aplicación, si no existe, y establecer:
 
-El trabajo incremental previsto para el Gateway se encuentra en el [plan de configuración inicial](docs/plan-configuracion-api-gateway.md).
+```dotenv
+VITE_API_BASE_URL=http://localhost:8080
+VITE_DEMO_SIN_AUTENTICACION=false
+```
 
-La [guía F-06 de jornadas y capacidad](docs/f06-jornadas-capacidad.md) describe persistencia, reservas, cierre seguro, configuración y límites de integración.
+Si se cambia `GATEWAY_PORT`, ajustar también esta URL. Reiniciar Vite al modificar sus variables. Este `.env` del frontend es independiente del `.env` raíz del backend.
 
-## Contribución
+Recorrido inicial, usando siempre el origen `localhost` para conservar la sesión:
 
-La [consulta de detalle de incidencia de F-04](docs/f04-detalle-incidencia.md) reúne el alcance de Gestión y Operación, la configuración privada de evidencia, las pruebas locales sin Docker y los pendientes de integración.
+1. Abrir `http://localhost:5173/desarrollo/f01`, seleccionar **Gestor de Despacho** y pulsar **Generar sesión de prueba**. La misma sesión permite navegar a las otras funcionalidades administrativas. Renovarla desde ese probador cuando venza.
+2. En **Zonas y tarifas**, crear una zona activa y configurar una tarifa si se desea probar cotizaciones.
+3. En **Repartidores**, registrar un perfil de prueba. Desde **Más acciones > Vincular cuenta**, asociar el usuario temporal `22222222-2222-4222-8222-222222222222`. Ese identificador solo puede vincularse a un repartidor; representa el único perfil repartidor del emisor temporal.
+4. En **Vehículos**, registrar una furgoneta disponible con capacidades positivas. Por ejemplo: 100 kg, 1 m³ y 10 paquetes.
+5. En **Monitoreo de flota**, pulsar **Abrir jornada**, seleccionar el repartidor vinculado, el vehículo, la zona y la fecha de hoy. Estar vinculado por sí solo no lo hace disponible para asignación.
+6. En **Programación**, usar **Generar pedido de prueba** y asignarlo a un candidato con jornada activa y capacidad suficiente. Los pedidos simulados se guardan en PostgreSQL local y comienzan pendientes de asignación.
+7. En **Entregas fallidas**, consultar los fallos existentes y abrir **Ver detalle**. El botón de Programación no genera fallos: para comprobar listado y detalle hacen falta incidencias de prueba con historial y referencias coherentes de repartidor y jornada. Una base nueva muestra el listado vacío.
 
-El equipo utiliza ramas de trabajo y Conventional Commits en español:
+### Probar la app del repartidor (F-03)
 
-- Funcionalidad: `feature/f<XX>-<descripcion-corta>`.
-- Corrección: `fix/<descripcion-corta>`.
-- Documentación: `docs/<descripcion-corta>`.
-- Ejemplo de commit: `docs(readme): documentar estructura y ejecución del backend`.
+Tras los pasos 1 a 6, ejecutar `npm run dev:repartidor` en otra terminal del frontend (puerto 5174) e ingresar con `mrojas@despacho.pe` / `Ruta2026!`; ese usuario corresponde al perfil vinculado en el paso 3. La ruta muestra los despachos asignados. **Iniciar traslado** y **Cerrar jornada** funcionan sin Storage; **Confirmar entrega** y **Marcar como fallido** necesitan la foto en el bucket privado, por lo que sin las variables `EVIDENCIAS_*` responden `503`. El cierre deja los pendientes como `FALLIDO`/`NO_INTENTADO`, visibles después en **Entregas fallidas** del administrador.
 
-Para este backend, `develop` será la rama de integración del equipo y `main` conservará las versiones estables y verificadas. El flujo acordado es:
+Para revisar la interfaz sin backend, la app admite `VITE_MODO_DEMO=true`, con datos en memoria que no llegan a PostgreSQL.
 
-1. Crear las ramas de trabajo desde `develop` actualizada.
-2. Abrir los Pull Requests de funcionalidades, correcciones y documentación hacia `develop`, con revisión de al menos otro integrante.
-3. Tras verificar la integración y las pruebas, abrir un Pull Request de `develop` hacia `main` para preparar una versión estable.
+Confirmar recepción, reprogramar y cerrar como devuelto (F-04) requieren integrar sus formularios y comandos propietarios.
 
-La rama `feature/seguridad-local-temporal` acumula la base del Gateway, Docker y el emisor temporal; su Pull Request inicial debe tener `develop` como destino. `develop` se crea desde `main` antes de integrar esos cambios mediante el PR.
+Los registros creados o preparados durante las pruebas permanecen en el volumen local de Docker. No se incluyen en los commits ni se copian a otros equipos: una instalación nueva parte de las migraciones y sus catálogos. `docker compose down -v` elimina también esos registros.
 
-Las convenciones generales se encuentran en la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md) [cite: 3]. Esa guía todavía describe ramas y PR directamente desde/hacia `main`; para el backend se aplica el flujo con `develop` descrito aquí. Las protecciones de ambas ramas deben configurarse en GitHub: crear una rama local no las activa.
+## Integraciones pendientes y frontends
 
-## Referencias
+- Productos y Ventas no se levantan en este Compose. La cotización utiliza el catálogo de productos de prueba configurado en Gestión. La recepción real de pedidos requiere Productos y sus credenciales; las notificaciones a Ventas pueden quedar pendientes hasta configurar el destino y la identidad técnica.
+- Las fotografías requieren un bucket privado y `EVIDENCIAS_STORAGE_URL`, `EVIDENCIAS_BUCKET` y `EVIDENCIAS_CLAVE_SERVICIO` en Operación. Vacíos, esos recorridos no están disponibles; no se sustituye Storage por un servicio local.
+- Los frontends pueden usar `VITE_API_BASE_URL=http://localhost:8080` y un token temporal mediante su configuración de desarrollo. CORS admite los puertos 5173 y 5174. Si el frontend necesita refrescar tokens, debe usar la configuración vigente de su propio repositorio.
+- La información de errores incorpora un identificador de correlación; buscarlo en `docker compose logs` para seguir una petición entre servicios.
 
-1. [Repositorio de especificaciones del módulo](https://github.com/Taller-SW-Web/G2-Despacho-Specs).
-2. [Contrato de integración](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md).
-3. [Guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md).
-4. [Documentación de Supabase Storage](https://supabase.com/docs/guides/storage).
+## Despliegues existentes
+
+Los Dockerfiles y perfiles `application-render.yaml` de los tres backends se conservan. El único Compose está destinado al entorno local y no modifica Render ni Supabase.
+
+Las plantillas de despliegue están ahora dentro de sus aplicaciones: [Gateway](api-gateway/.env.example), [Gestión](servicio-gestion-despachos/.env.example) y [Operación](servicio-operacion-reparto/.env.example). Configurar las variables en el panel de cada servicio. Cada microservicio utiliza su propia conexión de base de datos; el Gateway recibe las URLs de los servicios y no necesita credenciales PostgreSQL.
+
+El perfil `render` de ambos servicios deja Flyway desactivado por defecto, pero la variable `SPRING_FLYWAY_ENABLED` del despliegue puede sobrescribir ese valor. Comprobar las variables efectivas antes de desplegar esta historia V1/V2 sobre un Supabase existente. Adoptar Flyway allí requiere comparar el esquema y conciliar el historial; una posible baseline 2 de Gestión es una tarea posterior. Hibernate mantiene `ddl-auto=none`.
+
+Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-operacion-reparto/src/test/resources/flota/compatibilidad`. Sus pruebas los cargan como recursos. No son migraciones automáticas de una base nueva ni deben volver a aplicarse a ciegas al entorno publicado. Los datos F-04 usados por una prueba están en `src/test/resources/flota/datos-demo-f04.sql` del mismo servicio.
+
+## Pruebas y contratos
+
+Cada backend tiene su propio Maven Wrapper y sus pruebas. Para ejecutarlas manualmente, desde el directorio correspondiente:
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Para ejecutar Maven Wrapper fuera de Docker se necesita Java 21. Las suites de integración requieren Docker y crean bases aisladas con Testcontainers. Gestión necesita la imagen PostGIS definida en su configuración de pruebas. Nunca apuntar esas suites a Supabase ni a una base compartida, porque algunas crean, modifican o limpian tablas. `clean` evita conservar migraciones antiguas en `target/classes`.
+
+Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up --build` no ejecuta estas suites. El recorrido manual registrado arriba tampoco sustituye sus resultados.
+
+Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
+
+## Integración continua
+
+[CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
+
+Una cuarta comprobación compila y ejecuta las pruebas propias de `seguridad-local`, que levantan su emisor aislado con puerto efímero. El workflow no despliega servicios, no publica releases y no crea tags.
+
+Para exigir el resultado antes de integrar, configurar la protección de `develop` y `main` en GitHub y seleccionar estas cuatro comprobaciones cuando hayan aparecido en una ejecución:
+
+- `Pruebas (api-gateway)`
+- `Pruebas (servicio-gestion-despachos)`
+- `Pruebas (servicio-operacion-reparto)`
+- `Pruebas (seguridad-local)`
+
+La protección de ramas se configura en GitHub; añadir el workflow por sí solo no impide un merge. Se propone exigir PR, una aprobación de otro compañero, comprobaciones aprobadas y conversaciones resueltas, sin force push ni eliminación de las ramas protegidas.
+
+El changelog se prepara en `develop` y llega a `main` en el PR de entrega. Mantener los cambios aún no publicados en `Sin publicar`, cerrar el corte aproximadamente cada dos semanas con su versión y fecha, y crear manualmente el tag sobre el commit aprobado de `main`. No es necesario adoptar Scrum para usar esta cadencia. La referencia de `0.1.0` está identificada en el changelog; no se ha creado su tag automáticamente.
+
+Los requisitos, contratos de integración y modelo de datos se mantienen en [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs). Las comprobaciones históricas de las guías retiradas pueden consultarse en Git; no acreditan esta reorganización ni sustituyen su validación manual.
