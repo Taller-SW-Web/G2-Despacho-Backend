@@ -36,6 +36,10 @@ despacho:
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+  recepcion:
+    procesador-habilitado: ${RECEPCION_PROCESADOR_HABILITADO:true}
+    intervalo-procesador-ms: ${RECEPCION_INTERVALO_PROCESADOR_MS:1000}
+    esperas: ${RECEPCION_ESPERAS:PT30S,PT2M,PT10M,PT30M,PT1H}
   operacion:
     url: ${OPERACION_REPARTO_URL:http://localhost:8082}
     token-servicio: ${OPERACION_TOKEN_SERVICIO:}
