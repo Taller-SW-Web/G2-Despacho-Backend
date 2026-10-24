@@ -36,11 +36,19 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
             "modulo-chatbot", List.of("cotizaciones:calcular", "seguimientos:leer"),
             "modulo-ventas", List.of("despachos:crear", "despachos:cancelar", "seguimientos:leer"),
             "modulo-despacho", List.of("operacion:incidencias:leer", "operacion:capacidad:reservar",
-                    "operacion:capacidad:liberar", "operacion:proyecciones:escribir"));
+                    "operacion:capacidad:liberar", "operacion:proyecciones:escribir",
+                    "gestion:despachos:transicionar", "gestion:catalogos:leer"));
     private static final Map<String, Perfil> PERFILES = Map.of(
             "gestor", new Perfil("11111111-1111-4111-8111-111111111111", List.of("GESTOR_DESPACHO")),
             "repartidor", new Perfil("22222222-2222-4222-8222-222222222222", List.of()),
             "sin-rol", new Perfil("33333333-3333-4333-8333-333333333333", List.of()));
+
+    /** Cuentas ficticias del login propuesto; Seguridad y Usuarios entregará las cuentas reales. */
+    static final String CLAVE_USUARIO_PRUEBA = "Ruta2026!";
+    private static final Map<String, String> USUARIOS = Map.of(
+            "repartidor.prueba", "repartidor",
+            "mrojas@despacho.pe", "repartidor",
+            "gestor.prueba", "gestor");
 
     private final HttpServer servidor;
     private final ExecutorService ejecutor = Executors.newVirtualThreadPerTaskExecutor();
@@ -119,6 +127,7 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
                     responder(intercambio, 200, jwks);
                 }
                 case PREFIJO + "/token" -> emitirServicio(intercambio);
+                case PREFIJO + "/login" -> iniciarSesion(intercambio);
                 case "/pruebas/token-usuario" -> emitirUsuario(intercambio);
                 default -> throw new SolicitudInvalida(404, "NO_ENCONTRADO", "Ruta de prueba inexistente");
             }
@@ -172,6 +181,24 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
         Map<String, Object> claims = claims(perfil.sujeto(), "acceso", 900);
         claims.put("roles", perfil.roles());
         claims.put("permisos", List.of());
+        responder(intercambio, 200, Map.of(
+                "accessToken", firmar(claims), "tokenType", "Bearer", "expiresIn", 900,
+                "entorno", "simulado-local"));
+    }
+
+    /** Contrato propuesto a Seguridad: formulario usuario/clave y JWT de acceso con la misma forma que el real. */
+    private void iniciarSesion(HttpExchange intercambio) throws IOException, GeneralSecurityException {
+        Map<String, String> formulario = formulario(intercambio);
+        String usuario = formulario.getOrDefault("usuario", "").trim().toLowerCase(java.util.Locale.ROOT);
+        String perfil = USUARIOS.get(usuario);
+        if (perfil == null || !CLAVE_USUARIO_PRUEBA.equals(formulario.get("clave"))) {
+            throw new SolicitudInvalida(401, "CREDENCIALES_INVALIDAS", "Usuario o contraseña incorrectos");
+        }
+        Perfil datos = PERFILES.get(perfil);
+        Map<String, Object> claims = claims(datos.sujeto(), "acceso", 900);
+        claims.put("roles", datos.roles());
+        claims.put("permisos", List.of());
+        claims.put("preferred_username", usuario);
         responder(intercambio, 200, Map.of(
                 "accessToken", firmar(claims), "tokenType", "Bearer", "expiresIn", 900,
                 "entorno", "simulado-local"));

@@ -63,6 +63,7 @@ class JornadasHttpTests {
     @MockitoBean JwtDecoder decodificador;
 
     @MockitoBean GestorJornadas gestor;
+    @MockitoBean com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.OperacionCampo campo;
 
     @MockitoBean ConsultaZonaHttp zonas;
 

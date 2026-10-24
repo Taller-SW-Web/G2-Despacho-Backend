@@ -60,16 +60,21 @@ public final class DatosJornada {
         public static Detalle de(Jornada j, List<DespachoResumen> despachos) { return new Detalle(j.idJornada,j.idRepartidor,j.idFurgoneta,j.placa,j.idZona,j.fecha,j.estado,j.cerradaEn,j.limites,j.ocupacion,j.capacidadRemanente,j.porcentajeOcupacion,despachos); }
     }
     public record Contexto(UUID idRepartidor, String estadoOperativo, Jornada jornada) {}
+    /** Marcas del ciclo vigente informadas por Gestión: asignado, en camino y cierre del intento. */
+    public record Hitos(Instant asignadoEn, Instant enCaminoEn, Instant entregadoEn, Instant fallidoEn) {}
     public record DespachoRuta(UUID idDespacho, String codigoRastreoInterno, String estado,
             Integer secuenciaRuta, LocalDate fechaProgramada, int numeroIntentos, Integer maximoIntentos,
-            String destinatario, String direccion, String distrito) {}
+            String destinatario, String direccion, String distrito, String motivoFallo, Hitos hitos) {}
     public record RutaRepartidor(UUID idJornada, LocalDate fecha, String estadoOperativo,
             List<DespachoRuta> despachos) {}
     public record DetalleDespacho(UUID idJornada, UUID idDespacho, String codigoRastreoInterno, String estado,
             Integer secuenciaRuta, LocalDate fechaProgramada, int numeroIntentos, Integer maximoIntentos,
-            Destinatario destinatario, Destino destino) {}
-    public record ResumenJornada(UUID idJornada, LocalDate fecha, long asignados, long entregados,
-            long fallidosConIntento, long noIntentados, long pendientes) {}
+            Destinatario destinatario, Destino destino, String motivoFallo, Hitos hitos) {}
+    /** Paquete que el repartidor devuelve al centro: fallido con o sin intento consumido. */
+    public record PaqueteDevolucion(UUID idDespacho, String codigoRastreoInterno, String direccion, String distrito, String motivoFallo) {}
+    public record ResumenJornada(UUID idJornada, LocalDate fecha, String estadoJornada, Instant cerradaEn, long asignados, long entregados,
+            long fallidosConIntento, long noIntentados, long pendientes, List<PaqueteDevolucion> paquetesPorDevolver) {}
+    public record DespachoEnRuta(UUID idRepartidor, UUID idJornada, Proyeccion despacho) {}
     public record SolicitudReserva(UUID idDespacho, UUID idRepartidor, UUID idJornada, Capacidad requerido) {}
     public record ConfirmacionReserva(UUID idReserva, String estado, Capacidad capacidadRemanente) {}
     public record Reserva(UUID id, UUID clave, UUID despacho, UUID jornada, UUID repartidor, Capacidad carga, String estado,
@@ -79,5 +84,13 @@ public final class DatosJornada {
     public record Destino(String direccion, String referencia, String departamento, String provincia, String distrito, String codigoPostal, Object coordenadas) {}
     public record Proyeccion(UUID idDespacho, String idPedido, String codigoRastreoInterno, String estado, UUID idJornada,
             UUID idReserva, Integer secuenciaRuta, Destinatario destinatario, Destino destino, LocalDate fechaProgramada,
-            int numeroIntentos, long version, Instant actualizadoEn, Integer maximoIntentos) {}
+            int numeroIntentos, long version, Instant actualizadoEn, Integer maximoIntentos, String motivoFallo, Hitos hitos) {
+        public Proyeccion conTransicion(String nuevoEstado, int intentos, long nuevaVersion, Instant registradoEn, String motivo, Hitos nuevosHitos) {
+            return new Proyeccion(idDespacho, idPedido, codigoRastreoInterno, nuevoEstado, idJornada, idReserva, secuenciaRuta,
+                    destinatario, destino, fechaProgramada, intentos, nuevaVersion, registradoEn, maximoIntentos, motivo, nuevosHitos);
+        }
+        public boolean noIntentado() { return "NO_INTENTADO".equals(estado) || "FALLIDO".equals(estado) && "NO_INTENTADO".equals(motivoFallo); }
+        /** Las proyecciones previas al motivo conservan la regla anterior basada en el contador. */
+        public boolean fallidoConIntento() { return "FALLIDO".equals(estado) && !noIntentado() && (motivoFallo != null || numeroIntentos > 0); }
+    }
 }

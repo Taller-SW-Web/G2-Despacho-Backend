@@ -89,6 +89,19 @@ public final class EmisorSeguridadLocalPruebas {
                         ? "\"roles\":[\"GESTOR_DESPACHO\"]" : "\"roles\":[]"), "Roles del perfil " + perfil);
             }
 
+            String rutaLogin = origen + "/api/v1/auth/login";
+            var acceso = enviar(cliente, rutaLogin, formulario(Map.of("usuario", "MRojas@despacho.pe", "clave", "Ruta2026!")));
+            comprobar(acceso.statusCode() == 200, "Login de prueba del repartidor");
+            String claimsAcceso = decodificar(extraer(acceso.body(), "accessToken").split("\\.")[1]);
+            comprobar(claimsAcceso.contains("\"tipo\":\"acceso\"") && claimsAcceso.contains("\"roles\":[]")
+                    && extraer(claimsAcceso, "sub").equals("22222222-2222-4222-8222-222222222222"),
+                    "El login emite el mismo JWT humano que el perfil repartidor");
+            comprobar(enviar(cliente, rutaLogin, formulario(Map.of("usuario", "mrojas@despacho.pe", "clave", "otra")))
+                    .statusCode() == 401, "Rechazar una contraseña incorrecta");
+            comprobar(enviar(cliente, rutaLogin, formulario(Map.of("usuario", "desconocido", "clave", "Ruta2026!")))
+                    .statusCode() == 401, "Rechazar un usuario inexistente sin revelar cuál dato falló");
+            comprobar(obtener(cliente, rutaLogin).statusCode() == 405, "El login solo acepta POST");
+
             comprobar(obtener(cliente, rutaToken).statusCode() == 405, "Respetar el método de emisión");
             comprobar(enviar(cliente, rutaToken, "campo=" + "a".repeat(4096)).statusCode() == 413,
                     "Limitar el tamaño del formulario");
