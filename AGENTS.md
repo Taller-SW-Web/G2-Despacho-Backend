@@ -23,4 +23,4 @@
 ## Documentación de la entrega
 
 - Actualizar el README si cambia la forma de ejecutar o configurar el proyecto.
-- Registrar cambios significativos en `Sin publicar` de `CHANGELOG.md`. Las versiones se cierran al preparar una entrega; los tags se crean manualmente sobre el commit aprobado de `main`.
+- Actualizar `CHANGELOG.md` únicamente al preparar y publicar una nueva línea base en `main`; no añadir entradas por especificación ni durante el desarrollo de ramas funcionales. En ese corte se consolidan los cambios de la entrega con versión y fecha. Los tags se crean manualmente sobre el commit aprobado de `main`.

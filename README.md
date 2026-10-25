@@ -241,6 +241,6 @@ Para exigir el resultado antes de integrar, configurar la protección de `develo
 
 La protección de ramas se configura en GitHub; añadir el workflow por sí solo no impide un merge. Se propone exigir PR, una aprobación de otro compañero, comprobaciones aprobadas y conversaciones resueltas, sin force push ni eliminación de las ramas protegidas.
 
-El changelog se prepara en `develop` y llega a `main` en el PR de entrega. Mantener los cambios aún no publicados en `Sin publicar`, cerrar el corte aproximadamente cada dos semanas con su versión y fecha, y crear manualmente el tag sobre el commit aprobado de `main`. No es necesario adoptar Scrum para usar esta cadencia. La referencia de `0.1.0` está identificada en el changelog; no se ha creado su tag automáticamente.
+El changelog se actualiza únicamente al preparar y publicar una nueva línea base en `main`, consolidando los cambios de la entrega con su versión y fecha en el PR correspondiente. Las ramas funcionales no añaden entradas por cada especificación; su avance se registra en commits y en el seguimiento SDD de Specs. Crear manualmente el tag sobre el commit aprobado de `main`. La referencia de `0.1.0` está identificada en el changelog; no se ha creado su tag automáticamente.
 
 Los requisitos, contratos de integración y modelo de datos se mantienen en [G2-Despacho-Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs). Las comprobaciones históricas de las guías retiradas pueden consultarse en Git; no acreditan esta reorganización ni sustituyen su validación manual.
