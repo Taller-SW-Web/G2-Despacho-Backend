@@ -83,6 +83,9 @@ services:
       PORT: "8082"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/despacho_operacion
       GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
+      GESTION_CLIENT_ID: modulo-despacho
+      GESTION_CLIENT_SECRET: despacho-local-no-produccion
+      GESTION_SCOPES: gestion:despachos:transicionar gestion:catalogos:leer
       EVIDENCIAS_STORAGE_URL: ${EVIDENCIAS_STORAGE_URL:-}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
       EVIDENCIAS_CLAVE_SERVICIO: ${EVIDENCIAS_CLAVE_SERVICIO:-}

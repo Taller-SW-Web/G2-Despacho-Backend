@@ -101,6 +101,7 @@ public class ConfiguracionSeguridad {
                 .cors(configuracion -> configuracion.configurationSource(fuenteCors))
                 .authorizeExchange(reglas -> {
                     reglas.pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
+                    reglas.pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll();
                     if (modoDemo) reglas.pathMatchers("/api/v1/**").permitAll();
                     else reglas.pathMatchers("/api/v1/**").authenticated();
                     reglas.anyExchange().denyAll();

@@ -48,12 +48,17 @@ public final class EntregaEventosProgramacion {
             boolean requiereCredencial = haciaVentas || !operacionSinAutenticacion;
             String credencial = requiereCredencial ? (haciaVentas ? tokenVentas : tokenOperacion).get() : null;
             if (requiereCredencial && (credencial == null || credencial.isBlank())) throw new IllegalStateException("Credencial de servicio no disponible");
+            var datos = json.readTree(evento.payload());
+            boolean liberacion = "OPERACION_LIBERACION".equals(evento.destino());
             String ruta = haciaVentas ? "/api/v1/integraciones/despachos/eventos"
-                    : "/internal/v1/proyecciones/despachos/" + json.readTree(evento.payload()).path("idDespacho").asText();
+                    : liberacion ? "/internal/v1/capacidad/reservas/" + datos.path("idReserva").asText() + "/liberacion"
+                    : "/internal/v1/proyecciones/despachos/" + datos.path("idDespacho").asText();
+            String cuerpo = liberacion ? json.writeValueAsString(java.util.Map.of("motivo", datos.path("motivo").asText(),
+                    "idDespacho", datos.path("idDespacho").asText())) : evento.payload();
             var respuesta = (haciaVentas ? ventas : operacion).post().uri(ruta).headers(cabeceras -> {
                         if (requiereCredencial) cabeceras.setBearerAuth(credencial);
                     })
-                    .contentType(MediaType.APPLICATION_JSON).body(evento.payload()).retrieve().toBodilessEntity();
+                    .contentType(MediaType.APPLICATION_JSON).body(cuerpo).retrieve().toBodilessEntity();
             if (!respuesta.getStatusCode().is2xxSuccessful()) throw new IllegalStateException("El servicio no confirmó la entrega");
             sql.sql("""
                     UPDATE eventos_salientes SET estado_envio = 'ENVIADO', enviado_en = now(), intentos_envio = intentos_envio + 1,
@@ -62,7 +67,7 @@ public final class EntregaEventosProgramacion {
                     """).param("id", id).param("bloqueo", bloqueo).update();
         } catch (RuntimeException error) {
             int intentos = evento.intentos() + 1;
-            // Ventas: un envío inicial y hasta cinco reintentos. Proyección interna: recuperación continua.
+            // Ventas: un envío inicial y hasta cinco reintentos. Proyección y liberación internas: recuperación continua.
             boolean agotado = "VENTAS".equals(evento.destino()) && intentos >= 6;
             sql.sql("""
                     UPDATE eventos_salientes SET estado_envio = :estado, intentos_envio = :intentos,

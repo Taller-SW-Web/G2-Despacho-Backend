@@ -104,13 +104,38 @@ public class GestorJornadas {
         Perfil perfil = perfilPropio(usuario);
         LocalDate hoy = obtenerFechaActual();
         JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),hoy).orElse(null);
-        if (jornada == null) return new ResumenJornada(null,hoy,0,0,0,0,0);
+        if (jornada == null) return new ResumenJornada(null,hoy,null,null,0,0,0,0,0,List.of());
         var despachos = repositorio.listarProyecciones(jornada.id());
-        return new ResumenJornada(jornada.id(),jornada.fecha(),despachos.size(),
+        // Contrato ampliado: los fallidos, con o sin intento, regresan físicamente al centro.
+        var devolver = despachos.stream().filter(d -> "FALLIDO".equals(d.estado()) || "NO_INTENTADO".equals(d.estado()))
+                .map(d -> new PaqueteDevolucion(d.idDespacho(),d.codigoRastreoInterno(),
+                        d.destino() == null ? null : d.destino().direccion(),d.destino() == null ? null : d.destino().distrito(),
+                        d.motivoFallo() == null && "NO_INTENTADO".equals(d.estado()) ? "NO_INTENTADO" : d.motivoFallo())).toList();
+        return new ResumenJornada(jornada.id(),jornada.fecha(),jornada.estado(),jornada.cerradaEn(),despachos.size(),
                 despachos.stream().filter(d -> "ENTREGADO".equals(d.estado())).count(),
-                despachos.stream().filter(d -> "FALLIDO".equals(d.estado()) && d.numeroIntentos() > 0).count(),
-                despachos.stream().filter(d -> "NO_INTENTADO".equals(d.estado())).count(),
-                despachos.stream().filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado())).count());
+                despachos.stream().filter(Proyeccion::fallidoConIntento).count(),
+                despachos.stream().filter(Proyeccion::noIntentado).count(),
+                despachos.stream().filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado())).count(),devolver);
+    }
+    /** Lectura previa a un comando de campo; los datos se vuelven a validar en Gestión bajo su bloqueo. */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public DespachoEnRuta despachoEnRuta(UUID usuario, UUID idDespacho) {
+        Perfil perfil = perfilPropio(usuario);
+        JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),obtenerFechaActual()).filter(JornadaBase::activa)
+                .orElseThrow(() -> new ErrorJornada(409,"DESP_ERROR_FUERA_DE_TURNO","No tienes una jornada activa."));
+        Proyeccion despacho = repositorio.buscarProyeccion(jornada.id(),idDespacho)
+                .orElseThrow(() -> new ErrorJornada(404,"DESP_ERROR_DESPACHO_NO_ENCONTRADO","El despacho no existe."));
+        return new DespachoEnRuta(perfil.id(),jornada.id(),despacho);
+    }
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<DespachoEnRuta> pendientesPropios(UUID usuario, UUID idJornada) {
+        Perfil perfil = perfilPropio(usuario);
+        JornadaBase jornada = repositorio.obtenerJornada(idJornada);
+        if (!jornada.repartidor().equals(perfil.id())) throw new ErrorJornada(403,"DESP_ERROR_SCOPE_INSUFICIENTE","La jornada no pertenece a tu perfil.");
+        if (!jornada.activa()) return List.of();
+        return repositorio.listarProyecciones(jornada.id()).stream()
+                .filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado()))
+                .map(d -> new DespachoEnRuta(perfil.id(),jornada.id(),d)).toList();
     }
     private static DespachoRuta despachoRuta(Proyeccion despacho) {
         boolean mostrarDatosPersonales = datosPersonalesVisibles(despacho.estado());
@@ -119,7 +144,7 @@ public class GestorJornadas {
                 despacho.secuenciaRuta(),despacho.fechaProgramada(),despacho.numeroIntentos(),despacho.maximoIntentos(),
                 mostrarDatosPersonales ? despacho.destinatario().nombre() : null,
                 mostrarDatosPersonales ? despacho.destino().direccion() : null,
-                mostrarDatosPersonales ? despacho.destino().distrito() : null);
+                mostrarDatosPersonales ? despacho.destino().distrito() : null,despacho.motivoFallo(),despacho.hitos());
     }
     private static DetalleDespacho despachoDetalle(UUID jornada,Proyeccion despacho) {
         boolean mostrarDatosPersonales = datosPersonalesVisibles(despacho.estado());
@@ -127,7 +152,7 @@ public class GestorJornadas {
         return new DetalleDespacho(jornada,despacho.idDespacho(),despacho.codigoRastreoInterno(),despacho.estado(),
                 despacho.secuenciaRuta(),despacho.fechaProgramada(),despacho.numeroIntentos(),despacho.maximoIntentos(),
                 mostrarDatosPersonales ? despacho.destinatario() : null,
-                mostrarDatosPersonales ? despacho.destino() : null);
+                mostrarDatosPersonales ? despacho.destino() : null,despacho.motivoFallo(),despacho.hitos());
     }
     private static boolean datosPersonalesVisibles(String estado) {
         return "ASIGNADO".equals(estado) || "EN_CAMINO".equals(estado);
