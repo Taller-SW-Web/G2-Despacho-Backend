@@ -27,9 +27,10 @@ public class RecepcionCentroJdbc {
     private final JdbcClient sql;
     private final JsonMapper json;
     private final Clock reloj;
+    private final HistorialIncidenciasJdbc historial;
     private final TransactionTemplate transaccion;
-    public RecepcionCentroJdbc(JdbcClient sql, JsonMapper json, Clock reloj, PlatformTransactionManager gestor) {
-        this.sql = sql; this.json = json; this.reloj = reloj; this.transaccion = new TransactionTemplate(gestor);
+    public RecepcionCentroJdbc(JdbcClient sql, JsonMapper json, Clock reloj, HistorialIncidenciasJdbc historial, PlatformTransactionManager gestor) {
+        this.sql = sql; this.json = json; this.reloj = reloj; this.historial = historial; this.transaccion = new TransactionTemplate(gestor);
     }
     public ResultadoRecepcion confirmar(String despacho, SolicitudRecepcion solicitud, String actor) {
         return transaccion.execute(estado -> registrar(despacho, solicitud, actor));
@@ -84,13 +85,7 @@ public class RecepcionCentroJdbc {
         var datos = new LinkedHashMap<String, Object>();
         datos.put("idIncidencia", solicitud.idIncidencia()); datos.put("idReserva", salida.reserva());
         datos.put("selloIntacto", solicitud.selloIntacto()); datos.put("observacionRecepcion", solicitud.observacion());
-        sql.sql("""
-                INSERT INTO historial_estados_despacho (id, despacho_id, tipo_operacion, estado_anterior, estado_nuevo,
-                  funcionalidad_origen, ejecutor_tipo, ejecutor_id, origen, observaciones, datos, registrado_en)
-                VALUES (:id, CAST(:despacho AS uuid), 'RECEPCION_EN_CENTRO', 'FALLIDO', 'FALLIDO',
-                  'F-04', 'USUARIO', :actor, 'MANUAL', :observacion, CAST(:datos AS jsonb), :fecha)
-                """).param("id", UUID.randomUUID()).param("despacho", despacho).param("actor", actor)
-                .param("observacion", solicitud.observacion()).param("datos", json.writeValueAsString(datos)).param("fecha", fecha).update();
+        historial.registrar(despacho, "RECEPCION_EN_CENTRO", "FALLIDO", "FALLIDO", actor, solicitud.observacion(), datos, ahora);
         sql.sql("""
                 INSERT INTO liberaciones_capacidad (id, despacho_id, incidencia_id, reserva_id_externa, jornada_id_externa,
                   solicitada_por, version_solicitada, hash_contenido, respuesta_original, estado, proximo_intento_en, creado_en, actualizado_en)

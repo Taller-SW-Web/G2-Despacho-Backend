@@ -8,6 +8,7 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 
 ### Añadido
 
+- ES-F04-04 en Gestión: reprogramación atómica del despacho fallido recibido, sin consumir intentos; V3 para la respuesta original durable, historial compartido y evento de Ventas. Incluye pruebas de fecha de Lima, concurrencia, rollback, replay y reintentos HTTP del evento, además del arranque aislado para el recorrido de navegador.
 - ES-F04-03 en Gestión: recepción en centro atómica, respuesta original durable, control de concurrencia y liberación recuperable de la reserva original mediante HTTP; pruebas de validación, seguridad, rollback, recuperación y contrato de Operación.
 - CI para PR y cambios en `develop` y `main`: compilación y pruebas existentes de Gateway, Gestión y Operación, incluidas las integraciones con bases temporales; pruebas propias de Seguridad temporal.
 - Instrucciones del backend enlazadas con las especificaciones y contratos del equipo.

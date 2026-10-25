@@ -177,7 +177,7 @@ Recorrido inicial, usando siempre el origen `localhost` para conservar la sesió
 
 El registro funcional de fallos de F-03 todavía no está integrado. En desarrollo, el frontend del repartidor utiliza una simulación en memoria; sus cambios no aparecen en el administrador ni en PostgreSQL. Para abrir esa aplicación por separado, ejecutar `npm run dev:repartidor` en otra terminal del frontend; su puerto es 5174.
 
-En la comprobación local se preparó manualmente un fallo por `CLIENTE_AUSENTE`, con un intento consumido y retorno pendiente; se verificaron listado, detalle, historial y sincronización con Operación. Esa preparación de datos no forma parte del arranque automático ni implementa F-03. Las fotografías necesitan Storage y una evidencia asociada; confirmar recepción, reprogramar y cerrar requieren integrar sus formularios y comandos propietarios.
+En la comprobación local se preparó manualmente un fallo por `CLIENTE_AUSENTE`, con un intento consumido y retorno pendiente; se verificaron listado, detalle, historial y sincronización con Operación. Esa preparación de datos no forma parte del arranque automático ni implementa F-03. Las fotografías necesitan Storage y una evidencia asociada. Gestión implementa recepción y reprogramación (ES-F04-03/04); el cierre ES-F04-05 mantiene su alcance pendiente.
 
 Los registros creados o preparados durante las pruebas permanecen en el volumen local de Docker. No se incluyen en los commits ni se copian a otros equipos: una instalación nueva parte de las migraciones y sus catálogos. `docker compose down -v` elimina también esos registros.
 
@@ -200,7 +200,17 @@ Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-o
 
 ## Pruebas y contratos
 
-La implementación backend de ES-F04-03 y sus límites se describen en [verificación de recepción en centro](servicio-gestion-despachos/docs/ES-F04-03-verificacion.md). Reutiliza el esquema V1/V2 de Gestión sin migraciones adicionales. Las verificaciones se ejecutan exclusivamente sobre bases desechables. Los datos históricos sin referencias completas requieren reconciliación verificable; el endpoint los rechaza sin adivinar reservas. El modal administrativo y la comprobación conjunta con Operación quedan pendientes en esta entrega.
+La implementación backend de ES-F04-03 y sus límites se describen en [verificación de recepción en centro](servicio-gestion-despachos/docs/ES-F04-03-verificacion.md). Esa especificación reutiliza V1/V2. ES-F04-04 añade V3 para conservar la respuesta de reprogramación junto con su historial y evento; no modifica Operación ni su base. Las verificaciones usan bases desechables. Los datos históricos sin referencias completas requieren reconciliación verificable; los comandos los rechazan sin adivinar reservas. La trazabilidad vigente de reprogramación se mantiene en [su evidencia SDD](../G2-Despacho-Specs/especificaciones/ES-F04-04-ReprogramarDespachoFallido/evidence.md).
+
+Para el recorrido de navegador de ES-F04-04, con Docker disponible, ejecutar desde Gestión en PowerShell:
+
+```powershell
+.\mvnw.cmd test-compile dependency:build-classpath '-Dmdep.outputFile=target/classpath-revision.txt'
+$classpathF04 = 'target/test-classes;target/classes;' + (Get-Content target/classpath-revision.txt -Raw).Trim()
+java -cp $classpathF04 com.modulodespacho.gestiondespachos.servicio_gestion_despachos.ReprogramacionNavegadorPruebas
+```
+
+El arranque crea PostgreSQL desechable, aplica Flyway y reutiliza el escenario sintético de recepción/reprogramación con reloj `2026-10-25T03:30Z` (24/10 en Lima). Expone Gestión en `18085` con JWT controlado; no incorpora esa identidad al artefacto productivo. Tras `REVISION_F04_LISTA`, ejecutar `npm run test:f04:e2e` desde frontend. Para repetir el recorrido hay que reiniciar esta instancia, porque la prueba acepta la decisión real. Se cierra con Ctrl+C, al crear `target/detener-revision-f04`, o después de 15 minutos. Antes de otro arranque, retirar únicamente ese archivo de señal si existe. Gateway, Seguridad, Operación y Ventas reales no quedan acreditados por este recorrido.
 
 Gestión ejecuta su procesador de liberaciones con `RECEPCION_PROCESADOR_HABILITADO=true`, revisión de pendientes cada `RECEPCION_INTERVALO_PROCESADOR_MS=1000` y calendario `RECEPCION_ESPERAS=PT30S,PT2M,PT10M,PT30M,PT1H` (duraciones ISO 8601). Necesita la URL de Operación y la credencial técnica de `modulo-despacho` autorizada con `operacion:capacidad:liberar`; reutiliza `OPERACION_REPARTO_URL`, `OPERACION_CLIENT_ID`, `OPERACION_CLIENT_SECRET` o `OPERACION_TOKEN_SERVICIO`. Los secretos se configuran fuera de Git. Sin confirmación válida, conserva el retorno físico y la liberación pendiente; los errores de autorización o datos se señalan para revisión y se reintentan cada hora. Desactivar el procesador conserva las solicitudes, pero no las entrega hasta reactivarlo.
 
