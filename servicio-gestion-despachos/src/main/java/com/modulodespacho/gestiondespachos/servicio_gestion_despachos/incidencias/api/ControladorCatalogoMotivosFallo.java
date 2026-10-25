@@ -12,7 +12,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencia
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.MotivoFallo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 
-/** Entrada del catálogo para el Gestor de F-04; perfil de campo pendiente de Operación. */
+/** Entrada del catálogo para el Gestor de F-04 y, por la ruta interna, para el perfil de campo de Operación. */
 @RestController
 @Profile("!integracion-local")
 public class ControladorCatalogoMotivosFallo {
@@ -26,6 +26,16 @@ public class ControladorCatalogoMotivosFallo {
     @GetMapping("/api/v1/catalogos/motivos-fallo")
     @PreAuthorize("hasRole('GESTOR_DESPACHO')")
     public ResponseEntity<RespuestaCatalogo> consultar() {
+        return catalogo();
+    }
+
+    /** Operación lo consulta con su credencial técnica después de validar el perfil de campo. */
+    @GetMapping("/internal/v1/catalogos/motivos-fallo")
+    public ResponseEntity<RespuestaCatalogo> consultarInterno() {
+        return catalogo();
+    }
+
+    private ResponseEntity<RespuestaCatalogo> catalogo() {
         try {
             return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                     .body(new RespuestaCatalogo(catalogo.consultarTodos()));

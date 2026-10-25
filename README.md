@@ -129,7 +129,12 @@ El mismo token se puede introducir en `Authorize` de Swagger. Rutas iniciales pa
 
 ## Seguridad temporal
 
-Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no implementa login ni cuentas reales. No utilizar el emisor temporal para un despliegue público.
+Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Implementa el login propuesto a Seguridad (contrato externo §8.6) con cuentas ficticias para probar la app del repartidor. No utilizar el emisor temporal para un despliegue público.
+
+| Usuario de prueba (`POST /api/v1/auth/login`) | Clave | Perfil emitido |
+|---|---|---|
+| `repartidor.prueba` o `mrojas@despacho.pe` | `Ruta2026!` | `repartidor` |
+| `gestor.prueba` | `Ruta2026!` | `gestor` |
 
 | Perfil de prueba | Identificador | Uso |
 |---|---|---|
@@ -175,9 +180,13 @@ Recorrido inicial, usando siempre el origen `localhost` para conservar la sesió
 6. En **Programación**, usar **Generar pedido de prueba** y asignarlo a un candidato con jornada activa y capacidad suficiente. Los pedidos simulados se guardan en PostgreSQL local y comienzan pendientes de asignación.
 7. En **Entregas fallidas**, consultar los fallos existentes y abrir **Ver detalle**. El botón de Programación no genera fallos: para comprobar listado y detalle hacen falta incidencias de prueba con historial y referencias coherentes de repartidor y jornada. Una base nueva muestra el listado vacío.
 
-El registro funcional de fallos de F-03 todavía no está integrado. En desarrollo, el frontend del repartidor utiliza una simulación en memoria; sus cambios no aparecen en el administrador ni en PostgreSQL. Para abrir esa aplicación por separado, ejecutar `npm run dev:repartidor` en otra terminal del frontend; su puerto es 5174.
+### Probar la app del repartidor (F-03)
 
-En la comprobación local se preparó manualmente un fallo por `CLIENTE_AUSENTE`, con un intento consumido y retorno pendiente; se verificaron listado, detalle, historial y sincronización con Operación. Esa preparación de datos no forma parte del arranque automático ni implementa F-03. Las fotografías necesitan Storage y una evidencia asociada; confirmar recepción, reprogramar y cerrar requieren integrar sus formularios y comandos propietarios.
+Tras los pasos 1 a 6, ejecutar `npm run dev:repartidor` en otra terminal del frontend (puerto 5174) e ingresar con `mrojas@despacho.pe` / `Ruta2026!`; ese usuario corresponde al perfil vinculado en el paso 3. La ruta muestra los despachos asignados. **Iniciar traslado** y **Cerrar jornada** funcionan sin Storage; **Confirmar entrega** y **Marcar como fallido** necesitan la foto en el bucket privado, por lo que sin las variables `EVIDENCIAS_*` responden `503`. El cierre deja los pendientes como `FALLIDO`/`NO_INTENTADO`, visibles después en **Entregas fallidas** del administrador.
+
+Para revisar la interfaz sin backend, la app admite `VITE_MODO_DEMO=true`, con datos en memoria que no llegan a PostgreSQL.
+
+Confirmar recepción, reprogramar y cerrar como devuelto (F-04) requieren integrar sus formularios y comandos propietarios.
 
 Los registros creados o preparados durante las pruebas permanecen en el volumen local de Docker. No se incluyen en los commits ni se copian a otros equipos: una instalación nueva parte de las migraciones y sus catálogos. `docker compose down -v` elimina también esos registros.
 

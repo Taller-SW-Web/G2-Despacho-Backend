@@ -11,6 +11,10 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 - ES-F04-03 en Gestión: recepción en centro atómica, respuesta original durable, control de concurrencia y liberación recuperable de la reserva original mediante HTTP; pruebas de validación, seguridad, rollback, recuperación y contrato de Operación.
 - CI para PR y cambios en `develop` y `main`: compilación y pruebas existentes de Gateway, Gestión y Operación, incluidas las integraciones con bases temporales; pruebas propias de Seguridad temporal.
 - Instrucciones del backend enlazadas con las especificaciones y contratos del equipo.
+- F-03, comandos del repartidor en Operación: inicio de traslado, entrega y fallo con evidencia verificada en el bucket, y catálogo de motivos de campo. Cada comando es idempotente por `Idempotency-Key` del usuario (migración V6 `comandos_repartidor`) y se coordina con Gestión fuera de las transacciones locales.
+- F-03 en Gestión: `POST /internal/v1/despachos/{id}/transiciones` (contrato de Gestión §6.1) con máquina de estados, contador de intentos, incidencia vigente, historial F-03, eventos para Ventas, proyección para Operación y solicitud durable de liberación de capacidad al entregar. Catálogo interno de motivos para Operación (§6.2).
+- Proyección y consultas del repartidor con `motivoFallo` y `hitos` (asignado, en camino, entregado o fallido); resumen ampliado con estado y hora de cierre y paquetes por devolver.
+- Seguridad temporal: login propuesto `POST /api/v1/auth/login` con cuentas ficticias, enrutado por el Gateway sin JWT; scopes `gestion:despachos:transicionar` y `gestion:catalogos:leer` para `modulo-despacho`.
 
 ### Cambiado
 
@@ -19,7 +23,11 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 - Recursos de compatibilidad y datos utilizados por pruebas de Operación reubicados dentro del servicio.
 - Documentación de ejecución y configuración consolidada en el README; eliminación de Compose y guías redundantes.
 
+- El cierre de jornada del repartidor exige `Idempotency-Key` y resuelve los pendientes como `FALLIDO`/`NO_INTENTADO` en Gestión antes de cerrar, en lugar de rechazar el cierre.
+
 ### Corregido
+
+- Resumen del repartidor: `noIntentados` contaba un estado `NO_INTENTADO` que Gestión no emite; ahora usa el motivo del `FALLIDO`.
 
 - Preparación de las pruebas F01: conservar el catálogo de distritos creado por Flyway al limpiar los escenarios.
 - Generación de despachos simulados: consultar también `zonas_codigos_postales` y conservar la correspondencia entre distrito y código postal; adaptar la prueba de cobertura postal a las restricciones del esquema vigente.

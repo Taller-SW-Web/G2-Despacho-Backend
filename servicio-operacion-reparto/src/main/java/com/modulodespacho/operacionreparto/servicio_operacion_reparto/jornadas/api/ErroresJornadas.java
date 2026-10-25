@@ -14,7 +14,8 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.ErrorJornada;
 
-@RestControllerAdvice(assignableTypes={ControladorJornadas.class,ControladorJornadaPropia.class,ControladorCapacidadInterna.class})
+@RestControllerAdvice(assignableTypes={ControladorJornadas.class,ControladorJornadaPropia.class,ControladorCapacidadInterna.class,
+        com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.api.ControladorOperacionCampo.class})
 public class ErroresJornadas {
     @ExceptionHandler(ErrorJornada.class) public ProblemDetail negocio(ErrorJornada error) {
         ProblemDetail problema=problema(error.estado(),error.codigo(),error.getMessage());
