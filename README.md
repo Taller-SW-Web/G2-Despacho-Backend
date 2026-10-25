@@ -84,10 +84,10 @@ Editar `.env` y usar los mismos comandos de arranque. Un único `.env` raíz con
 
 | Servicio | Migraciones activas | Estado inicial esperado |
 |---|---|---|
-| Gestión | [V1 original](servicio-gestion-despachos/src/main/resources/db/migration/V1__esquema_original_gestion.sql) y [V2 acumulada](servicio-gestion-despachos/src/main/resources/db/migration/V2__actualizacion_esquema_gestion.sql) | 17 tablas de negocio, parámetros, motivos de fallo y 50 distritos de Lima/Callao. |
+| Gestión | [V1 original](servicio-gestion-despachos/src/main/resources/db/migration/V1__esquema_original_gestion.sql), [V2 acumulada](servicio-gestion-despachos/src/main/resources/db/migration/V2__actualizacion_esquema_gestion.sql), [V3 reprogramación](servicio-gestion-despachos/src/main/resources/db/migration/V3__reprogramaciones_despacho.sql) y [V4 cierre](servicio-gestion-despachos/src/main/resources/db/migration/V4__cierre_despacho_origen.sql) | Base inicial, resultado durable de reprogramación e índice único del cierre en el historial. |
 | Operación | V1 a V5 existentes en `servicio-operacion-reparto/src/main/resources/db/migration` | Tablas, funciones y parámetros de perfiles, flota, jornadas, reservas, proyecciones y evidencias; sin datos de negocio de prueba. |
 
-Flyway queda habilitado para ambas bases locales, con esquema `public`, baseline automática desactivada y limpieza de Flyway desactivada. Hibernate mantiene `ddl-auto=none`. Las modificaciones futuras de Gestión se agregan desde V3; no editar archivos que ya se hayan aplicado a una base persistente.
+Flyway queda habilitado para ambas bases locales, con esquema `public`, baseline automática desactivada y limpieza de Flyway desactivada. Hibernate mantiene `ddl-auto=none`. Las modificaciones futuras de Gestión se agregan desde V5; no editar archivos que ya se hayan aplicado a una base persistente. V4 conserva los cierres históricos sin inventar respuestas originales; si existen cierres duplicados del mismo despacho, exige reconciliarlos antes de aplicar el índice.
 
 PostgreSQL usa `postgis/postgis:17-3.6` porque V1 de Gestión conserva `zonas.geom`, `distrito.geom` y sus índices del esquema original. La cobertura actual se resuelve por distrito y código postal; no utiliza esas geometrías. Retirar PostGIS requiere una decisión de esquema posterior. El inicializador de la imagen instala extensiones en `postgres` y `template_postgis`; nuestras bases se crean desde `template1`, y V1 instala PostGIS en `extensions` de Gestión.
 
@@ -213,6 +213,8 @@ Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-o
 
 La implementación backend de ES-F04-03 y sus límites se describen en [verificación de recepción en centro](servicio-gestion-despachos/docs/ES-F04-03-verificacion.md). Esa especificación reutiliza V1/V2. ES-F04-04 añade V3 para conservar la respuesta de reprogramación junto con su historial y evento; no modifica Operación ni su base. Las verificaciones usan bases desechables. Los datos históricos sin referencias completas requieren reconciliación verificable; los comandos los rechazan sin adivinar reservas. La trazabilidad vigente de reprogramación se mantiene en [su evidencia SDD](../G2-Despacho-Specs/especificaciones/ES-F04-04-ReprogramarDespachoFallido/evidence.md).
 
+ES-F04-05 añade V4 y `POST /api/v1/despachos/{id}/devolucion-origen`, con resultado original en el historial y evento para despachos reales. Conserva la recepción y su liberación; no llama a Operación para aceptar el cierre. Su seguimiento está en [la evidencia SDD de cierre](../G2-Despacho-Specs/especificaciones/ES-F04-05-CerrarDespachoComoDevueltoAOrigen/evidence.md).
+
 Para el recorrido de navegador de ES-F04-04, con Docker disponible, ejecutar desde Gestión en PowerShell:
 
 ```powershell
@@ -222,6 +224,8 @@ java -cp $classpathF04 com.modulodespacho.gestiondespachos.servicio_gestion_desp
 ```
 
 El arranque crea PostgreSQL desechable, aplica Flyway y reutiliza el escenario sintético de recepción/reprogramación con reloj `2026-10-25T03:30Z` (24/10 en Lima). Expone Gestión en `18085` con JWT controlado; no incorpora esa identidad al artefacto productivo. Tras `REVISION_F04_LISTA`, ejecutar `npm run test:f04:e2e` desde frontend. Para repetir el recorrido hay que reiniciar esta instancia, porque la prueba acepta la decisión real. Se cierra con Ctrl+C, al crear `target/detener-revision-f04`, o después de 15 minutos. Antes de otro arranque, retirar únicamente ese archivo de señal si existe. Gateway, Seguridad, Operación y Ventas reales no quedan acreditados por este recorrido.
+
+Para ES-F04-05, usar el mismo classpath con `java -cp $classpathF04 com.modulodespacho.gestiondespachos.servicio_gestion_despachos.CierreNavegadorPruebas`. Esperar `REVISION_CIERRE_F04_LISTA` en el puerto `18086` y ejecutar `npm run test:f04:cierre:e2e` desde frontend. Tiene su propia base desechable y señal `target/detener-revision-cierre-f04`; también termina a los 15 minutos. El recorrido verifica pérdida de respuesta, recuperación exacta, conservación de filtros y accesibilidad/adaptación en navegador.
 
 Gestión ejecuta su procesador de liberaciones con `RECEPCION_PROCESADOR_HABILITADO=true`, revisión de pendientes cada `RECEPCION_INTERVALO_PROCESADOR_MS=1000` y calendario `RECEPCION_ESPERAS=PT30S,PT2M,PT10M,PT30M,PT1H` (duraciones ISO 8601). Necesita la URL de Operación y la credencial técnica de `modulo-despacho` autorizada con `operacion:capacidad:liberar`; reutiliza `OPERACION_REPARTO_URL`, `OPERACION_CLIENT_ID`, `OPERACION_CLIENT_SECRET` o `OPERACION_TOKEN_SERVICIO`. Los secretos se configuran fuera de Git. Sin confirmación válida, conserva el retorno físico y la liberación pendiente; los errores de autorización o datos se señalan para revisión y se reintentan cada hora. Desactivar el procesador conserva las solicitudes, pero no las entrega hasta reactivarlo.
 
