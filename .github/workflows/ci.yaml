@@ -60,6 +60,8 @@ jobs:
           path: |
             ${{ matrix.servicio }}/target/surefire-reports/
             ${{ matrix.servicio }}/target/failsafe-reports/
+            ${{ matrix.servicio }}/target/f05-rendimiento-local.json
+            ${{ matrix.servicio }}/target/f06-rendimiento-local.json
           if-no-files-found: ignore
           retention-days: 7
 
