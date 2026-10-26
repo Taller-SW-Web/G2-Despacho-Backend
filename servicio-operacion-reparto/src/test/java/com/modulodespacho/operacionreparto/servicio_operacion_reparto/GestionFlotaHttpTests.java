@@ -164,6 +164,9 @@ class GestionFlotaHttpTests {
         cambiar(furgoneta, "EN_MANTENIMIENTO", 204);
         assertThat(sql.sql("SELECT estado FROM asignaciones_diarias").query(String.class).single()).isEqualTo("CERRADA");
         assertThat(sql.sql("SELECT cerrada_en IS NOT NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
+        comprobarAuditoriaCierre("MANTENIMIENTO");
+        cambiar(furgoneta, "EN_MANTENIMIENTO", 204);
+        comprobarAuditoriaCierre("MANTENIMIENTO");
         assertThatThrownBy(() -> sql.sql("UPDATE proyecciones_despacho SET estado='ASIGNADO'").update())
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         baja(repartidor, 204);
@@ -319,10 +322,44 @@ class GestionFlotaHttpTests {
         baja(repartidor, 204);
         assertThat(sql.sql("SELECT estado FROM asignaciones_diarias").query(String.class).single()).isEqualTo("CERRADA");
         assertThat(sql.sql("SELECT cerrada_en IS NOT NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
+        comprobarAuditoriaCierre("GESTOR_DESPACHO");
+        baja(repartidor, 204);
+        comprobarAuditoriaCierre("GESTOR_DESPACHO");
         assertThat(sql.sql("SELECT estado FROM furgonetas").query(String.class).single()).isEqualTo("DISPONIBLE");
         assertThatThrownBy(() -> abrirJornada(repartidor, furgoneta))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(sql.sql("SELECT count(*) FROM asignaciones_diarias").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void revierteBajaYRetiroSiNoPuedeAuditarElCierreIndirecto() throws Exception {
+        UUID repartidor = crearRepartidor();
+        vincular(repartidor, UUID.randomUUID(), 204);
+        UUID furgoneta = crearFurgoneta();
+        abrirJornada(repartidor, furgoneta);
+        sql.sql("ALTER TABLE auditoria_configuracion ADD CONSTRAINT prueba_auditoria_cierre CHECK (entidad <> 'asignaciones_diarias')").update();
+        try {
+            cambiar(furgoneta, "EN_MANTENIMIENTO", 409);
+            baja(repartidor, 409);
+            assertThat(sql.sql("SELECT estado FROM asignaciones_diarias").query(String.class).single()).isEqualTo("ACTIVA");
+            assertThat(sql.sql("SELECT cerrada_en IS NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
+            assertThat(sql.sql("SELECT estado FROM furgonetas").query(String.class).single()).isEqualTo("DISPONIBLE");
+            assertThat(sql.sql("SELECT estado_registro FROM repartidores").query(String.class).single()).isEqualTo("ACTIVO");
+        } finally {
+            sql.sql("ALTER TABLE auditoria_configuracion DROP CONSTRAINT prueba_auditoria_cierre").update();
+        }
+    }
+
+    private void comprobarAuditoriaCierre(String tipo) {
+        assertThat(sql.sql("""
+                SELECT count(*) FROM auditoria_configuracion a
+                JOIN asignaciones_diarias j ON a.entidad_id = j.id::text
+                WHERE a.entidad='asignaciones_diarias' AND a.accion='CIERRE_JORNADA'
+                  AND a.usuario_id=:actor AND a.datos_anteriores->>'estado'='ACTIVA'
+                  AND a.datos_nuevos->>'estado'='CERRADA'
+                  AND a.datos_nuevos->>'tipo_cierre'=:tipo
+                  AND a.datos_nuevos->>'cerrada_en' IS NOT NULL
+                """).param("actor", ACTOR).param("tipo", tipo).query(Long.class).single()).isEqualTo(1);
     }
 
     @Test
