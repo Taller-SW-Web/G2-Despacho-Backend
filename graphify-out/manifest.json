@@ -1,0 +1,1778 @@
+{
+  "api-gateway/mvnw": {
+    "mtime": 1792175292.0961707,
+    "seen": 1793039267.065927,
+    "ast_hash": "ab50dd89da7da2346b28003352eeeeeb",
+    "semantic_hash": "ab50dd89da7da2346b28003352eeeeeb"
+  },
+  "api-gateway/pom.xml": {
+    "mtime": 1793037702.7973893,
+    "seen": 1793039267.0659485,
+    "ast_hash": "ddb2db2da394279dca169c89b1817f92",
+    "semantic_hash": "ddb2db2da394279dca169c89b1817f92"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/ApiGatewayApplication.java": {
+    "mtime": 1792175292.0968237,
+    "seen": 1793039267.0659528,
+    "ast_hash": "9d8113da12d738e73475ac92822c064e",
+    "semantic_hash": "9d8113da12d738e73475ac92822c064e"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/seguridad/ConfiguracionSeguridad.java": {
+    "mtime": 1793037719.9901083,
+    "seen": 1793039267.0659556,
+    "ast_hash": "c2d899dcc3e10eb859b05959a92332c0",
+    "semantic_hash": "c2d899dcc3e10eb859b05959a92332c0"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/seguridad/ValidadorTokenDespacho.java": {
+    "mtime": 1793037702.7987154,
+    "seen": 1793039267.0659585,
+    "ast_hash": "4fef497937cc133c99cb89c4fbb6b118",
+    "semantic_hash": "4fef497937cc133c99cb89c4fbb6b118"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/transversal/FiltroCorrelacion.java": {
+    "mtime": 1793037702.7987866,
+    "seen": 1793039267.0659611,
+    "ast_hash": "910fe31aa70d2a5891876b43dcfb8862",
+    "semantic_hash": "910fe31aa70d2a5891876b43dcfb8862"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/transversal/FiltroTamanoSolicitud.java": {
+    "mtime": 1793037702.798837,
+    "seen": 1793039267.065964,
+    "ast_hash": "3a7c6f0af106d0fc66fcab402807db98",
+    "semantic_hash": "3a7c6f0af106d0fc66fcab402807db98"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/transversal/ManejadorErroresGateway.java": {
+    "mtime": 1793037702.798881,
+    "seen": 1793039267.0659666,
+    "ast_hash": "7176790595a3d3730c66e1c9a5cf7823",
+    "semantic_hash": "7176790595a3d3730c66e1c9a5cf7823"
+  },
+  "api-gateway/src/main/java/com/modulodespacho/api_gateway/transversal/ProblemasGateway.java": {
+    "mtime": 1793037702.798881,
+    "seen": 1793039267.0659692,
+    "ast_hash": "846b6aa348e31b2a72205808684c893f",
+    "semantic_hash": "846b6aa348e31b2a72205808684c893f"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/ApiGatewayApplicationTests.java": {
+    "mtime": 1793037702.798881,
+    "seen": 1793039267.0659723,
+    "ast_hash": "3d29a5a2787e96b47570eb64b80885d5",
+    "semantic_hash": "3d29a5a2787e96b47570eb64b80885d5"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/ArranqueSeguridadGatewayTests.java": {
+    "mtime": 1793037702.798881,
+    "seen": 1793039267.0659745,
+    "ast_hash": "29d08f94e76b55dd189ac15753ec45db",
+    "semantic_hash": "29d08f94e76b55dd189ac15753ec45db"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/ModoDemoGatewayTests.java": {
+    "mtime": 1793037719.990519,
+    "seen": 1793039267.0659773,
+    "ast_hash": "955e17bb148a475cb43af9815ea19dc0",
+    "semantic_hash": "955e17bb148a475cb43af9815ea19dc0"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/RutaFallidosGatewayTests.java": {
+    "mtime": 1793037702.798881,
+    "seen": 1793039267.06598,
+    "ast_hash": "dad50a2fb9c7989e45e22b8c8f2e0158",
+    "semantic_hash": "dad50a2fb9c7989e45e22b8c8f2e0158"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/RutaFlotaGatewayTests.java": {
+    "mtime": 1793037719.990519,
+    "seen": 1793039267.0659828,
+    "ast_hash": "d4003e510e19e202eefceaa202bcd6ec",
+    "semantic_hash": "d4003e510e19e202eefceaa202bcd6ec"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/seguridad/DescubrimientoJwtTests.java": {
+    "mtime": 1793037702.7994466,
+    "seen": 1793039267.065985,
+    "ast_hash": "cf31c9d119e32dfc5e623ec27bfd7bf2",
+    "semantic_hash": "cf31c9d119e32dfc5e623ec27bfd7bf2"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/seguridad/ValidadorTokenDespachoTests.java": {
+    "mtime": 1793037702.7995086,
+    "seen": 1793039267.065988,
+    "ast_hash": "58283b35df5a8aa98ead272a68ab65d3",
+    "semantic_hash": "58283b35df5a8aa98ead272a68ab65d3"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/transversal/FiltroTamanoSolicitudTests.java": {
+    "mtime": 1793037702.7995086,
+    "seen": 1793039267.0659904,
+    "ast_hash": "53e91802317645e7bdae187f7de227df",
+    "semantic_hash": "53e91802317645e7bdae187f7de227df"
+  },
+  "api-gateway/src/test/java/com/modulodespacho/api_gateway/transversal/ManejadorErroresGatewayTests.java": {
+    "mtime": 1793037702.7996218,
+    "seen": 1793039267.0659933,
+    "ast_hash": "7af2a91e8f113656dba06f1ba5fbe61f",
+    "semantic_hash": "7af2a91e8f113656dba06f1ba5fbe61f"
+  },
+  "seguridad-local/pruebas/EmisorSeguridadLocalPruebas.java": {
+    "mtime": 1793037719.9914043,
+    "seen": 1793039267.065996,
+    "ast_hash": "f14e5cdec3165f4014bc8ab775219b5d",
+    "semantic_hash": "f14e5cdec3165f4014bc8ab775219b5d"
+  },
+  "seguridad-local/src/EmisorSeguridadLocal.java": {
+    "mtime": 1793037719.9914043,
+    "seen": 1793039267.0659988,
+    "ast_hash": "41508ae7101400a714262a7b232be326",
+    "semantic_hash": "41508ae7101400a714262a7b232be326"
+  },
+  "servicio-gestion-despachos/mvnw": {
+    "mtime": 1792175292.0976558,
+    "seen": 1793039267.0660012,
+    "ast_hash": "ab50dd89da7da2346b28003352eeeeeb",
+    "semantic_hash": "ab50dd89da7da2346b28003352eeeeeb"
+  },
+  "servicio-gestion-despachos/pom.xml": {
+    "mtime": 1793037702.8014655,
+    "seen": 1793039267.0660043,
+    "ast_hash": "fc609d752db17862f9c1e4744a4ca198",
+    "semantic_hash": "fc609d752db17862f9c1e4744a4ca198"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ServicioGestionDespachosApplication.java": {
+    "mtime": 1792175292.098285,
+    "seen": 1793039267.0660071,
+    "ast_hash": "e56d2851f3978f64fda154e76da3f97f",
+    "semantic_hash": "e56d2851f3978f64fda154e76da3f97f"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/api/ControladorCotizacion.java": {
+    "mtime": 1793037702.801954,
+    "seen": 1793039267.0660098,
+    "ast_hash": "da03bf900be2be5e6fc5f8bdfd99d0fd",
+    "semantic_hash": "da03bf900be2be5e6fc5f8bdfd99d0fd"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/api/ControladorCotizacionReal.java": {
+    "mtime": 1793037702.8020852,
+    "seen": 1793039267.0660124,
+    "ast_hash": "6972daf83c8509bb79847967a9817012",
+    "semantic_hash": "6972daf83c8509bb79847967a9817012"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/api/ManejadorErroresCotizacion.java": {
+    "mtime": 1793037702.8020852,
+    "seen": 1793039267.0660148,
+    "ast_hash": "adccb0d67597df1411402ad2537d988c",
+    "semantic_hash": "adccb0d67597df1411402ad2537d988c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/api/RespuestaCotizacion.java": {
+    "mtime": 1793037702.8020852,
+    "seen": 1793039267.0660176,
+    "ast_hash": "1602b019aa4c79d790702146947fdeb8",
+    "semantic_hash": "1602b019aa4c79d790702146947fdeb8"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/CalcularCotizacion.java": {
+    "mtime": 1793037702.80226,
+    "seen": 1793039267.0660203,
+    "ast_hash": "bba9227ed08ad735b0675b4887fa9b41",
+    "semantic_hash": "bba9227ed08ad735b0675b4887fa9b41"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/CotizacionInvalidaException.java": {
+    "mtime": 1793037702.8023055,
+    "seen": 1793039267.066023,
+    "ast_hash": "1f5369eb99882ef850429f5114913ecd",
+    "semantic_hash": "1f5369eb99882ef850429f5114913ecd"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/ProveedorDatosFisicos.java": {
+    "mtime": 1793037702.802349,
+    "seen": 1793039267.0660262,
+    "ast_hash": "e2c08a51d0502ada52a6f81749b204e0",
+    "semantic_hash": "e2c08a51d0502ada52a6f81749b204e0"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/PuertoCotizacion.java": {
+    "mtime": 1793037702.802349,
+    "seen": 1793039267.0660286,
+    "ast_hash": "755eb678024691a19d4f47ec5a7c11f3",
+    "semantic_hash": "755eb678024691a19d4f47ec5a7c11f3"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/ServicioCotizacion.java": {
+    "mtime": 1793037702.802349,
+    "seen": 1793039267.0660315,
+    "ast_hash": "f8af6275440b637bccba27280e4b691a",
+    "semantic_hash": "f8af6275440b637bccba27280e4b691a"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/application/SolicitudCotizacion.java": {
+    "mtime": 1793037702.802349,
+    "seen": 1793039267.066034,
+    "ast_hash": "7bfe0528f234f441f2853779fcc54322",
+    "semantic_hash": "7bfe0528f234f441f2853779fcc54322"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/domain/CalculadoraCotizacion.java": {
+    "mtime": 1793037702.8026116,
+    "seen": 1793039267.066037,
+    "ast_hash": "37dfff048b8db218784b686153f7ccfe",
+    "semantic_hash": "37dfff048b8db218784b686153f7ccfe"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/domain/DatosFisicos.java": {
+    "mtime": 1793037702.802663,
+    "seen": 1793039267.06604,
+    "ast_hash": "c6e5ca149f0140c913a8b0659608b14c",
+    "semantic_hash": "c6e5ca149f0140c913a8b0659608b14c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/domain/ResultadoCotizacion.java": {
+    "mtime": 1793037702.802663,
+    "seen": 1793039267.0660424,
+    "ast_hash": "8a43e2e900af24385843173e127e90dc",
+    "semantic_hash": "8a43e2e900af24385843173e127e90dc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/infrastructure/AdaptadorCotizacionSimulada.java": {
+    "mtime": 1793037702.802845,
+    "seen": 1793039267.0660453,
+    "ast_hash": "aa2beba451b42db0a103afbd7d6b181e",
+    "semantic_hash": "aa2beba451b42db0a103afbd7d6b181e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/infrastructure/CatalogoProductosStub.java": {
+    "mtime": 1793037702.8029504,
+    "seen": 1793039267.066048,
+    "ast_hash": "44c01fdaebaeafc34601027cfd59997c",
+    "semantic_hash": "44c01fdaebaeafc34601027cfd59997c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/infrastructure/FiltroLimiteCotizaciones.java": {
+    "mtime": 1793037702.8029504,
+    "seen": 1793039267.0660505,
+    "ast_hash": "a39ff3e2e9bb39cce5d18cd314b55b19",
+    "semantic_hash": "a39ff3e2e9bb39cce5d18cd314b55b19"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorCatalogoMotivosFallo.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660534,
+    "ast_hash": "392018529451d8cdcff893bf4e9921a6",
+    "semantic_hash": "392018529451d8cdcff893bf4e9921a6"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorCierreDespacho.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660563,
+    "ast_hash": "63820d88dcb4e39f7aeeadf870a07ef0",
+    "semantic_hash": "63820d88dcb4e39f7aeeadf870a07ef0"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorDetalleIncidencia.java": {
+    "mtime": 1793037702.8032565,
+    "seen": 1793039267.0660584,
+    "ast_hash": "d43ea0d42952aa5abdad71d8265b912c",
+    "semantic_hash": "d43ea0d42952aa5abdad71d8265b912c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorEntregasFallidas.java": {
+    "mtime": 1793037702.8032565,
+    "seen": 1793039267.0660613,
+    "ast_hash": "cf6cbdb60436d17aa9eddc006ebfc26d",
+    "semantic_hash": "cf6cbdb60436d17aa9eddc006ebfc26d"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorRecepcionCentro.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660663,
+    "ast_hash": "238fbbd3ba4e45c84db590f4faca615f",
+    "semantic_hash": "238fbbd3ba4e45c84db590f4faca615f"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorReprogramacion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660684,
+    "ast_hash": "cf8cbcf7c509abda02180d55f850d576",
+    "semantic_hash": "cf8cbcf7c509abda02180d55f850d576"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ParametrosConsultaFallidos.java": {
+    "mtime": 1793037702.8032565,
+    "seen": 1793039267.0660713,
+    "ast_hash": "839be1306182f14e56ccfe85ca8f54ca",
+    "semantic_hash": "839be1306182f14e56ccfe85ca8f54ca"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesCierre.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660744,
+    "ast_hash": "e3ff3e0992de007369af6f51163d27a0",
+    "semantic_hash": "e3ff3e0992de007369af6f51163d27a0"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesRecepcion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0660772,
+    "ast_hash": "b241cad8ae114cae6413fb0b0fb1138e",
+    "semantic_hash": "b241cad8ae114cae6413fb0b0fb1138e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesReprogramacion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.06608,
+    "ast_hash": "599c132004c639de4256ea543f636652",
+    "semantic_hash": "599c132004c639de4256ea543f636652"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/CatalogoMotivosFallo.java": {
+    "mtime": 1793037702.8035042,
+    "seen": 1793039267.0660827,
+    "ast_hash": "8c2d2a67a9dd4b63733071af536f1941",
+    "semantic_hash": "8c2d2a67a9dd4b63733071af536f1941"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ConsultarDetalleIncidencia.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.0660858,
+    "ast_hash": "89bbe18b78249cfc7d039e192fc21949",
+    "semantic_hash": "89bbe18b78249cfc7d039e192fc21949"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ConsultarEntregasFallidas.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.0660884,
+    "ast_hash": "8d608a21e306678f1bc2388eb04dd7db",
+    "semantic_hash": "8d608a21e306678f1bc2388eb04dd7db"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/DetalleIncidencia.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.0660915,
+    "ast_hash": "dd56c358e7eb480d42e014be3afb7bb5",
+    "semantic_hash": "dd56c358e7eb480d42e014be3afb7bb5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/FiltrosConsultaFallidos.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.066094,
+    "ast_hash": "a299a32583585d0f3c51e1e3dd43b7a3",
+    "semantic_hash": "a299a32583585d0f3c51e1e3dd43b7a3"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LectorCatalogoMotivosFallo.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.0660965,
+    "ast_hash": "5c76a8662a0067ec20cf044edd2f922c",
+    "semantic_hash": "5c76a8662a0067ec20cf044edd2f922c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LectorDatosOperativos.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.0660994,
+    "ast_hash": "3a849e5deff1d940f4d37ff19dca18da",
+    "semantic_hash": "3a849e5deff1d940f4d37ff19dca18da"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LectorDetalleIncidencia.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.066102,
+    "ast_hash": "0fa8e33d4a6b116588fd3ceaf043b532",
+    "semantic_hash": "0fa8e33d4a6b116588fd3ceaf043b532"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LectorIncidenciasLocales.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.066105,
+    "ast_hash": "65b6b749ce93e3fab4a9c5151ae99938",
+    "semantic_hash": "65b6b749ce93e3fab4a9c5151ae99938"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LiberacionesPendientes.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661077,
+    "ast_hash": "2949008629ff4d644ff3a91b2c59597c",
+    "semantic_hash": "2949008629ff4d644ff3a91b2c59597c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/LiberadorCapacidad.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661101,
+    "ast_hash": "0dcc80486fc754601a48767f1ff6ecf6",
+    "semantic_hash": "0dcc80486fc754601a48767f1ff6ecf6"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/PaginaEntregasFallidas.java": {
+    "mtime": 1793037702.8035765,
+    "seen": 1793039267.066113,
+    "ast_hash": "60381fa7802a06bae641dab00b79b638",
+    "semantic_hash": "60381fa7802a06bae641dab00b79b638"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ProcesadorLiberaciones.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661159,
+    "ast_hash": "33a4483da8e6bb5fc94c6784d7047462",
+    "semantic_hash": "33a4483da8e6bb5fc94c6784d7047462"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ResultadoCierre.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661182,
+    "ast_hash": "36803ba6a53497667fc94a9c5cde8fee",
+    "semantic_hash": "36803ba6a53497667fc94a9c5cde8fee"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ResultadoRecepcion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661209,
+    "ast_hash": "522dac904ffdecc9528ddf8e92ecd32c",
+    "semantic_hash": "522dac904ffdecc9528ddf8e92ecd32c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ResultadoReprogramacion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661237,
+    "ast_hash": "5f18213455ae2a72e90405f9bf452458",
+    "semantic_hash": "5f18213455ae2a72e90405f9bf452458"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/SolicitudCierre.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661266,
+    "ast_hash": "5e3fa28f334000d60b4bea68cb5f44b5",
+    "semantic_hash": "5e3fa28f334000d60b4bea68cb5f44b5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/SolicitudRecepcion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661302,
+    "ast_hash": "0cad56868a19e4c7749c54e16d4e2cef",
+    "semantic_hash": "0cad56868a19e4c7749c54e16d4e2cef"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/SolicitudReprogramacion.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661325,
+    "ast_hash": "2f346bcfd217fbc4707a4db2a05a95a6",
+    "semantic_hash": "2f346bcfd217fbc4707a4db2a05a95a6"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/domain/AccionesIncidencia.java": {
+    "mtime": 1793037702.8042433,
+    "seen": 1793039267.0661354,
+    "ast_hash": "4a300b1b17eba8f421d8ae37004bb95e",
+    "semantic_hash": "4a300b1b17eba8f421d8ae37004bb95e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/domain/DatosIncidenciaInconsistentesException.java": {
+    "mtime": 1793037702.8042994,
+    "seen": 1793039267.0661378,
+    "ast_hash": "b344c2681685d35d38b8c2e70ea3bf6f",
+    "semantic_hash": "b344c2681685d35d38b8c2e70ea3bf6f"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/domain/DatosOperativos.java": {
+    "mtime": 1793037702.8042994,
+    "seen": 1793039267.0661407,
+    "ast_hash": "75abd5e2d6548723f9c5aca4eaa49a28",
+    "semantic_hash": "75abd5e2d6548723f9c5aca4eaa49a28"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/domain/IncidenciaListadoLocal.java": {
+    "mtime": 1793037702.8042994,
+    "seen": 1793039267.0661435,
+    "ast_hash": "210f3edfb6b7ad26a20ce0d85a6b835b",
+    "semantic_hash": "210f3edfb6b7ad26a20ce0d85a6b835b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/domain/MotivoFallo.java": {
+    "mtime": 1793037702.8042994,
+    "seen": 1793039267.066146,
+    "ast_hash": "df40041192c0e680927e506e9e616bbc",
+    "semantic_hash": "df40041192c0e680927e506e9e616bbc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/CierreDespachoJdbc.java": {
+    "mtime": 1793037719.991519,
+    "seen": 1793039267.0661485,
+    "ast_hash": "68c8d4ab7f17e241d431aeffb95b4047",
+    "semantic_hash": "68c8d4ab7f17e241d431aeffb95b4047"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/ConfiguracionConsultaFallidos.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661514,
+    "ast_hash": "721c055c617533fce5f7c1b5cf0efd0e",
+    "semantic_hash": "721c055c617533fce5f7c1b5cf0efd0e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/ConfiguracionRecepcion.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661547,
+    "ast_hash": "473eec1003650d003352f73f885ae10a",
+    "semantic_hash": "473eec1003650d003352f73f885ae10a"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/DetalleIncidenciaJdbc.java": {
+    "mtime": 1793037702.8047476,
+    "seen": 1793039267.0661576,
+    "ast_hash": "5e6b71545c76386c8dac014f5981d88c",
+    "semantic_hash": "5e6b71545c76386c8dac014f5981d88c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/HistorialIncidenciasJdbc.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661604,
+    "ast_hash": "28360e134f20296a7815f122a7eed565",
+    "semantic_hash": "28360e134f20296a7815f122a7eed565"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/IncidenciasLocalesJdbc.java": {
+    "mtime": 1793037702.8047476,
+    "seen": 1793039267.0661633,
+    "ast_hash": "75e6376795f4e57c3097f2038c55a6e4",
+    "semantic_hash": "75e6376795f4e57c3097f2038c55a6e4"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/LiberacionesCapacidadJdbc.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.066166,
+    "ast_hash": "d97ab31ea6d2b16b411d737c88a1f993",
+    "semantic_hash": "d97ab31ea6d2b16b411d737c88a1f993"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/LiberadorCapacidadHttp.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661685,
+    "ast_hash": "c2b7f551884e3eee70da238a128b7db7",
+    "semantic_hash": "c2b7f551884e3eee70da238a128b7db7"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/OperacionIncidenciasHttp.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661714,
+    "ast_hash": "c3bb61868e6769e663542c0a2f5b550c",
+    "semantic_hash": "c3bb61868e6769e663542c0a2f5b550c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/ProveedorTokenOperacion.java": {
+    "mtime": 1793037702.8047476,
+    "seen": 1793039267.066174,
+    "ast_hash": "2dce3ebca508d679c722a9449a46d617",
+    "semantic_hash": "2dce3ebca508d679c722a9449a46d617"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/RecepcionCentroJdbc.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661767,
+    "ast_hash": "d502f36c341b6a3cfc39d779992a7182",
+    "semantic_hash": "d502f36c341b6a3cfc39d779992a7182"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/ReprogramacionDespachoJdbc.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0661795,
+    "ast_hash": "3ba489e08eafc2fcb23c9bf4f87073a5",
+    "semantic_hash": "3ba489e08eafc2fcb23c9bf4f87073a5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/api/ControladorProgramacion.java": {
+    "mtime": 1793037702.8050985,
+    "seen": 1793039267.066182,
+    "ast_hash": "b3ce6dc63430998fbdd8667096a0aa57",
+    "semantic_hash": "b3ce6dc63430998fbdd8667096a0aa57"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/api/ParametrosPendientes.java": {
+    "mtime": 1793037702.805209,
+    "seen": 1793039267.066185,
+    "ast_hash": "02d5720c4c6473cb3d5a43966538d5d8",
+    "semantic_hash": "02d5720c4c6473cb3d5a43966538d5d8"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/api/SolicitudesProgramacion.java": {
+    "mtime": 1793037702.8052588,
+    "seen": 1793039267.0661879,
+    "ast_hash": "387778ed8f43307bc779ba3743b857f9",
+    "semantic_hash": "387778ed8f43307bc779ba3743b857f9"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/AlmacenProgramacion.java": {
+    "mtime": 1793037702.8053455,
+    "seen": 1793039267.0661902,
+    "ast_hash": "b6124b5ded33922afe045c9b93b1ee40",
+    "semantic_hash": "b6124b5ded33922afe045c9b93b1ee40"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/AsignarDespacho.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.066193,
+    "ast_hash": "0e706adbb773c51a76aa52e475424849",
+    "semantic_hash": "0e706adbb773c51a76aa52e475424849"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/CoberturaProgramacion.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.0661955,
+    "ast_hash": "d92e09fd11992d5e6064dd65e6760c78",
+    "semantic_hash": "d92e09fd11992d5e6064dd65e6760c78"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/ConsultarColaPendientes.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.0661983,
+    "ast_hash": "3d5ff626c78dec119fbdf91d43e4ddd1",
+    "semantic_hash": "3d5ff626c78dec119fbdf91d43e4ddd1"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/GenerarDespachoPrueba.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.0662007,
+    "ast_hash": "c61b1c1f3cd6ff460389a7cd4112314b",
+    "semantic_hash": "c61b1c1f3cd6ff460389a7cd4112314b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/ModelosProgramacion.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.0662036,
+    "ast_hash": "f216d026c9a405fc84e169166b2817ab",
+    "semantic_hash": "f216d026c9a405fc84e169166b2817ab"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/PuertoCapacidad.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.066206,
+    "ast_hash": "f5a45d42c1468d0f4dc7005ced4a5fa4",
+    "semantic_hash": "f5a45d42c1468d0f4dc7005ced4a5fa4"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/RecibirSolicitudDespacho.java": {
+    "mtime": 1793037702.8054204,
+    "seen": 1793039267.0662086,
+    "ast_hash": "df350f6562db9a253e75d187b1580262",
+    "semantic_hash": "df350f6562db9a253e75d187b1580262"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/domain/Despacho.java": {
+    "mtime": 1793037702.8058276,
+    "seen": 1793039267.0662112,
+    "ast_hash": "79b3d74cfeed3df4643d9953982bb13e",
+    "semantic_hash": "79b3d74cfeed3df4643d9953982bb13e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/domain/EstadoDespacho.java": {
+    "mtime": 1793037702.8058722,
+    "seen": 1793039267.0662136,
+    "ast_hash": "36df3962c0869583cc548f7e4cca2faa",
+    "semantic_hash": "36df3962c0869583cc548f7e4cca2faa"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/CapacidadProgramacionHttp.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0662167,
+    "ast_hash": "95b57e91e11852acec78eb937ec88b03",
+    "semantic_hash": "95b57e91e11852acec78eb937ec88b03"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/CoberturaProgramacionLocal.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.066219,
+    "ast_hash": "9177401bdda9ed27a03bb7c4854a321e",
+    "semantic_hash": "9177401bdda9ed27a03bb7c4854a321e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/ConfiguracionProgramacion.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.0662217,
+    "ast_hash": "6b43ee6be2eec06016f90f420f16ee52",
+    "semantic_hash": "6b43ee6be2eec06016f90f420f16ee52"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/EntregaEventosProgramacion.java": {
+    "mtime": 1793037719.992519,
+    "seen": 1793039267.066224,
+    "ast_hash": "cee8f12292aab587761f3a7f3181d1c1",
+    "semantic_hash": "cee8f12292aab587761f3a7f3181d1c1"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/ProductosProgramacionHttp.java": {
+    "mtime": 1793037702.8060822,
+    "seen": 1793039267.066227,
+    "ast_hash": "bfa70de414edbde3c66f49b3d8ad281c",
+    "semantic_hash": "bfa70de414edbde3c66f49b3d8ad281c"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/ProgramacionPersistencia.java": {
+    "mtime": 1793037719.9935188,
+    "seen": 1793039267.0662293,
+    "ast_hash": "3aeaa6f35e2df07777b8f00fc5c19f04",
+    "semantic_hash": "3aeaa6f35e2df07777b8f00fc5c19f04"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/RecuperacionProgramacion.java": {
+    "mtime": 1793037702.8060822,
+    "seen": 1793039267.0662317,
+    "ast_hash": "af3cadbeb2d0f81d6147a17d4da9fd38",
+    "semantic_hash": "af3cadbeb2d0f81d6147a17d4da9fd38"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/auditoria/AccionAuditoria.java": {
+    "mtime": 1793037702.806421,
+    "seen": 1793039267.0662346,
+    "ast_hash": "e56d271f1e8406d16ae06290c00a2600",
+    "semantic_hash": "e56d271f1e8406d16ae06290c00a2600"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/auditoria/domain/AuditoriaConfiguracion.java": {
+    "mtime": 1793037702.8065066,
+    "seen": 1793039267.066237,
+    "ast_hash": "fb31b137f2b3d04e9f42d964a3165b06",
+    "semantic_hash": "fb31b137f2b3d04e9f42d964a3165b06"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/auditoria/infrastructure/AuditoriaAdaptador.java": {
+    "mtime": 1793037702.806591,
+    "seen": 1793039267.06624,
+    "ast_hash": "e0f5a70c915dfaac5630aaed4f8150e7",
+    "semantic_hash": "e0f5a70c915dfaac5630aaed4f8150e7"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/auditoria/persistence/AuditoriaConfiguracionRepositorioJpa.java": {
+    "mtime": 1793037702.8066573,
+    "seen": 1793039267.066243,
+    "ast_hash": "52d4cb41fb92e69024b67406e705720a",
+    "semantic_hash": "52d4cb41fb92e69024b67406e705720a"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/configuracion/ConfiguracionOpenApi.java": {
+    "mtime": 1793037702.8066573,
+    "seen": 1793039267.066245,
+    "ast_hash": "7e00266d97c30414a2abe6927fb265a5",
+    "semantic_hash": "7e00266d97c30414a2abe6927fb265a5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/configuracion/domain/ParametroConfiguracion.java": {
+    "mtime": 1793037702.8068235,
+    "seen": 1793039267.066248,
+    "ast_hash": "d5053aba14f0caf11e985323c7dca643",
+    "semantic_hash": "d5053aba14f0caf11e985323c7dca643"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/configuracion/persistence/ParametroConfiguracionRepositorioJpa.java": {
+    "mtime": 1793037702.8068235,
+    "seen": 1793039267.0662506,
+    "ast_hash": "d2d41369ff0ee52a12ee73e9e2a6f9eb",
+    "semantic_hash": "d2d41369ff0ee52a12ee73e9e2a6f9eb"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/errores/CodigosError.java": {
+    "mtime": 1793037702.8068235,
+    "seen": 1793039267.0662534,
+    "ast_hash": "991181d17fd1acdc83d882d191420ef4",
+    "semantic_hash": "991181d17fd1acdc83d882d191420ef4"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/errores/ErrorDeCampo.java": {
+    "mtime": 1793037702.8070507,
+    "seen": 1793039267.066256,
+    "ast_hash": "2150c48bc6c9d9cc6151dc8b1633a9d2",
+    "semantic_hash": "2150c48bc6c9d9cc6151dc8b1633a9d2"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/errores/ErrorDeNegocio.java": {
+    "mtime": 1793037702.8070507,
+    "seen": 1793039267.0662584,
+    "ast_hash": "809702e37e8c45548d97bacc2d5b2e70",
+    "semantic_hash": "809702e37e8c45548d97bacc2d5b2e70"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/errores/ManejadorErroresApi.java": {
+    "mtime": 1793037719.9935188,
+    "seen": 1793039267.0662613,
+    "ast_hash": "a377b57bc30120532a06307880a09ebc",
+    "semantic_hash": "a377b57bc30120532a06307880a09ebc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/errores/RespuestasSeguridad.java": {
+    "mtime": 1793037702.8070507,
+    "seen": 1793039267.0662634,
+    "ast_hash": "fb0daef01e9eaf1290ebf22639210aec",
+    "semantic_hash": "fb0daef01e9eaf1290ebf22639210aec"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/ConfiguracionSeguridad.java": {
+    "mtime": 1793037719.9935188,
+    "seen": 1793039267.066266,
+    "ast_hash": "9911838c8f26a53c38e8421e19ff46ad",
+    "semantic_hash": "9911838c8f26a53c38e8421e19ff46ad"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/FiltroIdentidadDemo.java": {
+    "mtime": 1793037719.9935188,
+    "seen": 1793039267.066269,
+    "ast_hash": "82665f4b244a4a64d47dd43b910166b9",
+    "semantic_hash": "82665f4b244a4a64d47dd43b910166b9"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/ProveedorTokenServicio.java": {
+    "mtime": 1793037702.8073163,
+    "seen": 1793039267.066272,
+    "ast_hash": "c22786b83b9fbdbcbf7555ef351b66ae",
+    "semantic_hash": "c22786b83b9fbdbcbf7555ef351b66ae"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/UsuarioSeguridadAdaptador.java": {
+    "mtime": 1793037702.8073545,
+    "seen": 1793039267.0662744,
+    "ast_hash": "b56ee5fd998f28e954adbdf92fae177f",
+    "semantic_hash": "b56ee5fd998f28e954adbdf92fae177f"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/ValidadorTokenDespacho.java": {
+    "mtime": 1793037702.8073845,
+    "seen": 1793039267.066277,
+    "ast_hash": "dca9302f3b3cd71be83fe9c6f05e5cfc",
+    "semantic_hash": "dca9302f3b3cd71be83fe9c6f05e5cfc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/web/FiltroCorrelacion.java": {
+    "mtime": 1793037702.8073845,
+    "seen": 1793039267.0662794,
+    "ast_hash": "28e55c259f231d385b63bff9d61f4fd3",
+    "semantic_hash": "28e55c259f231d385b63bff9d61f4fd3"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/transiciones/api/ControladorTransicionesInternas.java": {
+    "mtime": 1793037719.9944267,
+    "seen": 1793039267.0662825,
+    "ast_hash": "22092c8aa2de8c7a2ca17570a5cfaa84",
+    "semantic_hash": "22092c8aa2de8c7a2ca17570a5cfaa84"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/transiciones/application/AlmacenTransiciones.java": {
+    "mtime": 1793037719.9944267,
+    "seen": 1793039267.066285,
+    "ast_hash": "feb126ec9991bfcc90b919bb9024a225",
+    "semantic_hash": "feb126ec9991bfcc90b919bb9024a225"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/transiciones/application/ModelosTransicion.java": {
+    "mtime": 1793037719.994591,
+    "seen": 1793039267.0662875,
+    "ast_hash": "e5e109b944190427f89a1cad1afe3473",
+    "semantic_hash": "e5e109b944190427f89a1cad1afe3473"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/transiciones/application/RegistrarTransicion.java": {
+    "mtime": 1793037719.994591,
+    "seen": 1793039267.06629,
+    "ast_hash": "f3c39245abe278074379f61d59f0710b",
+    "semantic_hash": "f3c39245abe278074379f61d59f0710b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/transiciones/infrastructure/TransicionesPersistencia.java": {
+    "mtime": 1793037719.994591,
+    "seen": 1793039267.0662928,
+    "ast_hash": "b37ca6f284b5533e09baafad887c983d",
+    "semantic_hash": "b37ca6f284b5533e09baafad887c983d"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/api/ControladorDistritos.java": {
+    "mtime": 1793037702.807502,
+    "seen": 1793039267.0662951,
+    "ast_hash": "b89147dd6c3012350c5935c9fc21afa5",
+    "semantic_hash": "b89147dd6c3012350c5935c9fc21afa5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/api/ControladorTarifas.java": {
+    "mtime": 1793037702.807583,
+    "seen": 1793039267.066298,
+    "ast_hash": "2ff0eabf8f30c6bba3278a25758aa157",
+    "semantic_hash": "2ff0eabf8f30c6bba3278a25758aa157"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/api/ControladorZonas.java": {
+    "mtime": 1793037702.807583,
+    "seen": 1793039267.0663004,
+    "ast_hash": "ef2a5736c89f6b9d83c4f3dd786f130b",
+    "semantic_hash": "ef2a5736c89f6b9d83c4f3dd786f130b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/DistritoCatalogoVista.java": {
+    "mtime": 1793037702.807583,
+    "seen": 1793039267.0663035,
+    "ast_hash": "066837ae5172aad732dece99a4a7b030",
+    "semantic_hash": "066837ae5172aad732dece99a4a7b030"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/DistritoVista.java": {
+    "mtime": 1793037702.807773,
+    "seen": 1793039267.0663064,
+    "ast_hash": "c5649dc0153525cad77935fa9acc16fc",
+    "semantic_hash": "c5649dc0153525cad77935fa9acc16fc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/GestionDistritos.java": {
+    "mtime": 1793037702.8078346,
+    "seen": 1793039267.0663085,
+    "ast_hash": "f4640420691a4ecc374688ace5b78c73",
+    "semantic_hash": "f4640420691a4ecc374688ace5b78c73"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/GestionTarifas.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663114,
+    "ast_hash": "dbdcc63b917dcc7fe46d75fd7596630d",
+    "semantic_hash": "dbdcc63b917dcc7fe46d75fd7596630d"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/GestionZonas.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663142,
+    "ast_hash": "1766d16b108ad551f73f09463ce3d244",
+    "semantic_hash": "1766d16b108ad551f73f09463ce3d244"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/PaginaZonas.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663168,
+    "ast_hash": "74183092771c325c47c1d5a679ba68fc",
+    "semantic_hash": "74183092771c325c47c1d5a679ba68fc"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/PaginaZonasCruda.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663195,
+    "ast_hash": "6c10152abb5487ef041588bb3568db25",
+    "semantic_hash": "6c10152abb5487ef041588bb3568db25"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/ProveedorUsuario.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663218,
+    "ast_hash": "12eec75bea37cddd7340436a916a73ca",
+    "semantic_hash": "12eec75bea37cddd7340436a916a73ca"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/RegistroAuditoria.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663247,
+    "ast_hash": "d12c2b24e8668b371d8ba983adcb94ba",
+    "semantic_hash": "d12c2b24e8668b371d8ba983adcb94ba"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/RegistroConflictos.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.066327,
+    "ast_hash": "5462f7c611a765b6d6dcea92206791aa",
+    "semantic_hash": "5462f7c611a765b6d6dcea92206791aa"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/RepositorioDistritos.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663297,
+    "ast_hash": "68fa727dc8545a657629c0f80e584f8d",
+    "semantic_hash": "68fa727dc8545a657629c0f80e584f8d"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/RepositorioTarifas.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663323,
+    "ast_hash": "4fa40cf49c13388422e5ac9ba3e91ba5",
+    "semantic_hash": "4fa40cf49c13388422e5ac9ba3e91ba5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/RepositorioZonas.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663352,
+    "ast_hash": "930eeb6e42e7654253cce0d1e5038992",
+    "semantic_hash": "930eeb6e42e7654253cce0d1e5038992"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/ResolucionZona.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663378,
+    "ast_hash": "c5524b6bf79d41b903f2056e85b11b90",
+    "semantic_hash": "c5524b6bf79d41b903f2056e85b11b90"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/SolicitudDistritoZona.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663407,
+    "ast_hash": "d00f53e8a1fd789d8fe2d8d823867034",
+    "semantic_hash": "d00f53e8a1fd789d8fe2d8d823867034"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/SolicitudEstado.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663428,
+    "ast_hash": "1855d51214b8f973e59ae3ca2e262d5b",
+    "semantic_hash": "1855d51214b8f973e59ae3ca2e262d5b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/SolicitudTarifa.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663457,
+    "ast_hash": "d7729d85730f635b00766d966261a9c5",
+    "semantic_hash": "d7729d85730f635b00766d966261a9c5"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/SolicitudZona.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.066348,
+    "ast_hash": "b3b734617b1afd27e6f2e5a659129590",
+    "semantic_hash": "b3b734617b1afd27e6f2e5a659129590"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/TarifaVista.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.066351,
+    "ast_hash": "6d79664f16ed628e98672f3d91313731",
+    "semantic_hash": "6d79664f16ed628e98672f3d91313731"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/application/ZonaVista.java": {
+    "mtime": 1793037702.8079267,
+    "seen": 1793039267.0663533,
+    "ast_hash": "5b9e0175ba2e3da3075225c332fdd47e",
+    "semantic_hash": "5b9e0175ba2e3da3075225c332fdd47e"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/ConflictoZonaLog.java": {
+    "mtime": 1793037702.8087935,
+    "seen": 1793039267.0663562,
+    "ast_hash": "717d440f0f87e8b803c479a370dec112",
+    "semantic_hash": "717d440f0f87e8b803c479a370dec112"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/Distrito.java": {
+    "mtime": 1793037702.8088436,
+    "seen": 1793039267.0663586,
+    "ast_hash": "32fede13c59335a74583526562b54f49",
+    "semantic_hash": "32fede13c59335a74583526562b54f49"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/EntidadConFechas.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663617,
+    "ast_hash": "191f97839640ecb7b4ecff5839cae283",
+    "semantic_hash": "191f97839640ecb7b4ecff5839cae283"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/EstadoZona.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663638,
+    "ast_hash": "880c39b947786d9cff834925a3e443e8",
+    "semantic_hash": "880c39b947786d9cff834925a3e443e8"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/OrigenDelimitacion.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663667,
+    "ast_hash": "0421db85ab670ad0cccf11cb799a8892",
+    "semantic_hash": "0421db85ab670ad0cccf11cb799a8892"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/TarifaZona.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663693,
+    "ast_hash": "6feee129df7cd330cd619406ce951b72",
+    "semantic_hash": "6feee129df7cd330cd619406ce951b72"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/Zona.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663722,
+    "ast_hash": "33136b2e7a48e208bccc9a3943e4983b",
+    "semantic_hash": "33136b2e7a48e208bccc9a3943e4983b"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/ZonaCodigoPostal.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663745,
+    "ast_hash": "f1e8c7a78cece2e94c52a14bd344cd0a",
+    "semantic_hash": "f1e8c7a78cece2e94c52a14bd344cd0a"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/domain/ZonaDistrito.java": {
+    "mtime": 1793037702.8089006,
+    "seen": 1793039267.0663772,
+    "ast_hash": "f87e8342e7feedb8e191aa6fb08e063f",
+    "semantic_hash": "f87e8342e7feedb8e191aa6fb08e063f"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ConflictoZonaLogRepositorioJpa.java": {
+    "mtime": 1793037702.8092303,
+    "seen": 1793039267.06638,
+    "ast_hash": "b4ceec9f91ad2d37dc4859f4a46b2fff",
+    "semantic_hash": "b4ceec9f91ad2d37dc4859f4a46b2fff"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ConflictosAdaptadorJpa.java": {
+    "mtime": 1793037702.809317,
+    "seen": 1793039267.066383,
+    "ast_hash": "53e6d017df89b4eadabac2324176c8c2",
+    "semantic_hash": "53e6d017df89b4eadabac2324176c8c2"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/DistritoRepositorioJpa.java": {
+    "mtime": 1793037702.8093662,
+    "seen": 1793039267.0663853,
+    "ast_hash": "c857efd01a0a6e9f3e04cb4b7d7bbfbb",
+    "semantic_hash": "c857efd01a0a6e9f3e04cb4b7d7bbfbb"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/DistritosAdaptadorJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.0663881,
+    "ast_hash": "0a8839ae222457d6ace11bd4481c107a",
+    "semantic_hash": "0a8839ae222457d6ace11bd4481c107a"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/TarifaZonaRepositorioJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.0663905,
+    "ast_hash": "d0e5f2505f71bae2c2ae851fd54dca50",
+    "semantic_hash": "d0e5f2505f71bae2c2ae851fd54dca50"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/TarifasAdaptadorJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.0663936,
+    "ast_hash": "65b0caac114dd793f64fc56fe26ce906",
+    "semantic_hash": "65b0caac114dd793f64fc56fe26ce906"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ZonaCodigoPostalRepositorioJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.066396,
+    "ast_hash": "38ae990735245a4df9cbaf730f573765",
+    "semantic_hash": "38ae990735245a4df9cbaf730f573765"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ZonaDistritoRepositorioJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.0663981,
+    "ast_hash": "191653e791ebe76640620f3873bd84b3",
+    "semantic_hash": "191653e791ebe76640620f3873bd84b3"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ZonaRepositorioJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.066401,
+    "ast_hash": "38ac169bed90247565ceb64164c16c1d",
+    "semantic_hash": "38ac169bed90247565ceb64164c16c1d"
+  },
+  "servicio-gestion-despachos/src/main/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/zonas/infrastructure/persistence/ZonasAdaptadorJpa.java": {
+    "mtime": 1793037702.8094015,
+    "seen": 1793039267.066404,
+    "ast_hash": "fd4e1cc94606d1188f3e91a36753f029",
+    "semantic_hash": "fd4e1cc94606d1188f3e91a36753f029"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/CierreDespachoHttpTests.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.0664067,
+    "ast_hash": "4f397c73cdeed62800e2be6247cac0bb",
+    "semantic_hash": "4f397c73cdeed62800e2be6247cac0bb"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/CierreNavegadorPruebas.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.0664105,
+    "ast_hash": "87dffc3066f92803b497222577525a9d",
+    "semantic_hash": "87dffc3066f92803b497222577525a9d"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ConsultaFallidosHttpTests.java": {
+    "mtime": 1793037702.8100748,
+    "seen": 1793039267.0664127,
+    "ast_hash": "751c2068c454efbba02c8ab675c9fdb2",
+    "semantic_hash": "751c2068c454efbba02c8ab675c9fdb2"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/FlujoF01Tests.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.0664155,
+    "ast_hash": "5036acaf62df998e654d731156e6e5f3",
+    "semantic_hash": "5036acaf62df998e654d731156e6e5f3"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ModoDemoGestionTests.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.0664182,
+    "ast_hash": "f5aaae57792bf9617b167b2a32876643",
+    "semantic_hash": "f5aaae57792bf9617b167b2a32876643"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ProgramacionHttpTests.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.066421,
+    "ast_hash": "8960474f402edc16a99e458711b1fd70",
+    "semantic_hash": "8960474f402edc16a99e458711b1fd70"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/RecepcionCentroHttpTests.java": {
+    "mtime": 1793037719.9950037,
+    "seen": 1793039267.0664232,
+    "ast_hash": "7ca4fc969e2113b89813c6d510876851",
+    "semantic_hash": "7ca4fc969e2113b89813c6d510876851"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ReprogramacionDespachoHttpTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.066426,
+    "ast_hash": "07b78307ba9deefb9f1efebd13c95bd3",
+    "semantic_hash": "07b78307ba9deefb9f1efebd13c95bd3"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ReprogramacionNavegadorPruebas.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664287,
+    "ast_hash": "f63faf29518ecc68236b0d4083a0644f",
+    "semantic_hash": "f63faf29518ecc68236b0d4083a0644f"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/ServicioGestionDespachosApplicationTests.java": {
+    "mtime": 1793037702.8103888,
+    "seen": 1793039267.066431,
+    "ast_hash": "028cc5d9884a5001a7af21abc52fc792",
+    "semantic_hash": "028cc5d9884a5001a7af21abc52fc792"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/TestServicioGestionDespachosApplication.java": {
+    "mtime": 1792175292.0989969,
+    "seen": 1793039267.066434,
+    "ast_hash": "af6af261af328c2d47d94e118f56b061",
+    "semantic_hash": "af6af261af328c2d47d94e118f56b061"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/TestcontainersConfiguration.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664365,
+    "ast_hash": "4e416ef5f9a68f6df700724f49b685b2",
+    "semantic_hash": "4e416ef5f9a68f6df700724f49b685b2"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/TransicionesHttpTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.066439,
+    "ast_hash": "8156da77c2d523fe1f43d6f32ab19fd8",
+    "semantic_hash": "8156da77c2d523fe1f43d6f32ab19fd8"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/api/ControladorCotizacionTests.java": {
+    "mtime": 1793037702.8112726,
+    "seen": 1793039267.0664418,
+    "ast_hash": "f35fd8f0231c7480fe4d8d6d76de671d",
+    "semantic_hash": "f35fd8f0231c7480fe4d8d6d76de671d"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/cotizacion/domain/CalculadoraCotizacionTests.java": {
+    "mtime": 1793037702.8114238,
+    "seen": 1793039267.066444,
+    "ast_hash": "645a43d2ec0b225c45fa29bf4c4147b1",
+    "semantic_hash": "645a43d2ec0b225c45fa29bf4c4147b1"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/ControladorDetalleIncidenciaTests.java": {
+    "mtime": 1793037702.811575,
+    "seen": 1793039267.0664468,
+    "ast_hash": "027d18273d54d56d15a2c57d99f47b81",
+    "semantic_hash": "027d18273d54d56d15a2c57d99f47b81"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesCierreTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664499,
+    "ast_hash": "d4867fa057f0595097efd2456a24c1fd",
+    "semantic_hash": "d4867fa057f0595097efd2456a24c1fd"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesRecepcionTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664523,
+    "ast_hash": "f3efa75bca3ddb5cff2b8c60cc21a710",
+    "semantic_hash": "f3efa75bca3ddb5cff2b8c60cc21a710"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/api/SolicitudesReprogramacionTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664551,
+    "ast_hash": "5b8dc469e3ce48230000bcf504777200",
+    "semantic_hash": "5b8dc469e3ce48230000bcf504777200"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ConsultarDetalleIncidenciaTests.java": {
+    "mtime": 1793037702.8117056,
+    "seen": 1793039267.0664573,
+    "ast_hash": "d05440712bce163e976467ac53d8a601",
+    "semantic_hash": "d05440712bce163e976467ac53d8a601"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ConsultarEntregasFallidasTests.java": {
+    "mtime": 1793037702.811857,
+    "seen": 1793039267.0664604,
+    "ast_hash": "83e34b974a7527e92e5d2e1f9cb5018e",
+    "semantic_hash": "83e34b974a7527e92e5d2e1f9cb5018e"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/application/ProcesadorLiberacionesTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664632,
+    "ast_hash": "6fbb20f6acfa7a9473f3e9166a96f253",
+    "semantic_hash": "6fbb20f6acfa7a9473f3e9166a96f253"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/DetalleIncidenciaJdbcTests.java": {
+    "mtime": 1793037702.812011,
+    "seen": 1793039267.0664656,
+    "ast_hash": "93503aa1168337af8c6d11f808b852b2",
+    "semantic_hash": "93503aa1168337af8c6d11f808b852b2"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/IncidenciasLocalesJdbcTests.java": {
+    "mtime": 1793037702.8120842,
+    "seen": 1793039267.0664682,
+    "ast_hash": "a61b1a2f36b9045612e984389da1aa89",
+    "semantic_hash": "a61b1a2f36b9045612e984389da1aa89"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/LiberadorCapacidadHttpTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664709,
+    "ast_hash": "aa326ce863768f4fc0cfb37d0dec1749",
+    "semantic_hash": "aa326ce863768f4fc0cfb37d0dec1749"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/OperacionIncidenciasDemoTests.java": {
+    "mtime": 1793037719.9955187,
+    "seen": 1793039267.0664737,
+    "ast_hash": "a55d46eda1a000bd77c64190ce878d1d",
+    "semantic_hash": "a55d46eda1a000bd77c64190ce878d1d"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/OperacionIncidenciasHttpTests.java": {
+    "mtime": 1793037702.8120842,
+    "seen": 1793039267.0664766,
+    "ast_hash": "b8d1e585ff75c74509267470ce944749",
+    "semantic_hash": "b8d1e585ff75c74509267470ce944749"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/incidencias/infrastructure/ProveedorTokenOperacionTests.java": {
+    "mtime": 1793037702.8120842,
+    "seen": 1793039267.0664787,
+    "ast_hash": "6b6cba9a570d1e09418b1dd72d733d3e",
+    "semantic_hash": "6b6cba9a570d1e09418b1dd72d733d3e"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/application/AsignarDespachoTests.java": {
+    "mtime": 1793037702.8122737,
+    "seen": 1793039267.0664816,
+    "ast_hash": "1ad92ef5521c1a97912661cde438d816",
+    "semantic_hash": "1ad92ef5521c1a97912661cde438d816"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/ContratoCapacidadF06Tests.java": {
+    "mtime": 1793037719.9966493,
+    "seen": 1793039267.066484,
+    "ast_hash": "d6925236c2b235e2ce259ba37c9467fd",
+    "semantic_hash": "d6925236c2b235e2ce259ba37c9467fd"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/programacion/infrastructure/EntregaEventosDemoTests.java": {
+    "mtime": 1793037719.996702,
+    "seen": 1793039267.066487,
+    "ast_hash": "5ad4300ea925d4ce11dd0c9f82004cfa",
+    "semantic_hash": "5ad4300ea925d4ce11dd0c9f82004cfa"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/ProveedorTokenServicioTests.java": {
+    "mtime": 1793037702.812383,
+    "seen": 1793039267.0664895,
+    "ast_hash": "48ccbcb12c5046579974e9d758f144e6",
+    "semantic_hash": "48ccbcb12c5046579974e9d758f144e6"
+  },
+  "servicio-gestion-despachos/src/test/java/com/modulodespacho/gestiondespachos/servicio_gestion_despachos/shared/seguridad/ValidadorTokenDespachoTests.java": {
+    "mtime": 1793037702.8124893,
+    "seen": 1793039267.066492,
+    "ast_hash": "a63d7fa27be4cefe63aa73247736bfe9",
+    "semantic_hash": "a63d7fa27be4cefe63aa73247736bfe9"
+  },
+  "servicio-gestion-despachos/src/test/resources/contratos/f06-respuestas-backend.json": {
+    "mtime": 1793037719.9967728,
+    "seen": 1793039267.0664947,
+    "ast_hash": "88712fb5d3bf03e3cfc9e00a726ce63c",
+    "semantic_hash": "88712fb5d3bf03e3cfc9e00a726ce63c"
+  },
+  "servicio-operacion-reparto/mvnw": {
+    "mtime": 1792175292.0992572,
+    "seen": 1793039267.0664976,
+    "ast_hash": "ab50dd89da7da2346b28003352eeeeeb",
+    "semantic_hash": "ab50dd89da7da2346b28003352eeeeeb"
+  },
+  "servicio-operacion-reparto/pom.xml": {
+    "mtime": 1793037719.9967728,
+    "seen": 1793039267.0665,
+    "ast_hash": "7686a20f2cb4af23a00f2b2f255547f1",
+    "semantic_hash": "7686a20f2cb4af23a00f2b2f255547f1"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/ServicioOperacionRepartoApplication.java": {
+    "mtime": 1792175292.0998256,
+    "seen": 1793039267.0665028,
+    "ast_hash": "771f2717fff20188d2cc17d5e3d64229",
+    "semantic_hash": "771f2717fff20188d2cc17d5e3d64229"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/api/ControladorOperacionCampo.java": {
+    "mtime": 1793037719.9970522,
+    "seen": 1793039267.0665052,
+    "ast_hash": "2922508da4ef4b52e4218397457f7db6",
+    "semantic_hash": "2922508da4ef4b52e4218397457f7db6"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/application/AlmacenCampo.java": {
+    "mtime": 1793037719.9971485,
+    "seen": 1793039267.066508,
+    "ast_hash": "9fbdbe19eb836acde3d32a0be3f63fb0",
+    "semantic_hash": "9fbdbe19eb836acde3d32a0be3f63fb0"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/application/OperacionCampo.java": {
+    "mtime": 1793037719.9972405,
+    "seen": 1793039267.066511,
+    "ast_hash": "56c9aa96935e14f87fcddd649a7eafeb",
+    "semantic_hash": "56c9aa96935e14f87fcddd649a7eafeb"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/application/PuertoGestion.java": {
+    "mtime": 1793037719.9972405,
+    "seen": 1793039267.0665138,
+    "ast_hash": "41f0e351c4c6340b0fcd1a8642a26ec1",
+    "semantic_hash": "41f0e351c4c6340b0fcd1a8642a26ec1"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/domain/ModelosCampo.java": {
+    "mtime": 1793037719.9972405,
+    "seen": 1793039267.066516,
+    "ast_hash": "68a311b03fac09a1b6c20c9186f11066",
+    "semantic_hash": "68a311b03fac09a1b6c20c9186f11066"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/infrastructure/AlmacenCampoJdbc.java": {
+    "mtime": 1793037719.9972405,
+    "seen": 1793039267.066519,
+    "ast_hash": "b5203646c1285a5ce08c76804e85c009",
+    "semantic_hash": "b5203646c1285a5ce08c76804e85c009"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/infrastructure/ConfiguracionCampo.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665214,
+    "ast_hash": "9d6e44dccd945884200dd02dbda1c661",
+    "semantic_hash": "9d6e44dccd945884200dd02dbda1c661"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/infrastructure/GestionHttp.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665243,
+    "ast_hash": "5ac329e00d4defd6dfbab004bf6748f7",
+    "semantic_hash": "5ac329e00d4defd6dfbab004bf6748f7"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/api/ControladorAutorizacionEvidencia.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665267,
+    "ast_hash": "9541fc345b271f8ea862f4e6f4273b53",
+    "semantic_hash": "9541fc345b271f8ea862f4e6f4273b53"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/api/ControladorLecturaEvidencia.java": {
+    "mtime": 1793037702.812943,
+    "seen": 1793039267.0665295,
+    "ast_hash": "cd7daa5e1b65d5c24f11e2b9806a743a",
+    "semantic_hash": "cd7daa5e1b65d5c24f11e2b9806a743a"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/api/ErroresEvidencia.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.066532,
+    "ast_hash": "c6398c3082a5819756f419e91b51fb3d",
+    "semantic_hash": "c6398c3082a5819756f419e91b51fb3d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/AutorizadorCargaStorage.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665348,
+    "ast_hash": "c0483ff648d91992240be68f61f0e0d7",
+    "semantic_hash": "c0483ff648d91992240be68f61f0e0d7"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/AutorizadorEvidencia.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665371,
+    "ast_hash": "d1c7604940084b70885a9d4e11f26a3b",
+    "semantic_hash": "d1c7604940084b70885a9d4e11f26a3b"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/AutorizarLecturaEvidencia.java": {
+    "mtime": 1793037702.813056,
+    "seen": 1793039267.06654,
+    "ast_hash": "b8d6db87c541f944e5134d550ebe37c1",
+    "semantic_hash": "b8d6db87c541f944e5134d550ebe37c1"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/FirmadorEvidencia.java": {
+    "mtime": 1793037702.81314,
+    "seen": 1793039267.0665424,
+    "ast_hash": "dac782ade74dcdbd33904e53aa06c380",
+    "semantic_hash": "dac782ade74dcdbd33904e53aa06c380"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/LectorEvidencias.java": {
+    "mtime": 1793037702.813177,
+    "seen": 1793039267.0665452,
+    "ast_hash": "18a7cd7f58b704eeeeefbe520ce992d0",
+    "semantic_hash": "18a7cd7f58b704eeeeefbe520ce992d0"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/PoliticaCargaEvidencia.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665474,
+    "ast_hash": "1550e5f3732a67fe93fbc9fa22cf5b1f",
+    "semantic_hash": "1550e5f3732a67fe93fbc9fa22cf5b1f"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/VerificadorCargaStorage.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665503,
+    "ast_hash": "deb0be44f4c372a940a056266e9a166b",
+    "semantic_hash": "deb0be44f4c372a940a056266e9a166b"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/domain/DespachoNoDisponible.java": {
+    "mtime": 1793037719.997485,
+    "seen": 1793039267.0665529,
+    "ast_hash": "d1c5977d00341c6b2a1527166a90fc0f",
+    "semantic_hash": "d1c5977d00341c6b2a1527166a90fc0f"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/domain/ErrorEvidencia.java": {
+    "mtime": 1793037702.8132455,
+    "seen": 1793039267.066555,
+    "ast_hash": "3552602d93c83fb3d0dfaf42c5b2df8b",
+    "semantic_hash": "3552602d93c83fb3d0dfaf42c5b2df8b"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/domain/EvidenciaNoDisponible.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.0665581,
+    "ast_hash": "4af26aee28db917632378f931b490c2c",
+    "semantic_hash": "4af26aee28db917632378f931b490c2c"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/domain/SolicitudEvidenciaInvalida.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.066561,
+    "ast_hash": "c0ba39089396106e04698724e6a8d1b8",
+    "semantic_hash": "c0ba39089396106e04698724e6a8d1b8"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/domain/TipoEvidencia.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.0665634,
+    "ast_hash": "41982cf43d838366427b7a1d8358246c",
+    "semantic_hash": "41982cf43d838366427b7a1d8358246c"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/AutorizadorCargaSupabase.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.0665662,
+    "ast_hash": "9b0e4c370539c49720c5a3bcf43dee3b",
+    "semantic_hash": "9b0e4c370539c49720c5a3bcf43dee3b"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/EvidenciasJdbc.java": {
+    "mtime": 1793037702.8132455,
+    "seen": 1793039267.0665684,
+    "ast_hash": "e15041e47c01fd79b0f9621fd7073d8e",
+    "semantic_hash": "e15041e47c01fd79b0f9621fd7073d8e"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/FirmadorSupabase.java": {
+    "mtime": 1793037702.813376,
+    "seen": 1793039267.0665712,
+    "ast_hash": "ed2be181b7d3098af5ab7426ff23679d",
+    "semantic_hash": "ed2be181b7d3098af5ab7426ff23679d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/RepositorioEvidenciaJdbc.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.0665739,
+    "ast_hash": "25983fabc5721da0d37f885cc123162d",
+    "semantic_hash": "25983fabc5721da0d37f885cc123162d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/VerificadorCargaSupabase.java": {
+    "mtime": 1793037719.9975185,
+    "seen": 1793039267.0665767,
+    "ast_hash": "57824b1a447d9994453708b484ada61c",
+    "semantic_hash": "57824b1a447d9994453708b484ada61c"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/api/ControladorFurgonetas.java": {
+    "mtime": 1793037702.8134346,
+    "seen": 1793039267.0665789,
+    "ast_hash": "b4b57c43b1559a54e00e07808c076eaf",
+    "semantic_hash": "b4b57c43b1559a54e00e07808c076eaf"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/api/ControladorRepartidores.java": {
+    "mtime": 1793037702.8135214,
+    "seen": 1793039267.0665815,
+    "ast_hash": "22824d077f04b0091f44d3f53fbbfe98",
+    "semantic_hash": "22824d077f04b0091f44d3f53fbbfe98"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/api/ErroresFlota.java": {
+    "mtime": 1793037702.813572,
+    "seen": 1793039267.0665843,
+    "ast_hash": "b08c7fa458f40101dc754deb9f9fcdfb",
+    "semantic_hash": "b08c7fa458f40101dc754deb9f9fcdfb"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/api/SolicitudesFlota.java": {
+    "mtime": 1793037702.8136165,
+    "seen": 1793039267.066587,
+    "ast_hash": "d6bdd605fa8b7bf87417472600e3a4bf",
+    "semantic_hash": "d6bdd605fa8b7bf87417472600e3a4bf"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/application/GestorFlota.java": {
+    "mtime": 1793037702.8136926,
+    "seen": 1793039267.0665896,
+    "ast_hash": "5b9c5908cb5bf499ec7954049991435e",
+    "semantic_hash": "5b9c5908cb5bf499ec7954049991435e"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/application/IRepositorioFlota.java": {
+    "mtime": 1793037702.8137434,
+    "seen": 1793039267.066592,
+    "ast_hash": "7c5f01d1b2f51e50e5ea86baf89c25a4",
+    "semantic_hash": "7c5f01d1b2f51e50e5ea86baf89c25a4"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/domain/ConflictoFlota.java": {
+    "mtime": 1793037702.8138788,
+    "seen": 1793039267.0665944,
+    "ast_hash": "abdb40427a9a3af36f72423ba691e88d",
+    "semantic_hash": "abdb40427a9a3af36f72423ba691e88d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/domain/DatosFlota.java": {
+    "mtime": 1793037702.8140147,
+    "seen": 1793039267.0665972,
+    "ast_hash": "8958d4bfd5bfd81989963e508e297b21",
+    "semantic_hash": "8958d4bfd5bfd81989963e508e297b21"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/flota/infrastructure/RepositorioFlotaJdbc.java": {
+    "mtime": 1793037702.8141215,
+    "seen": 1793039267.0665998,
+    "ast_hash": "fcbceff119060f53bf7b06cbfeaa8170",
+    "semantic_hash": "fcbceff119060f53bf7b06cbfeaa8170"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/incidencias/api/ControladorConsultaIncidencias.java": {
+    "mtime": 1793037702.8141901,
+    "seen": 1793039267.0666027,
+    "ast_hash": "1a7438ca95003c79284614d8b915985e",
+    "semantic_hash": "1a7438ca95003c79284614d8b915985e"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/incidencias/application/LectorIncidenciasOperativas.java": {
+    "mtime": 1793037702.8142817,
+    "seen": 1793039267.0666053,
+    "ast_hash": "0afa09481677caa454459f1c0cff9cf5",
+    "semantic_hash": "0afa09481677caa454459f1c0cff9cf5"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/incidencias/domain/DatosIncidenciasOperativas.java": {
+    "mtime": 1793037702.8143742,
+    "seen": 1793039267.0666077,
+    "ast_hash": "c2248119ade59cae567742cdcc5741b2",
+    "semantic_hash": "c2248119ade59cae567742cdcc5741b2"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/incidencias/infrastructure/IncidenciasOperativasJdbc.java": {
+    "mtime": 1793037702.8144329,
+    "seen": 1793039267.0666103,
+    "ast_hash": "a5e21fa703ba9398bd6cfa487785112e",
+    "semantic_hash": "a5e21fa703ba9398bd6cfa487785112e"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/api/ControladorCapacidadInterna.java": {
+    "mtime": 1793037719.9983244,
+    "seen": 1793039267.066613,
+    "ast_hash": "554a4bf898b56d3d1282db60a31f81cd",
+    "semantic_hash": "554a4bf898b56d3d1282db60a31f81cd"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/api/ControladorJornadaPropia.java": {
+    "mtime": 1793037719.9984422,
+    "seen": 1793039267.0666158,
+    "ast_hash": "88bf2c0f37c7439706dfd9c51fc3611d",
+    "semantic_hash": "88bf2c0f37c7439706dfd9c51fc3611d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/api/ControladorJornadas.java": {
+    "mtime": 1793037719.9984422,
+    "seen": 1793039267.0666184,
+    "ast_hash": "f08f862d2ff01ba8fa3ce70db89a2cb5",
+    "semantic_hash": "f08f862d2ff01ba8fa3ce70db89a2cb5"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/api/ErroresJornadas.java": {
+    "mtime": 1793037719.9985247,
+    "seen": 1793039267.066621,
+    "ast_hash": "5dc11f8cc6a4e8137cf6b1fbe6bf6e23",
+    "semantic_hash": "5dc11f8cc6a4e8137cf6b1fbe6bf6e23"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/api/SolicitudesJornada.java": {
+    "mtime": 1793037719.9985247,
+    "seen": 1793039267.0666234,
+    "ast_hash": "31683195da7b454d4dd8682229b26122",
+    "semantic_hash": "31683195da7b454d4dd8682229b26122"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/application/GestorJornadas.java": {
+    "mtime": 1793037719.9986973,
+    "seen": 1793039267.0666263,
+    "ast_hash": "a29a5545e1234e01de814e59ab36f852",
+    "semantic_hash": "a29a5545e1234e01de814e59ab36f852"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/application/IRepositorioJornadas.java": {
+    "mtime": 1793037719.9987867,
+    "seen": 1793039267.0666287,
+    "ast_hash": "666de726fed044a80781c534ea156582",
+    "semantic_hash": "666de726fed044a80781c534ea156582"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/domain/DatosJornada.java": {
+    "mtime": 1793037719.9989047,
+    "seen": 1793039267.0666313,
+    "ast_hash": "866bee4706e99e9603d374be95d127b5",
+    "semantic_hash": "866bee4706e99e9603d374be95d127b5"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/domain/ErrorJornada.java": {
+    "mtime": 1793037719.9989705,
+    "seen": 1793039267.0666337,
+    "ast_hash": "f8203f29290e82faad39330ea90bcffe",
+    "semantic_hash": "f8203f29290e82faad39330ea90bcffe"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/infrastructure/ConfiguracionJornadas.java": {
+    "mtime": 1793037719.9990678,
+    "seen": 1793039267.0666366,
+    "ast_hash": "97311f1ebf4503534189550f24350782",
+    "semantic_hash": "97311f1ebf4503534189550f24350782"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/infrastructure/ConsultaZonaHttp.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666392,
+    "ast_hash": "3e61627986618dc649b39909daf54361",
+    "semantic_hash": "3e61627986618dc649b39909daf54361"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/infrastructure/RepositorioJornadasJdbc.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666418,
+    "ast_hash": "06bfaa0d32b916b936e2993eb1dc807d",
+    "semantic_hash": "06bfaa0d32b916b936e2993eb1dc807d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/configuracion/ConfiguracionOpenApi.java": {
+    "mtime": 1793037702.814534,
+    "seen": 1793039267.0666444,
+    "ast_hash": "9d8d0ac2f4bd3a7f5672575a92ff120d",
+    "semantic_hash": "9d8d0ac2f4bd3a7f5672575a92ff120d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/errores/RespuestasSeguridad.java": {
+    "mtime": 1793037702.814534,
+    "seen": 1793039267.0666473,
+    "ast_hash": "8cd139ee36cfd25d430a5b24d331c34d",
+    "semantic_hash": "8cd139ee36cfd25d430a5b24d331c34d"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ConfiguracionSeguridad.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666502,
+    "ast_hash": "9da32d3e6055f2c13e666d1bc43904c1",
+    "semantic_hash": "9da32d3e6055f2c13e666d1bc43904c1"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/FiltroIdentidadDemo.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666528,
+    "ast_hash": "408320afd3ac7b0083879d39816d3fdf",
+    "semantic_hash": "408320afd3ac7b0083879d39816d3fdf"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/PerfilRepartidorNoDisponible.java": {
+    "mtime": 1793037702.814792,
+    "seen": 1793039267.0666554,
+    "ast_hash": "3633ae40641865a6f089e6de9aa24a11",
+    "semantic_hash": "3633ae40641865a6f089e6de9aa24a11"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ProveedorTokenServicio.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666578,
+    "ast_hash": "b50395a7872cb31964dd9bb1cb2a5964",
+    "semantic_hash": "b50395a7872cb31964dd9bb1cb2a5964"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ValidadorPerfilRepartidor.java": {
+    "mtime": 1793037702.814792,
+    "seen": 1793039267.0666606,
+    "ast_hash": "5e4c0192d3860d314fe2db66c7f83603",
+    "semantic_hash": "5e4c0192d3860d314fe2db66c7f83603"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ValidadorTokenDespacho.java": {
+    "mtime": 1793037702.814792,
+    "seen": 1793039267.066663,
+    "ast_hash": "3be34a6595ae169012a24b7a07d501a3",
+    "semantic_hash": "3be34a6595ae169012a24b7a07d501a3"
+  },
+  "servicio-operacion-reparto/src/main/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/web/FiltroCorrelacion.java": {
+    "mtime": 1793037702.814792,
+    "seen": 1793039267.0666656,
+    "ast_hash": "6f0df1979f0e8c74d18e3978d63249e4",
+    "semantic_hash": "6f0df1979f0e8c74d18e3978d63249e4"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/AccesoPerfilRepartidorHttpTests.java": {
+    "mtime": 1793037702.815317,
+    "seen": 1793039267.0666685,
+    "ast_hash": "053b46ce741c7ef3ebe426278981871a",
+    "semantic_hash": "053b46ce741c7ef3ebe426278981871a"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/AutorizacionEvidenciaHttpTests.java": {
+    "mtime": 1793037719.9991128,
+    "seen": 1793039267.0666711,
+    "ast_hash": "c180a0c2926ea2d001157e649d83d787",
+    "semantic_hash": "c180a0c2926ea2d001157e649d83d787"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/CompatibilidadFlotaHeredadaTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666735,
+    "ast_hash": "81b12998eacd41b7b76dc801ac3e9b1e",
+    "semantic_hash": "81b12998eacd41b7b76dc801ac3e9b1e"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/ConsultaIncidenciasOperativasHttpTests.java": {
+    "mtime": 1793037702.815317,
+    "seen": 1793039267.0666761,
+    "ast_hash": "bdd0cbba1d0f58bb0d8040ec2b23a548",
+    "semantic_hash": "bdd0cbba1d0f58bb0d8040ec2b23a548"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/DemoF04CompatibleTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666788,
+    "ast_hash": "4c6d45c8178de27bd0e04ef0f65dcb44",
+    "semantic_hash": "4c6d45c8178de27bd0e04ef0f65dcb44"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/GestionFlotaHttpTests.java": {
+    "mtime": 1793037702.815317,
+    "seen": 1793039267.0666816,
+    "ast_hash": "341f924df8b90c8291cbaeb255d775bd",
+    "semantic_hash": "341f924df8b90c8291cbaeb255d775bd"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/JornadasHeredadasTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666842,
+    "ast_hash": "f0edd63363a70294fe4a136e8d1909a4",
+    "semantic_hash": "f0edd63363a70294fe4a136e8d1909a4"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/JornadasPostgresTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666869,
+    "ast_hash": "cb585d8cec8ff9aa84f7c9d1c4e92858",
+    "semantic_hash": "cb585d8cec8ff9aa84f7c9d1c4e92858"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/ModoDemoJornadasTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666897,
+    "ast_hash": "9e618ea2ffe26fe6e4abd0696ffd668e",
+    "semantic_hash": "9e618ea2ffe26fe6e4abd0696ffd668e"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/ModoDemoOperacionTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.066692,
+    "ast_hash": "77cf180fdb0a24459f6c680a81e5b112",
+    "semantic_hash": "77cf180fdb0a24459f6c680a81e5b112"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/OperacionCampoPostgresTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.066695,
+    "ast_hash": "783b54632b760826f96fa7b80a969d19",
+    "semantic_hash": "783b54632b760826f96fa7b80a969d19"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/ServicioOperacionRepartoApplicationTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0666978,
+    "ast_hash": "4eb54fc2570954f491d3572f66557010",
+    "semantic_hash": "4eb54fc2570954f491d3572f66557010"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/TestServicioOperacionRepartoApplication.java": {
+    "mtime": 1792175292.1003368,
+    "seen": 1793039267.0667,
+    "ast_hash": "20b97b8079fcc64b20ed3705b95770f6",
+    "semantic_hash": "20b97b8079fcc64b20ed3705b95770f6"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/TestcontainersConfiguration.java": {
+    "mtime": 1793037702.815317,
+    "seen": 1793039267.0667028,
+    "ast_hash": "1d3f668115ce2e21f4b614832db63c51",
+    "semantic_hash": "1d3f668115ce2e21f4b614832db63c51"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/campo/OperacionCampoTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0667055,
+    "ast_hash": "1c9f57e153d9a700dd2cf1ba87c2548d",
+    "semantic_hash": "1c9f57e153d9a700dd2cf1ba87c2548d"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/AutorizadorCargaSupabaseTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0667083,
+    "ast_hash": "9d4656166f2f8fbdc7621bb6db47bed6",
+    "semantic_hash": "9d4656166f2f8fbdc7621bb6db47bed6"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/AutorizadorEvidenciaTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.066711,
+    "ast_hash": "194d97e1afff6cd8ea4ec2c7bf298298",
+    "semantic_hash": "194d97e1afff6cd8ea4ec2c7bf298298"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/PoliticaCargaEvidenciaTests.java": {
+    "mtime": 1793037719.9995184,
+    "seen": 1793039267.0667133,
+    "ast_hash": "67c3ebc2c23ae0474c2a8ef203a80dd5",
+    "semantic_hash": "67c3ebc2c23ae0474c2a8ef203a80dd5"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/api/ControladorLecturaEvidenciaTests.java": {
+    "mtime": 1793037702.8153884,
+    "seen": 1793039267.0667162,
+    "ast_hash": "9596d2c4bde3339eb22b78b92ff7b3bb",
+    "semantic_hash": "9596d2c4bde3339eb22b78b92ff7b3bb"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/application/AutorizarLecturaEvidenciaTests.java": {
+    "mtime": 1793037702.816054,
+    "seen": 1793039267.0667188,
+    "ast_hash": "4d2a45dd7b0011d01ee135d66cd07c46",
+    "semantic_hash": "4d2a45dd7b0011d01ee135d66cd07c46"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/evidencias/infrastructure/FirmadorSupabaseTests.java": {
+    "mtime": 1793037702.8161438,
+    "seen": 1793039267.0667214,
+    "ast_hash": "411fdc114fce12db57da12e549228590",
+    "semantic_hash": "411fdc114fce12db57da12e549228590"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/CalculoOcupacionTests.java": {
+    "mtime": 1793037720.0009015,
+    "seen": 1793039267.0667238,
+    "ast_hash": "3ec947bd82805c42081980ce7c7ec030",
+    "semantic_hash": "3ec947bd82805c42081980ce7c7ec030"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/ConsultaZonaHttpTests.java": {
+    "mtime": 1793037720.0010161,
+    "seen": 1793039267.066727,
+    "ast_hash": "ce450e9375fcb18984a0e9e74e67bd2a",
+    "semantic_hash": "ce450e9375fcb18984a0e9e74e67bd2a"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/GestorJornadasTests.java": {
+    "mtime": 1793037720.001101,
+    "seen": 1793039267.0667293,
+    "ast_hash": "ca3824562034a264a904bc9bbc3559bf",
+    "semantic_hash": "ca3824562034a264a904bc9bbc3559bf"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/jornadas/JornadasHttpTests.java": {
+    "mtime": 1793037720.001101,
+    "seen": 1793039267.066732,
+    "ast_hash": "7e3490f77049b247c1719e2b1d42e0a1",
+    "semantic_hash": "7e3490f77049b247c1719e2b1d42e0a1"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ValidadorPerfilRepartidorTests.java": {
+    "mtime": 1793037702.8162928,
+    "seen": 1793039267.0667348,
+    "ast_hash": "3bc5c76336ec93c946c75318d648bb11",
+    "semantic_hash": "3bc5c76336ec93c946c75318d648bb11"
+  },
+  "servicio-operacion-reparto/src/test/java/com/modulodespacho/operacionreparto/servicio_operacion_reparto/shared/seguridad/ValidadorTokenDespachoTests.java": {
+    "mtime": 1793037702.8164055,
+    "seen": 1793039267.0667372,
+    "ast_hash": "ffe81e2edb5b1b55db660627189eb611",
+    "semantic_hash": "ffe81e2edb5b1b55db660627189eb611"
+  }
+}

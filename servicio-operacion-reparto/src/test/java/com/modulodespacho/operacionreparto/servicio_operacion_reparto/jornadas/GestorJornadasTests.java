@@ -102,6 +102,20 @@ class GestorJornadasTests {
         assertThatThrownBy(() -> gestor.liberar(reserva,UUID.randomUUID(),"COMPENSACION","modulo-despacho")).isInstanceOf(ErrorJornada.class);
         verify(repositorio,never()).liberar(any(),any(),any(),any());
     }
+    @Test void transferenciaValidaCadaDimensionAntesDeTocarLaReservaOrigen() {
+        UUID origen=UUID.randomUUID(),despacho=UUID.randomUUID();
+        when(repositorio.obtenerJornada(id)).thenReturn(base("ACTIVA",false,Capacidad.cero()));
+        when(repositorio.obtenerPerfil(perfil)).thenReturn(habilitado);
+        when(repositorio.obtenerVehiculo(vehiculo)).thenReturn(disponible);
+        for(Capacidad carga:List.of(new Capacidad(new BigDecimal("501"),BigDecimal.ONE,1),
+                new Capacidad(BigDecimal.ONE,new BigDecimal("5"),1),new Capacidad(BigDecimal.ONE,BigDecimal.ONE,81))) {
+            when(repositorio.obtenerReserva(origen)).thenReturn(new Reserva(origen,null,despacho,UUID.randomUUID(),UUID.randomUUID(),carga,"ACTIVA",null,null,null));
+            assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),new SolicitudTransferencia(origen,despacho,perfil,id),"modulo-despacho"))
+                    .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(422));
+        }
+        verify(repositorio,never()).liberar(any(),any(),any(),any());
+        verify(repositorio,never()).guardarReserva(any(),any(),any(),any(),any(),any());
+    }
     @Test void proyeccionesAntiguasNoReemplazanLaVersionActualNiConsultanReferenciasViejas() {
         UUID despacho=UUID.randomUUID();when(repositorio.buscarVersionProyeccion(despacho)).thenReturn(Optional.of(3L));
         gestor.proyectar(despacho,new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,UUID.randomUUID(),1,null,null,hoy,0,2,reloj.instant(),2,null,null),"modulo-despacho");

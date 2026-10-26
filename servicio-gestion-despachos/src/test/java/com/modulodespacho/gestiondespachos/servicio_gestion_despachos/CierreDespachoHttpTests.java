@@ -302,7 +302,7 @@ class CierreDespachoHttpTests {
             sentencia.execute("INSERT INTO historial_estados_despacho(despacho_id,tipo_operacion,estado_anterior,estado_nuevo,funcionalidad_origen,ejecutor_tipo,origen,datos) VALUES ('"+DESPACHO+"','TRANSICION','FALLIDO','DEVUELTO_A_ORIGEN','F-04','SISTEMA','MANUAL','{}')");
         }
         var migracion = Flyway.configure().dataSource(url,postgres.getUsername(),postgres.getPassword()).load();
-        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("4");
+        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("5");
         try (var conexion = java.sql.DriverManager.getConnection(url,postgres.getUsername(),postgres.getPassword()); var sentencia = conexion.createStatement()) {
             var filas = sentencia.executeQuery("SELECT datos::text FROM historial_estados_despacho");
             assertThat(filas.next()).isTrue(); assertThat(filas.getString(1)).isEqualTo("{}");

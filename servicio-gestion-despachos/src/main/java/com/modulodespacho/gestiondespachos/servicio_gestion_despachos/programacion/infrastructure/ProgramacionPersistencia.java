@@ -192,19 +192,26 @@ public class ProgramacionPersistencia implements AlmacenProgramacion {
                     "idPedido", despacho.getIdPedido(), "idDespacho", despacho.getId().toString(), "estadoAnterior", "PENDIENTE_ASIGNACION",
                     "estadoNuevo", "ASIGNADO", "ocurridoEn", ahora, "datos", Map.of("fechaProgramada", despacho.getFechaProgramada())));
         }
+        publicarProyeccion(despacho, ahora);
+        return respuesta;
+    }
+
+    /** Se invoca dentro de la transacción de asignación o reordenamiento. */
+    public void publicarProyeccion(Despacho despacho, Instant ahora) {
         Map<String, Object> proyeccion = new LinkedHashMap<>();
         proyeccion.put("idDespacho", despacho.getId().toString()); proyeccion.put("idPedido", despacho.getIdPedido());
         proyeccion.put("codigoRastreoInterno", despacho.getCodigoRastreoInterno()); proyeccion.put("estado", "ASIGNADO");
         proyeccion.put("idJornada", despacho.getIdJornada()); proyeccion.put("idReserva", despacho.getIdReserva());
-        proyeccion.put("secuenciaRuta", posicion); proyeccion.put("destinatario", new Destinatario(despacho.getDestinatarioNombre(), despacho.getDestinatarioTelefono()));
+        proyeccion.put("secuenciaRuta", despacho.getSecuenciaRuta()); proyeccion.put("destinatario", new Destinatario(despacho.getDestinatarioNombre(), despacho.getDestinatarioTelefono()));
         proyeccion.put("destino", new Destino(despacho.getDireccion(), despacho.getReferencia(), despacho.getDepartamento(), despacho.getProvincia(), despacho.getDistrito(), despacho.getCodigoPostal(), null));
         proyeccion.put("fechaProgramada", despacho.getFechaProgramada()); proyeccion.put("numeroIntentos", despacho.getNumeroIntentos());
         proyeccion.put("maximoIntentos", sql.sql("SELECT CAST(valor AS integer) FROM parametros_configuracion WHERE clave='MAXIMO_INTENTOS'")
                 .query(Integer.class).single());
-        proyeccion.put("hitos", Map.of("asignadoEn", ahora));
+        var asignadoEn = sql.sql("SELECT max(registrado_en) FROM historial_estados_despacho WHERE despacho_id=:id AND tipo_operacion='TRANSICION' AND estado_nuevo='ASIGNADO'")
+                .param("id", despacho.getId()).query((fila, indice) -> fila.getObject(1, OffsetDateTime.class)).list().getFirst();
+        if (asignadoEn != null) proyeccion.put("hitos", Map.of("asignadoEn", asignadoEn.toInstant()));
         proyeccion.put("version", despacho.getVersion()); proyeccion.put("actualizadoEn", ahora);
         guardarEvento(UUID.randomUUID(), despacho.getId(), "OPERACION", "PROYECCION_DESPACHO", proyeccion);
-        return respuesta;
     }
 
     private void guardarEvento(UUID id, UUID despacho, String destino, String tipo, Object payload) {

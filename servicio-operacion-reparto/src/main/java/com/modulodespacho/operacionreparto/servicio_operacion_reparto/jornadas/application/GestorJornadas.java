@@ -211,6 +211,35 @@ public class GestorJornadas {
         if (resultado.liberadaEn() == null || resultado.motivo() == null) throw ErrorJornada.noDisponible();
         return new Liberacion(id,despacho,"LIBERADA",resultado.motivo(),resultado.liberadaEn());
     }
+    /** Transferencia local atómica: nunca se libera el origen antes de validar el destino. */
+    public Transferencia transferir(UUID clave, SolicitudTransferencia datos, String actor) {
+        if (clave.version() != 4) throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","La clave debe ser UUID v4.");
+        repositorio.bloquearOperacion();
+        String solicitud = json.writeValueAsString(datos);
+        var previa = repositorio.buscarTransferencia(clave, solicitud);
+        if (previa.isPresent()) return json.readValue(previa.get(),Transferencia.class);
+        Reserva origen = repositorio.obtenerReserva(datos.idReservaOrigen());
+        if (!origen.despacho().equals(datos.idDespacho()) || !"ACTIVA".equals(origen.estado()))
+            throw new ErrorJornada(409,"DESP_ERROR_RESERVA_NO_COINCIDE","La reserva de origen no está activa o pertenece a otro despacho.");
+        if (origen.repartidor().equals(datos.idNuevoRepartidor()) || origen.jornada().equals(datos.idNuevaJornada()))
+            throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El destino debe ser otro repartidor y jornada.");
+        JornadaBase destino = repositorio.obtenerJornada(datos.idNuevaJornada());
+        Perfil perfil = repositorio.obtenerPerfil(datos.idNuevoRepartidor());
+        if (!destino.activa() || !destino.fecha().equals(obtenerFechaActual()) || !destino.repartidor().equals(perfil.id())
+                || !perfil.habilitado() || !"DISPONIBLE".equals(repositorio.obtenerVehiculo(destino.furgoneta()).estado()))
+            throw new ErrorJornada(409,"DESP_ERROR_REPARTIDOR_NO_HABILITADO","La jornada destino no está habilitada.");
+        Capacidad remanente = destino.limites().menos(destino.ocupacion());
+        if (!remanente.admite(origen.carga())) throw new ErrorJornada(422,"DESP_ERROR_CAPACIDAD_EXCEDIDA","La carga supera la capacidad remanente del destino.");
+        // Misma transacción y bloqueo que reservar/liberar/proyectar: fallo de INSERT revierte la liberación.
+        repositorio.liberar(origen.id(),"REASIGNACION",actor,reloj.instant());
+        UUID nueva = UUID.randomUUID();
+        var confirmacion = new ConfirmacionReserva(nueva,"CONFIRMADA",remanente.menos(origen.carga()));
+        repositorio.guardarReserva(nueva,UUID.randomUUID(),new SolicitudReserva(datos.idDespacho(),datos.idNuevoRepartidor(),datos.idNuevaJornada(),origen.carga()),
+                json.writeValueAsString(confirmacion),actor,reloj.instant());
+        var resultado = new Transferencia(origen.id(),datos.idDespacho(),nueva,datos.idNuevaJornada(),"TRANSFERIDA",confirmacion.capacidadRemanente(),reloj.instant());
+        repositorio.guardarTransferencia(clave,solicitud,json.writeValueAsString(resultado),actor);
+        return resultado;
+    }
     public void proyectar(UUID id, Proyeccion datos, String actor) {
         if (!id.equals(datos.idDespacho())) throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El identificador de la ruta no coincide.");
         repositorio.bloquearOperacion();

@@ -335,7 +335,7 @@ class ReprogramacionDespachoHttpTests {
         }
         var migracion=Flyway.configure().dataSource(url,postgres.getUsername(),postgres.getPassword()).load();
         migracion.migrate();
-        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("4");
+        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("5");
         try(var conexion=java.sql.DriverManager.getConnection(url,postgres.getUsername(),postgres.getPassword());var sentencia=conexion.createStatement()) {
             var resultado=sentencia.executeQuery("SELECT (SELECT count(*) FROM despachos WHERE pedido_id='PED-PREVIO'),(SELECT count(*) FROM reprogramaciones_despacho)");
             assertThat(resultado.next()).isTrue(); assertThat(resultado.getInt(1)).isEqualTo(1); assertThat(resultado.getInt(2)).isZero();

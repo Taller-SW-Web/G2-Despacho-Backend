@@ -22,6 +22,9 @@ public final class SolicitudesJornada {
         public DatosJornada.SolicitudReserva datos() { return new DatosJornada.SolicitudReserva(idDespacho,idRepartidor,idJornada,requerido.datos()); }
     }
     public record Liberar(@NotNull UUID idDespacho,@NotNull @Pattern(regexp="ENTREGA|CANCELACION|RECEPCION_EN_CENTRO|REASIGNACION|COMPENSACION") String motivo) {}
+    public record Transferir(@NotNull UUID idReservaOrigen,@NotNull UUID idDespacho,@NotNull UUID idNuevoRepartidor,@NotNull UUID idNuevaJornada) {
+        public DatosJornada.SolicitudTransferencia datos() { return new DatosJornada.SolicitudTransferencia(idReservaOrigen,idDespacho,idNuevoRepartidor,idNuevaJornada); }
+    }
     public record CierrePropio(@NotNull UUID idJornada) {}
     public record Destinatario(@NotBlank @Size(max=160) String nombre,@NotBlank @Size(max=30) String telefono) {
         DatosJornada.Destinatario datos() { return new DatosJornada.Destinatario(nombre,telefono); }

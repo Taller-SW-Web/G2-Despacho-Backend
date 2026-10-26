@@ -241,6 +241,20 @@ Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up 
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
 
+## Verificación integrada de rutas F-02
+
+La rama `feature/f02-rutas-transferencia-segura` añade Gestión V5 (resultado durable de secuencia y unicidad diferida de posiciones) y Operación V7 (transferencias atómicas de capacidad; V6 ya pertenece a comandos F-03). No editar migraciones aplicadas. Las futuras migraciones empiezan en Gestión V6 y Operación V8.
+
+Construir los tres servicios con `./mvnw clean verify` y, desde la raíz del backend, ejecutar:
+
+```bash
+python3 pruebas/verificar_f02_rutas.py
+```
+
+Requiere Python 3.9+, Docker Compose, los JAR verificados, el frontend hermano `../G2-Despacho-Frontend` con dependencias instaladas y Chromium de Playwright. Reserva `18080`, `18090` y `4186`. El script no carga `.env`: crea un proyecto Compose único, PostgreSQL con almacenamiento temporal, dos bases separadas y datos sintéticos. Usa los servicios reales de Gateway/Gestión/Operación y Seguridad temporal de G2, crea una jornada, simula/asigna dos despachos y ejecuta `npm run test:f02:rutas:e2e` del frontend. Al terminar elimina únicamente los contenedores/red de ese proyecto; no usa ni borra volúmenes del desarrollo.
+
+El recorrido verifica teclado, descarte, guardado con respuesta perdida/recuperación y llegada del nuevo orden a la API F-03, sin simular respuestas de negocio. Productos, Ventas y Seguridad real de G7 no quedan acreditados. La primitiva privada de transferencia de F-06 no habilita por sí sola la reasignación pública de ES-F02-06: su coordinación durable en Gestión sigue pendiente. Estado y resultados: [evidencia ES-F02-05](../despacho-docs/especificaciones/ES-F02-05-ConsultarReordenarSecuenciaRuta/evidence.md).
+
 ## Integración continua
 
 [CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.

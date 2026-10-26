@@ -9,6 +9,10 @@ spring:
             connect-timeout: 3000
             response-timeout: 10s
           routes:
+            - id: gestion-rutas-programacion
+              uri: ${GESTION_DESPACHOS_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/jornadas/*/ruta,/api/v1/jornadas/*/secuencia
             - id: gestion-despachos
               uri: ${GESTION_DESPACHOS_URL:http://localhost:8081}
               predicates:
