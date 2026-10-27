@@ -53,6 +53,7 @@ public class RutasPersistencia {
         for (var parada : actuales) {
             int posicion = nuevas.get(parada.idDespacho());
             if (posicion == parada.posicion()) continue;
+            GuardiaReasignacion.exigirLibre(sql,parada.idDespacho());
             int cambios = sql.sql("UPDATE despachos SET secuencia_ruta=:posicion,version=version+1,actualizado_en=:ahora WHERE id=:id AND version=:version AND estado='ASIGNADO'")
                     .param("posicion", posicion).param("ahora", ahora.atOffset(ZoneOffset.UTC)).param("id", parada.idDespacho()).param("version", parada.version()).update();
             if (cambios != 1) throw conflicto("El despacho cambió mientras se guardaba");
@@ -77,11 +78,14 @@ public class RutasPersistencia {
         return json.writeValueAsString(List.of(jornada, version, secuencia));
     }
     private List<Parada> filas(String jornada, boolean bloquear) {
-        return sql.sql("SELECT * FROM despachos WHERE asignacion_diaria_id_externa=:jornada AND secuencia_ruta IS NOT NULL ORDER BY id" + (bloquear ? " FOR UPDATE" : ""))
+        return sql.sql("SELECT d.*,EXISTS(SELECT 1 FROM reasignaciones_despacho r WHERE r.despacho_id=d.id AND r.estado='PENDIENTE') AS reasignacion_en_proceso,"
+                + "EXISTS(SELECT 1 FROM cancelaciones_despacho c WHERE c.despacho_id=d.id AND c.estado='PENDIENTE') AS cancelacion_en_proceso "
+                + "FROM despachos d WHERE asignacion_diaria_id_externa=:jornada AND secuencia_ruta IS NOT NULL AND d.estado<>'CANCELADO' ORDER BY id" + (bloquear ? " FOR UPDATE OF d" : ""))
                 .param("jornada", jornada).query((r, i) -> new Parada(r.getObject("id", UUID.class), r.getString("codigo_operativo"),
                         r.getString("codigo_rastreo_interno"), r.getString("estado"), r.getInt("secuencia_ruta"), r.getInt("version"),
                         r.getString("destinatario_nombre"), r.getString("direccion"), r.getBigDecimal("peso_kg"), r.getBigDecimal("volumen_m3"),
-                        r.getInt("cantidad_paquetes"), r.getObject("actualizado_en", OffsetDateTime.class).toInstant())).list();
+                        r.getInt("cantidad_paquetes"), r.getObject("actualizado_en", OffsetDateTime.class).toInstant(),r.getString("pedido_id"),
+                        r.getString("repartidor_id_externo"),r.getBoolean("reasignacion_en_proceso"),r.getBoolean("cancelacion_en_proceso"))).list();
     }
     private Ruta vista(String jornada, String estado, List<Parada> filas, Instant ahora) {
         return new Ruta(jornada, estado, filas.stream().sorted(Comparator.comparingInt(Parada::posicion)).toList(), version(filas), ahora);
@@ -89,7 +93,7 @@ public class RutasPersistencia {
     private String version(List<Parada> filas) {
         try {
             String contenido = json.writeValueAsString(filas.stream().sorted(Comparator.comparing(Parada::idDespacho))
-                    .map(p -> List.of(p.idDespacho(), p.version(), p.posicion(), p.estado())).toList());
+                    .map(p -> List.of(p.idDespacho(), p.version(), p.posicion(), p.estado(),p.reasignacionEnProceso(),p.cancelacionEnProceso())).toList());
             return "\"" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(contenido.getBytes(StandardCharsets.UTF_8))) + "\"";
         } catch (NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
     }

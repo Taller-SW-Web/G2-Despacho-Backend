@@ -117,6 +117,7 @@ public class ProgramacionPersistencia implements AlmacenProgramacion {
     @Transactional
     public IntencionAsignacion prepararAsignacion(UUID id, SolicitudAsignacion solicitud, String actor, LocalDate hoy) {
         bloquear("asignacion:" + id);
+        GuardiaCancelacion.exigirLibre(sql, id);
         Despacho despacho = buscar(id);
         var anteriores = sql.sql("""
                 SELECT a.* FROM asignaciones_despacho a WHERE a.despacho_id = :id
@@ -196,11 +197,11 @@ public class ProgramacionPersistencia implements AlmacenProgramacion {
         return respuesta;
     }
 
-    /** Se invoca dentro de la transacción de asignación o reordenamiento. */
+    /** Proyección del estado canónico dentro de la transacción de asignación, orden, reasignación o cancelación. */
     public void publicarProyeccion(Despacho despacho, Instant ahora) {
         Map<String, Object> proyeccion = new LinkedHashMap<>();
         proyeccion.put("idDespacho", despacho.getId().toString()); proyeccion.put("idPedido", despacho.getIdPedido());
-        proyeccion.put("codigoRastreoInterno", despacho.getCodigoRastreoInterno()); proyeccion.put("estado", "ASIGNADO");
+        proyeccion.put("codigoRastreoInterno", despacho.getCodigoRastreoInterno()); proyeccion.put("estado", despacho.getEstado().name());
         proyeccion.put("idJornada", despacho.getIdJornada()); proyeccion.put("idReserva", despacho.getIdReserva());
         proyeccion.put("secuenciaRuta", despacho.getSecuenciaRuta()); proyeccion.put("destinatario", new Destinatario(despacho.getDestinatarioNombre(), despacho.getDestinatarioTelefono()));
         proyeccion.put("destino", new Destino(despacho.getDireccion(), despacho.getReferencia(), despacho.getDepartamento(), despacho.getProvincia(), despacho.getDistrito(), despacho.getCodigoPostal(), null));

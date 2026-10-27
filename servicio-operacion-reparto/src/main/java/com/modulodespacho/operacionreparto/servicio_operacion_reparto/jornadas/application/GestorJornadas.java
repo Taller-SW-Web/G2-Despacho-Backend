@@ -225,7 +225,7 @@ public class GestorJornadas {
             throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El destino debe ser otro repartidor y jornada.");
         JornadaBase destino = repositorio.obtenerJornada(datos.idNuevaJornada());
         Perfil perfil = repositorio.obtenerPerfil(datos.idNuevoRepartidor());
-        if (!destino.activa() || !destino.fecha().equals(obtenerFechaActual()) || !destino.repartidor().equals(perfil.id())
+        if (!destino.activa() || "SATURADO".equals(destino.estadoOperativo()) || !destino.fecha().equals(obtenerFechaActual()) || !destino.repartidor().equals(perfil.id())
                 || !perfil.habilitado() || !"DISPONIBLE".equals(repositorio.obtenerVehiculo(destino.furgoneta()).estado()))
             throw new ErrorJornada(409,"DESP_ERROR_REPARTIDOR_NO_HABILITADO","La jornada destino no está habilitada.");
         Capacidad remanente = destino.limites().menos(destino.ocupacion());

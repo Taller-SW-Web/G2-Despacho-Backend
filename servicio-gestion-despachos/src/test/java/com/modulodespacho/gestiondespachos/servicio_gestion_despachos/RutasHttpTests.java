@@ -77,7 +77,7 @@ class RutasHttpTests {
         guardar(version,UUID.randomUUID().toString(),"{\"despachos\":[]}").andExpect(status().isBadRequest());
         guardar(version,UUID.randomUUID().toString(),cuerpo(1,2,3).replace(dos.toString(),UUID.randomUUID().toString())).andExpect(status().isBadRequest());
         guardar(version,UUID.randomUUID().toString(),cuerpo(2,1,3)).andExpect(status().isConflict());
-        for(String estado:List.of("ENTREGADO","FALLIDO","CANCELADO","DEVUELTO_A_ORIGEN")) {
+        for(String estado:List.of("ENTREGADO","FALLIDO","DEVUELTO_A_ORIGEN")) {
             sql.sql("UPDATE despachos SET estado=:estado,version=version+1 WHERE id=:id").param("estado",estado).param("id",fijo).update();
             guardar(version(),UUID.randomUUID().toString(),cuerpo(2,1,3)).andExpect(status().isConflict());
         }
@@ -90,6 +90,16 @@ class RutasHttpTests {
         sql.sql("UPDATE despachos SET estado='EN_CAMINO',version=version+1 WHERE id=:id").param("id",uno).update();
         guardar(version,UUID.randomUUID().toString(),cuerpo(3,2,1)).andExpect(status().isConflict());
         assertThat(posicion(uno)).isEqualTo(1);
+    }
+    @Test void canceladoSeRetiraDeLaFotografiaSinBorrarSuPosicionHistorica() throws Exception {
+        String anterior = version();
+        sql.sql("UPDATE despachos SET estado='CANCELADO',version=version+1 WHERE id=:id").param("id", fijo).update();
+        http.perform(get(ruta()).header("Authorization","Bearer gestor")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.despachos.length()").value(2)).andExpect(jsonPath("$.despachos[1].posicion").value(3));
+        guardar(anterior,UUID.randomUUID().toString(),cuerpo(2,1,3)).andExpect(status().isConflict());
+        guardar(version(),UUID.randomUUID().toString(),cuerpo(2,1,3)).andExpect(status().isBadRequest());
+        assertThat(posicion(fijo)).isEqualTo(2);
+        assertThat(sql.sql("SELECT count(*) FROM eventos_salientes").query(Long.class).single()).isZero();
     }
     @Test void dosGuardadosConcurrentesSobreLaMismaFotografiaNoSePisan() throws Exception {
         String version=version();

@@ -249,6 +249,38 @@ class CierreDespachoHttpTests {
         assertThat(texto("SELECT estado FROM liberaciones_capacidad")).isEqualTo("CONFIRMADA");
         assertThat(numero("SELECT version FROM despachos")).isEqualTo(10);
     }
+    @Test void anulacionRealImpideReprogramarYPermiteCierreConVersionActualizada() throws Exception {
+        when(decodificador.decode("ventas")).thenReturn(Jwt.withTokenValue("ventas").header("alg","RS256").subject("modulo-ventas")
+                .claim("tipo","servicio").claim("scope","despachos:cancelar").issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600)).build());
+        String clave = UUID.randomUUID().toString();
+        http.perform(post("/api/v1/despachos/pedidos/PED-REPROGRAMACION/cancelacion").header("Authorization","Bearer ventas")
+                .header("Idempotency-Key",clave).contentType("application/json").content("{\"motivo\":\"PEDIDO_ANULADO\"}"))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.estado").value("FALLIDO"));
+        http.perform(get("/api/v1/despachos/"+DESPACHO+"/incidencia").header("Authorization","Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.pedidoAnulado").value(true))
+                .andExpect(jsonPath("$.acciones.reprogramar.habilitada").value(false));
+        http.perform(post("/api/v1/despachos/"+DESPACHO+"/reprogramacion").header("Authorization","Bearer gestor").contentType("application/json")
+                .content("{\"idIncidencia\":\""+INCIDENCIA+"\",\"versionDespacho\":10,\"nuevaFechaProgramada\":\"2026-10-25\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DESP_ERROR_PEDIDO_ANULADO"));
+        enviar("gestor",cuerpo("Retorno de pedido anulado",null).replace("\"versionDespacho\":9","\"versionDespacho\":10"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("DEVUELTO_A_ORIGEN"));
+        http.perform(post("/api/v1/despachos/pedidos/PED-REPROGRAMACION/cancelacion").header("Authorization","Bearer ventas")
+                .header("Idempotency-Key",clave).contentType("application/json").content("{\"motivo\":\"PEDIDO_ANULADO\"}"))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.estado").value("FALLIDO"));
+    }
+    @Test void reprogramacionGanadoraHaceQueAnulacionPosteriorCanceleElPendienteVigente() throws Exception {
+        when(decodificador.decode("ventas")).thenReturn(Jwt.withTokenValue("ventas").header("alg","RS256").subject("modulo-ventas")
+                .claim("tipo","servicio").claim("scope","despachos:cancelar").issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600)).build());
+        http.perform(post("/api/v1/despachos/"+DESPACHO+"/reprogramacion").header("Authorization","Bearer gestor").contentType("application/json")
+                .content("{\"idIncidencia\":\""+INCIDENCIA+"\",\"versionDespacho\":9,\"nuevaFechaProgramada\":\"2026-10-25\"}"))
+                .andExpect(status().isOk());
+        http.perform(post("/api/v1/despachos/pedidos/PED-REPROGRAMACION/cancelacion").header("Authorization","Bearer ventas")
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"motivo\":\"PEDIDO_ANULADO\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("CANCELADO"));
+        assertThat(texto("SELECT estado FROM despachos")).isEqualTo("CANCELADO");
+        assertThat(numero("SELECT version FROM despachos")).isEqualTo(11);
+        assertThat(numero("SELECT count(*) FROM liberaciones_capacidad")).isEqualTo(1);
+    }
     @Test void eventoReintentaPorHttpConElMismoPayloadSinRevertirLaDecision() throws Exception {
         // Receptor HTTP controlado: acredita transporte/outbox, no la instalación real de Ventas.
         var servidor = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
@@ -302,7 +334,7 @@ class CierreDespachoHttpTests {
             sentencia.execute("INSERT INTO historial_estados_despacho(despacho_id,tipo_operacion,estado_anterior,estado_nuevo,funcionalidad_origen,ejecutor_tipo,origen,datos) VALUES ('"+DESPACHO+"','TRANSICION','FALLIDO','DEVUELTO_A_ORIGEN','F-04','SISTEMA','MANUAL','{}')");
         }
         var migracion = Flyway.configure().dataSource(url,postgres.getUsername(),postgres.getPassword()).load();
-        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("5");
+        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("7");
         try (var conexion = java.sql.DriverManager.getConnection(url,postgres.getUsername(),postgres.getPassword()); var sentencia = conexion.createStatement()) {
             var filas = sentencia.executeQuery("SELECT datos::text FROM historial_estados_despacho");
             assertThat(filas.next()).isTrue(); assertThat(filas.getString(1)).isEqualTo("{}");

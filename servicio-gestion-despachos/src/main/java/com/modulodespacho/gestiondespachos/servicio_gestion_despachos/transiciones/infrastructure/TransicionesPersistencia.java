@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosProgramacion.Destinatario;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosProgramacion.Destino;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.domain.Despacho;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.infrastructure.GuardiaReasignacion;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.domain.EstadoDespacho;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.transiciones.application.AlmacenTransiciones;
@@ -51,6 +52,7 @@ public class TransicionesPersistencia implements AlmacenTransiciones {
         if (repetida.isPresent()) return repetida.get();
         // Misma clave de bloqueo que F-02: una asignación y una transición nunca se cruzan.
         bloquear("asignacion:" + id);
+        GuardiaReasignacion.exigirLibre(sql,id);
         Despacho despacho = entidades.find(Despacho.class, id);
         if (despacho == null) throw ErrorDeNegocio.de(404, "DESP_ERROR_DESPACHO_NO_ENCONTRADO", "El despacho no existe");
         EstadoDespacho anterior = despacho.getEstado();

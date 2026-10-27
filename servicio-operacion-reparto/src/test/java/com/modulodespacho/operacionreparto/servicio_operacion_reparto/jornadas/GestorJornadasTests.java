@@ -113,6 +113,9 @@ class GestorJornadasTests {
             assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),new SolicitudTransferencia(origen,despacho,perfil,id),"modulo-despacho"))
                     .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(422));
         }
+        when(repositorio.obtenerJornada(id)).thenReturn(base("ACTIVA",false,limites));
+        assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),new SolicitudTransferencia(origen,despacho,perfil,id),"modulo-despacho"))
+                .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(409));
         verify(repositorio,never()).liberar(any(),any(),any(),any());
         verify(repositorio,never()).guardarReserva(any(),any(),any(),any(),any(),any());
     }

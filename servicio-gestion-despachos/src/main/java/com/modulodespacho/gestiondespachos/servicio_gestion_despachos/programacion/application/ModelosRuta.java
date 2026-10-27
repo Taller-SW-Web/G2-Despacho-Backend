@@ -11,7 +11,8 @@ public final class ModelosRuta {
     private ModelosRuta() {}
     public record Parada(UUID idDespacho, String codigoOperativo, String codigoRastreoInterno, String estado,
             int posicion, int version, String destinatario, String direccion, BigDecimal pesoKg,
-            BigDecimal volumenM3, int cantidadPaquetes, Instant actualizadoEn) {}
+            BigDecimal volumenM3, int cantidadPaquetes, Instant actualizadoEn, String idPedido, String idRepartidor,
+            boolean reasignacionEnProceso, boolean cancelacionEnProceso) {}
     public record Ruta(String idJornada, String estadoJornada, List<Parada> despachos, String versionRuta, Instant consultadoEn) {}
     public record Posicion(@NotNull UUID idDespacho, @NotNull @Min(1) @Max(32767) Integer posicion) {}
     public record Secuencia(@NotNull @Size(max=1000) List<@NotNull @Valid Posicion> despachos) {}
