@@ -30,4 +30,6 @@ public interface IRepositorioJornadas {
     void liberar(UUID id, String motivo, String actor, Instant ahora);
     Optional<Long> buscarVersionProyeccion(UUID despacho);
     void guardarProyeccion(Proyeccion datos, String actor);
+    Optional<String> buscarTransferencia(UUID clave, String solicitud);
+    void guardarTransferencia(UUID clave, String solicitud, String respuesta, String actor);
 }

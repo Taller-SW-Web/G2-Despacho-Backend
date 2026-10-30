@@ -77,6 +77,9 @@ public final class DatosJornada {
     public record DespachoEnRuta(UUID idRepartidor, UUID idJornada, Proyeccion despacho) {}
     public record SolicitudReserva(UUID idDespacho, UUID idRepartidor, UUID idJornada, Capacidad requerido) {}
     public record ConfirmacionReserva(UUID idReserva, String estado, Capacidad capacidadRemanente) {}
+    public record SolicitudTransferencia(UUID idReservaOrigen, UUID idDespacho, UUID idNuevoRepartidor, UUID idNuevaJornada) {}
+    public record Transferencia(UUID idReservaOrigen, UUID idDespacho, UUID idNuevaReserva, UUID idNuevaJornada,
+            String estado, Capacidad capacidadRemanente, Instant transferidaEn) {}
     public record Reserva(UUID id, UUID clave, UUID despacho, UUID jornada, UUID repartidor, Capacidad carga, String estado,
             String motivo, Instant liberadaEn, String respuesta) {}
     public record Liberacion(UUID idReserva, UUID idDespacho, String estado, String motivoLiberacion, Instant liberadaEn) {}

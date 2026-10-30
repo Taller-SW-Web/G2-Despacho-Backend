@@ -249,6 +249,24 @@ Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up 
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
 
+## Verificación integrada de rutas F-02
+
+La rama `feature/f02-rutas-transferencia-segura` añade Gestión V5 (resultado durable de secuencia y unicidad diferida de posiciones), V6 (intenciones/resultados y cerco de reasignación), V7 (cancelaciones durables por anulación) y Operación V7 (transferencias atómicas de capacidad; V6 ya pertenece a comandos F-03). No editar migraciones aplicadas ni activar Flyway sobre bases compartidas para probar. Las futuras migraciones empiezan en Gestión V8 y Operación V8.
+
+Construir los tres servicios con `./mvnw clean verify` y, desde la raíz del backend, ejecutar:
+
+```bash
+python3 pruebas/verificar_f02_rutas.py
+```
+
+Requiere Python 3.9+, Docker Compose, los JAR verificados, el frontend hermano `../G2-Despacho-Frontend` con dependencias instaladas y Chromium de Playwright. Reserva `18080`, `18090` y `4186`. El script no carga `.env`: crea un proyecto Compose único, PostgreSQL con almacenamiento temporal, dos bases separadas y datos sintéticos. Usa Gateway/Gestión/Operación reales y Seguridad temporal de G2, crea dos repartidores/jornadas y despachos simulados y ejecuta `npm run test:f02:rutas:e2e` del frontend (ruta y reasignación). Al terminar elimina únicamente los contenedores/red de ese proyecto; no usa ni borra volúmenes del desarrollo.
+
+El recorrido verifica teclado, descarte, guardado con respuesta perdida y llegada del orden a F-03; también reasigna desde el modal, recupera la misma solicitud tras perder su respuesta y comprueba las dos rutas móviles y capacidades reales. Productos, Ventas y Seguridad real de G7 no quedan acreditados. Gestión coordina la transferencia con un cerco durable frente a traslado/reordenamiento y recuperación hacia adelante; nunca libera una reserva transferida por un fallo local. El procesador de programación existente retoma las intenciones pendientes tras vencer su arrendamiento de 60 segundos. Sin Operación o sin poder confirmar localmente, el despacho permanece bloqueado para no entregar desde una asignación incierta. Estado y resultados: [ES-F02-05](../despacho-docs/especificaciones/ES-F02-05-ConsultarReordenarSecuenciaRuta/evidence.md), [ES-F02-06](../despacho-docs/especificaciones/ES-F02-06-ReasignarDespachoRepartidor/evidence.md).
+
+**Cancelación ES-F02-07:** el mismo runner solicita JWT técnico de Ventas al emisor temporal y verifica cancelación de pendiente/asignado, retiro de cola/ruta y capacidad sin doble liberación. Después prepara un fallo por la API interna real (no acredita captura de evidencia en campo), anula el pedido, recibe físicamente el paquete, verifica liberación F-06 y rechazo de reprogramación y cierra por F-04. No carga credenciales reales ni publica rutas internas en Gateway.
+
+`CancelarDespacho` persiste intención/cerco antes de liberar una reserva de `ASIGNADO`; confirma `200` solo tras liberación y guardado local. Los fallos/timeout conservan el cerco y se recuperan con la misma clave/cuerpo y reserva. No se debe borrar la intención ni recrear una reserva para compensar. El procesador de programación retoma pendientes con lease vencido; una referencia o motivo remoto inconsistente deja bloqueo para revisión operativa. En `FALLIDO`, solo registra la marca temporal y responde `202`; la liberación corresponde a recepción física. No se añade pantalla de cancelación administrativa. Contrato y evidencia: [Común §7.2](../despacho-docs/integraciones/api-contract.md#72-cancelar-por-anulación-del-pedido), [ES-F02-07](../despacho-docs/especificaciones/ES-F02-07-CancelarDespachoPorAnulacion/evidence.md).
+
 ## Integración continua
 
 [CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.

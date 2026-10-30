@@ -62,6 +62,16 @@ public class SolicitudesProgramacion {
         objeto(cuerpo, "solicitud", "idRepartidor", "idJornada", "observacion");
         return validar(new SolicitudAsignacion(texto(cuerpo, "idRepartidor"), texto(cuerpo, "idJornada"), observacion(cuerpo, "observacion")));
     }
+    public com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosReasignacion.Solicitud reasignacion(JsonNode cuerpo) {
+        objeto(cuerpo,"solicitud","idNuevoRepartidor","idNuevaJornada","motivo");
+        return validar(new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosReasignacion.Solicitud(
+                texto(cuerpo,"idNuevoRepartidor"),texto(cuerpo,"idNuevaJornada"),texto(cuerpo,"motivo")));
+    }
+    public com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosCancelacion.Solicitud cancelacion(JsonNode cuerpo) {
+        objeto(cuerpo, "solicitud", "motivo", "observacion");
+        return validar(new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosCancelacion.Solicitud(
+                texto(cuerpo, "motivo"), observacion(cuerpo, "observacion")));
+    }
     public String clave(String clave) {
         if (clave == null || clave.length() > 128 || !clave.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"))
             throw invalido("Idempotency-Key", "Debe informar un UUID v4 válido");

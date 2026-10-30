@@ -87,8 +87,8 @@ public class ConfiguracionSeguridad {
                 .filter(origen -> !origen.isEmpty()).toList());
         cors.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept",
-                "Idempotency-Key", "X-Correlation-Id"));
-        cors.setExposedHeaders(Arrays.asList("X-Correlation-Id", "WWW-Authenticate", "Retry-After"));
+                "Idempotency-Key", "If-Match", "X-Correlation-Id"));
+        cors.setExposedHeaders(Arrays.asList("X-Correlation-Id", "WWW-Authenticate", "Retry-After", "ETag"));
         cors.setAllowCredentials(false);
         cors.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource fuenteCors = new UrlBasedCorsConfigurationSource();

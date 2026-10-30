@@ -110,6 +110,10 @@ public class ConfiguracionSeguridad {
                                 "/swagger-ui.html").permitAll();
                     }
                     reglas
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/transferencias")
+                            .access((autenticacion, contexto) -> new AuthorizationDecision(
+                                    permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")
+                                    && permiteServicio(autenticacion.get(), "operacion:capacidad:liberar")))
                         .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas")
                             .access((autenticacion, contexto) -> new AuthorizationDecision(permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")))
                         .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas/*/liberacion")

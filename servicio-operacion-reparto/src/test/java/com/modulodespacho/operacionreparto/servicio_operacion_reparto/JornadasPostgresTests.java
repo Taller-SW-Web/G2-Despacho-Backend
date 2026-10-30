@@ -43,6 +43,8 @@ class JornadasPostgresTests {
     @MockitoBean ConsultaZonaHttp zonas;
     final UUID actor=UUID.randomUUID(),perfil=UUID.randomUUID(),vehiculo=UUID.randomUUID(),zona=UUID.randomUUID();
     @BeforeEach void preparar() {
+        sql.sql("DROP TRIGGER IF EXISTS prueba_fallo_transferencia ON reservas_capacidad").update();
+        sql.sql("TRUNCATE transferencias_capacidad").update();
         sql.sql("TRUNCATE auditoria_configuracion,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
         when(decodificador.decode("gestor")).thenReturn(token("acceso",actor.toString(),""));
         when(decodificador.decode("capacidad")).thenReturn(token("servicio","modulo-despacho","operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir"));
@@ -55,6 +57,63 @@ class JornadasPostgresTests {
             INSERT INTO furgonetas(id,placa,estado,capacidad_max_kg,capacidad_max_m3,max_paquetes,creado_por,actualizado_por)
             VALUES (:id,'TEST-01','DISPONIBLE',500,4,80,:actor,:actor)
             """).param("id",vehiculo).param("actor",actor).update();
+    }
+    @Test void transferenciaAtomicaConservaCargaOcupacionYResultadoIdempotente() throws Exception {
+        UUID origen=abrir(),despacho=UUID.randomUUID();
+        UUID reserva=UUID.fromString(reservar(origen,despacho,UUID.randomUUID(),"20",1,2).path("idReserva").asText());
+        var destino=destinoTransferencia();
+        UUID clave=UUID.randomUUID();
+        var solicitud=new SolicitudTransferencia(reserva,despacho,destino.idRepartidor(),destino.idJornada());
+        var resultado=gestor.transferir(clave,solicitud,"modulo-despacho");
+        assertThat(resultado.estado()).isEqualTo("TRANSFERIDA");
+        assertThat(gestor.consultarDetalle(origen).ocupacion().pesoKg()).isEqualByComparingTo("0");
+        assertThat(gestor.consultarDetalle(destino.idJornada()).ocupacion().pesoKg()).isEqualByComparingTo("20");
+        assertThat(sql.sql("SELECT count(*) FROM reservas_capacidad WHERE estado='ACTIVA'").query(Long.class).single()).isEqualTo(1);
+        assertThat(gestor.transferir(clave,solicitud,"modulo-despacho")).isEqualTo(resultado);
+        gestor.liberar(resultado.idNuevaReserva(),despacho,"COMPENSACION","modulo-despacho");
+        assertThat(gestor.transferir(clave,solicitud,"modulo-despacho")).isEqualTo(resultado);
+        assertThatThrownBy(() -> gestor.transferir(clave,new SolicitudTransferencia(reserva,UUID.randomUUID(),destino.idRepartidor(),destino.idJornada()),"modulo-despacho"))
+                .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.codigo()).isEqualTo("DESP_ERROR_CLAVE_REUTILIZADA"));
+    }
+    @Test void rechazoDeCapacidadNoLiberaOrigenYUnFalloAlCrearDestinoRevierteTodo() throws Exception {
+        UUID origen=abrir(),despacho=UUID.randomUUID();
+        UUID reserva=UUID.fromString(reservar(origen,despacho,UUID.randomUUID(),"300",1,2).path("idReserva").asText());
+        var destino=destinoTransferencia();
+        gestor.reservar(UUID.randomUUID(),new SolicitudReserva(UUID.randomUUID(),destino.idRepartidor(),destino.idJornada(),new Capacidad(new BigDecimal("300"),BigDecimal.ONE,1)),"modulo-despacho");
+        var solicitud=new SolicitudTransferencia(reserva,despacho,destino.idRepartidor(),destino.idJornada());
+        assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),solicitud,"modulo-despacho"))
+                .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(422));
+        assertThat(gestor.consultarDetalle(origen).ocupacion().pesoKg()).isEqualByComparingTo("300");
+        sql.sql("UPDATE reservas_capacidad SET estado='LIBERADA' WHERE asignacion_diaria_id=:id").param("id",destino.idJornada()).update();
+        sql.sql("CREATE OR REPLACE FUNCTION prueba_fallo_transferencia() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fallo inducido'; END $$").update();
+        sql.sql("CREATE TRIGGER prueba_fallo_transferencia BEFORE INSERT ON reservas_capacidad FOR EACH ROW EXECUTE FUNCTION prueba_fallo_transferencia()").update();
+        assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),solicitud,"modulo-despacho")).isInstanceOf(RuntimeException.class);
+        assertThat(gestor.consultarDetalle(origen).ocupacion().pesoKg()).isEqualByComparingTo("300");
+        assertThat(sql.sql("SELECT count(*) FROM transferencias_capacidad").query(Long.class).single()).isZero();
+    }
+    @Test void transferenciasConcurrentesDelMismoOrigenNoCreanDosReservasActivas() throws Exception {
+        UUID origen=abrir(),despacho=UUID.randomUUID();
+        UUID reserva=UUID.fromString(reservar(origen,despacho,UUID.randomUUID(),"20",1,1).path("idReserva").asText());
+        var destino=destinoTransferencia();
+        var solicitud=new SolicitudTransferencia(reserva,despacho,destino.idRepartidor(),destino.idJornada());
+        try(var hilos=Executors.newVirtualThreadPerTaskExecutor()) {
+            Callable<Integer> tarea=() -> { try { gestor.transferir(UUID.randomUUID(),solicitud,"modulo-despacho"); return 200; }
+                catch(ErrorJornada error) { return error.estado(); } };
+            var a=hilos.submit(tarea);var b=hilos.submit(tarea);
+            assertThat(List.of(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS))).containsExactlyInAnyOrder(200,409);
+        }
+        assertThat(sql.sql("SELECT count(*) FROM reservas_capacidad WHERE estado='ACTIVA'").query(Long.class).single()).isEqualTo(1);
+    }
+    private Jornada destinoTransferencia() {
+        UUID perfilDestino=UUID.randomUUID(),vehiculoDestino=UUID.randomUUID(),usuarioDestino=UUID.randomUUID();
+        sql.sql("""
+                INSERT INTO repartidores(id,nombres,apellidos,dni,telefono,correo,numero_brevete,turno_habitual,estado_registro,
+                  id_usuario_seguridad,estado_vinculacion,creado_por,actualizado_por)
+                VALUES (:id,'Destino','Prueba','87654321','999111223','destino@example.invalid','TEST-02','COMPLETO','ACTIVO',:usuario,'VINCULADO',:actor,:actor)
+                """).param("id",perfilDestino).param("usuario",usuarioDestino).param("actor",actor).update();
+        sql.sql("INSERT INTO furgonetas(id,placa,estado,capacidad_max_kg,capacidad_max_m3,max_paquetes,creado_por,actualizado_por) VALUES (:id,'TEST-02','DISPONIBLE',500,4,80,:actor,:actor)")
+                .param("id",vehiculoDestino).param("actor",actor).update();
+        return gestor.abrir(new Apertura(perfilDestino,vehiculoDestino,zona,LocalDate.of(2026,10,17)),actor);
     }
     @Test void abreConInstantaneaYAuditoriaYRechazaDuplicadosYRecursosInhabilitados() throws Exception {
         UUID jornada=abrir();

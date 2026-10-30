@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.AsignarDespacho;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ReasignarDespacho;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.CancelarDespacho;
 
 @Component
 @Profile("!integracion-local")
@@ -15,10 +17,15 @@ public class RecuperacionProgramacion {
     private static final Logger REGISTRO = LoggerFactory.getLogger(RecuperacionProgramacion.class);
     private final AsignarDespacho asignacion;
     private final EntregaEventosProgramacion eventos;
-    public RecuperacionProgramacion(AsignarDespacho asignacion, EntregaEventosProgramacion eventos) { this.asignacion = asignacion; this.eventos = eventos; }
+    private final ReasignarDespacho reasignacion;
+    private final CancelarDespacho cancelacion;
+    public RecuperacionProgramacion(AsignarDespacho asignacion, EntregaEventosProgramacion eventos,
+            ReasignarDespacho reasignacion, CancelarDespacho cancelacion) {
+        this.asignacion = asignacion; this.eventos = eventos; this.reasignacion=reasignacion; this.cancelacion=cancelacion;
+    }
     @Scheduled(fixedDelayString = "${despacho.programacion.intervalo-recuperacion-ms:30000}", initialDelayString = "${despacho.programacion.intervalo-recuperacion-ms:30000}")
     public void recuperar() {
-        try { asignacion.recuperarPendientes(); eventos.ejecutar(); }
+        try { asignacion.recuperarPendientes(); reasignacion.recuperarPendientes(); cancelacion.recuperarPendientes(); eventos.ejecutar(); }
         catch (RuntimeException error) { REGISTRO.warn("No se pudo completar el ciclo de recuperación de programación"); }
     }
 }

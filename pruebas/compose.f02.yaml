@@ -1,0 +1,70 @@
+# Entorno desechable de F-02: sin .env, sin volúmenes persistentes ni puertos de desarrollo.
+# Requiere los tres JAR construidos mediante clean verify.
+services:
+  postgres:
+    image: postgis/postgis:17-3.6
+    environment:
+      POSTGRES_USER: prueba
+      POSTGRES_PASSWORD: prueba-aislada
+    tmpfs: [/var/lib/postgresql/data]
+    volumes:
+      - ../init-db.sql:/docker-entrypoint-initdb.d/20-bases.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U prueba -d postgres']
+      interval: 2s
+      retries: 40
+  seguridad-local:
+    build: ../seguridad-local
+    environment:
+      HABILITAR_SEGURIDAD_LOCAL: 'true'
+      DIRECCION_ESCUCHA: 0.0.0.0
+    ports: ['127.0.0.1:18090:8090']
+  gestion:
+    image: eclipse-temurin:21-jre-jammy
+    command: [java, -Xmx384m, -jar, /app/servicio.jar, '--despacho.programacion.intervalo-recuperacion-ms=500']
+    volumes:
+      - ../servicio-gestion-despachos/target/servicio-gestion-despachos-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/despacho_gestion
+      SPRING_DATASOURCE_USERNAME: prueba
+      SPRING_DATASOURCE_PASSWORD: prueba-aislada
+      SPRING_FLYWAY_ENABLED: 'true'
+      SEGURIDAD_URL: http://seguridad-local:8090
+      OPERACION_REPARTO_URL: http://operacion:8082
+      OPERACION_CLIENT_SECRET: despacho-local-no-produccion
+      OPERACION_CAPACIDAD_SCOPES: operacion:incidencias:leer operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir
+      PORT: '8081'
+    depends_on:
+      postgres: {condition: service_healthy}
+      seguridad-local: {condition: service_healthy}
+  operacion:
+    image: eclipse-temurin:21-jre-jammy
+    command: [java, -Xmx384m, -jar, /app/servicio.jar]
+    volumes:
+      - ../servicio-operacion-reparto/target/servicio-operacion-reparto-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/despacho_operacion
+      SPRING_DATASOURCE_USERNAME: prueba
+      SPRING_DATASOURCE_PASSWORD: prueba-aislada
+      SPRING_FLYWAY_ENABLED: 'true'
+      SEGURIDAD_URL: http://seguridad-local:8090
+      GESTION_DESPACHOS_URL: http://gestion:8081
+      GESTION_CLIENT_SECRET: despacho-local-no-produccion
+      PORT: '8082'
+    depends_on:
+      postgres: {condition: service_healthy}
+      seguridad-local: {condition: service_healthy}
+  gateway:
+    image: eclipse-temurin:21-jre-jammy
+    command: [java, -Xmx256m, -jar, /app/servicio.jar]
+    volumes:
+      - ../api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro
+    environment:
+      SEGURIDAD_URL: http://seguridad-local:8090
+      GESTION_DESPACHOS_URL: http://gestion:8081
+      OPERACION_REPARTO_URL: http://operacion:8082
+      CORS_ORIGENES: http://127.0.0.1:4186
+      PORT: '8080'
+    ports: ['127.0.0.1:18080:8080']
+    depends_on:
+      seguridad-local: {condition: service_healthy}

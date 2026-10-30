@@ -4,10 +4,15 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.springframework.web.client.RestClient;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoCapacidad;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoTransferencia;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoLiberacionCancelacion;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosCancelacion;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosReasignacion.Intencion;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosReasignacion.Transferencia;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import static com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosProgramacion.*;
 
-public final class CapacidadProgramacionHttp implements PuertoCapacidad {
+public final class CapacidadProgramacionHttp implements PuertoCapacidad, PuertoTransferencia, PuertoLiberacionCancelacion {
     private final RestClient cliente;
     private final Supplier<String> token;
     private final boolean sinAutenticacion;
@@ -72,6 +77,47 @@ public final class CapacidadProgramacionHttp implements PuertoCapacidad {
     }
     private void autorizar(org.springframework.http.HttpHeaders cabeceras) {
         if (!sinAutenticacion) cabeceras.setBearerAuth(credencial());
+    }
+    @Override public Transferencia transferir(Intencion intencion) {
+        try {
+            var cuerpo=cliente.post().uri("/internal/v1/capacidad/transferencias")
+                    .headers(c -> { autorizar(c); c.set("Idempotency-Key",intencion.id().toString()); })
+                    .body(Map.of("idReservaOrigen",intencion.idReservaOrigen(),"idDespacho",intencion.idDespacho().toString(),
+                            "idNuevoRepartidor",intencion.solicitud().idNuevoRepartidor(),"idNuevaJornada",intencion.solicitud().idNuevaJornada()))
+                    .retrieve().onStatus(e -> e.value()!=200,(solicitud,r) -> {
+                        int estado=r.getStatusCode().value();
+                        if (estado==422) throw ErrorDeNegocio.de(422,"DESP_ERROR_CAPACIDAD_EXCEDIDA","Capacidad de carga del nuevo repartidor excedida");
+                        if (estado==409) throw ErrorDeNegocio.de(409,"DESP_ERROR_REPARTIDOR_NO_HABILITADO","La reserva o el repartidor destino ya no están habilitados");
+                        if (estado==400) throw ErrorDeNegocio.de(400,"DESP_ERROR_CAMPOS_INVALIDOS","Operación rechazó los datos de la transferencia");
+                        throw noDisponible();
+                    }).body(tools.jackson.databind.JsonNode.class);
+            if (cuerpo==null || !cuerpo.path("capacidadRemanente").path("pesoKg").isNumber()
+                    || !cuerpo.path("capacidadRemanente").path("volumenM3").isNumber()
+                    || !cuerpo.path("capacidadRemanente").path("paquetes").isIntegralNumber()) throw noDisponible();
+            var respuesta=tools.jackson.databind.json.JsonMapper.builder().findAndAddModules().build().treeToValue(cuerpo,Transferencia.class);
+            if (respuesta==null || !intencion.idReservaOrigen().equals(respuesta.idReservaOrigen())
+                    || !intencion.idDespacho().toString().equals(respuesta.idDespacho()) || !intencion.solicitud().idNuevaJornada().equals(respuesta.idNuevaJornada())
+                    || !"TRANSFERIDA".equals(respuesta.estado()) || respuesta.idNuevaReserva()==null || respuesta.transferidaEn()==null
+                    || respuesta.idNuevaReserva().equals(intencion.idReservaOrigen()) || respuesta.capacidadRemanente()==null
+                    || respuesta.capacidadRemanente().pesoKg()==null || respuesta.capacidadRemanente().volumenM3()==null
+                    || respuesta.capacidadRemanente().pesoKg().signum()<0 || respuesta.capacidadRemanente().volumenM3().signum()<0
+                    || respuesta.capacidadRemanente().paquetes()<0) throw noDisponible();
+            java.util.UUID.fromString(respuesta.idNuevaReserva());
+            return respuesta;
+        } catch (ErrorDeNegocio error) { throw error; }
+        catch (RuntimeException error) { throw noDisponible(); }
+    }
+    @Override public ModelosCancelacion.Liberacion liberarPorCancelacion(ModelosCancelacion.Intencion intencion) {
+        try {
+            var respuesta = cliente.post().uri("/internal/v1/capacidad/reservas/{id}/liberacion", intencion.idReserva())
+                    .headers(this::autorizar).body(Map.of("motivo", "CANCELACION", "idDespacho", intencion.idDespacho().toString()))
+                    .retrieve().onStatus(estado -> estado.value() != 200, (solicitud, resultado) -> { throw noDisponible(); })
+                    .body(ModelosCancelacion.Liberacion.class);
+            if (respuesta == null || !intencion.idReserva().equals(respuesta.idReserva())
+                    || !intencion.idDespacho().toString().equals(respuesta.idDespacho()) || !"LIBERADA".equals(respuesta.estado())
+                    || !"CANCELACION".equals(respuesta.motivoLiberacion()) || respuesta.liberadaEn() == null) throw noDisponible();
+            return respuesta;
+        } catch (RuntimeException error) { throw noDisponible(); }
     }
     private String credencial() { String valor = token.get(); if (valor == null || valor.isBlank()) throw noDisponible(); return valor; }
     private static ErrorDeNegocio noDisponible() { return ErrorDeNegocio.de(503, "DESP_ERROR_OPERACION_NO_DISPONIBLE", "No se pudo confirmar la operación de capacidad"); }
