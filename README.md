@@ -85,7 +85,7 @@ Editar `.env` y usar los mismos comandos de arranque. Un único `.env` raíz con
 | Servicio | Migraciones activas | Estado inicial esperado |
 |---|---|---|
 | Gestión | [V1 original](servicio-gestion-despachos/src/main/resources/db/migration/V1__esquema_original_gestion.sql), [V2 acumulada](servicio-gestion-despachos/src/main/resources/db/migration/V2__actualizacion_esquema_gestion.sql), [V3 reprogramación](servicio-gestion-despachos/src/main/resources/db/migration/V3__reprogramaciones_despacho.sql) y [V4 cierre](servicio-gestion-despachos/src/main/resources/db/migration/V4__cierre_despacho_origen.sql) | Base inicial, resultado durable de reprogramación e índice único del cierre en el historial. |
-| Operación | V1 a V5 existentes en `servicio-operacion-reparto/src/main/resources/db/migration` | Tablas, funciones y parámetros de perfiles, flota, jornadas, reservas, proyecciones y evidencias; sin datos de negocio de prueba. |
+| Operación | V1 a V6 existentes en `servicio-operacion-reparto/src/main/resources/db/migration` | Tablas, funciones y parámetros de perfiles, flota, jornadas, reservas, proyecciones, evidencias y comandos del repartidor; sin datos de negocio de prueba. |
 
 Flyway queda habilitado para ambas bases locales, con esquema `public`, baseline automática desactivada y limpieza de Flyway desactivada. Hibernate mantiene `ddl-auto=none`. Las modificaciones futuras de Gestión se agregan desde V5; no editar archivos que ya se hayan aplicado a una base persistente. V4 conserva los cierres históricos sin inventar respuestas originales; si existen cierres duplicados del mismo despacho, exige reconciliarlos antes de aplicar el índice.
 
@@ -108,7 +108,7 @@ Comprobar las versiones aplicadas en Gestión:
 docker compose exec postgres psql -U despacho_local -d despacho_gestion -c "SELECT version, description, success FROM public.flyway_schema_history ORDER BY installed_rank;"
 ```
 
-Se esperan versiones 1 y 2 con `success=true`; Operación debe registrar 1 a 5 en su propia base. Ambas historias se comprobaron en el entorno local el 23/10/2026. Esto confirma las migraciones locales, no una sincronización automática con Supabase.
+Con la revisión actual del repositorio se esperan versiones 1 a 4 en Gestión y 1 a 6 en Operación, todas con `success=true`. La comprobación histórica del 23/10/2026 corresponde a la revisión de ese día; no acredita las migraciones posteriores ni una sincronización automática con Supabase.
 
 ## Salud y primeras consultas
 
@@ -179,6 +179,14 @@ Recorrido inicial, usando siempre el origen `localhost` para conservar la sesió
 5. En **Monitoreo de flota**, pulsar **Abrir jornada**, seleccionar el repartidor vinculado, el vehículo, la zona y la fecha de hoy. Estar vinculado por sí solo no lo hace disponible para asignación.
 6. En **Programación**, usar **Generar pedido de prueba** y asignarlo a un candidato con jornada activa y capacidad suficiente. Los pedidos simulados se guardan en PostgreSQL local y comienzan pendientes de asignación.
 7. En **Entregas fallidas**, consultar los fallos existentes y abrir **Ver detalle**. El botón de Programación no genera fallos: para comprobar listado y detalle hacen falta incidencias de prueba con historial y referencias coherentes de repartidor y jornada. Una base nueva muestra el listado vacío.
+
+### Verificar F-05 y F-06 sin Seguridad real
+
+El botón **Generar sesión de prueba** del probador administrativo utiliza el emisor temporal local, sin crear cuentas en Seguridad real. En F-05 se registra el perfil local y se asocia manualmente el UUID de prueba del repartidor. El backend conserva la autorización; las pruebas identifican expresamente los JWT simulados.
+
+Con los recursos del recorrido anterior, comprobar registro/edición/baja de repartidores, vinculación manual, registro/edición/estados de furgonetas y apertura/detalle/cierre de jornadas. Una edición de capacidad solo afecta jornadas futuras. La baja de un perfil o el retiro de una furgoneta cierran sus jornadas vacías y auditan cada cierre con el actor y las instantáneas anterior/nueva en la misma transacción. Si falla esa auditoría, también se revierte la baja o el retiro; las repeticiones no duplican el cierre.
+
+Las reservas activas y los despachos en curso siguen bloqueando la baja y el retiro. Una recepción pendiente no libera capacidad por anticipado. La suite `servicio-operacion-reparto` verifica estos casos con PostgreSQL desechable mediante `.\mvnw.cmd clean verify`; requiere Docker disponible y no utiliza Supabase. La suite de navegador `npm run test:flota:e2e`, en el frontend, usa APIs simuladas y no sustituye esa comprobación de persistencia.
 
 ### Probar la app del repartidor (F-03)
 

@@ -112,12 +112,19 @@ public class RepositorioFlotaJdbc implements IRepositorioFlota {
                 """).param("id", id).query(Boolean.class).single();
         if (ocupado) throw ConflictoFlota.conflicto("Existen despachos en curso o capacidad reservada pendiente de liberar.");
     }
-    public void cerrarJornadas(UUID id, boolean repartidor) {
+    public void cerrarJornadas(UUID id, boolean repartidor, UUID actor) {
         String columna = repartidor ? "repartidor_id" : "furgoneta_id";
+        var anteriores = sql.sql("SELECT id, to_jsonb(jornada)::text AS datos FROM asignaciones_diarias jornada"
+                + " WHERE " + columna + " = :id AND estado = 'ACTIVA' ORDER BY id FOR UPDATE")
+                .param("id", id).query((fila, indice) -> new JornadaAnterior(uuid(fila, "id"), fila.getString("datos"))).list();
         sql.sql("UPDATE asignaciones_diarias SET estado = 'CERRADA', cerrada_en = now(), tipo_cierre = :cierre"
                 + " WHERE " + columna + " = :id AND estado = 'ACTIVA'")
                 .param("id", id).param("cierre", repartidor ? "GESTOR_DESPACHO" : "MANTENIMIENTO").update();
+        for (var jornada : anteriores) {
+            auditar("asignaciones_diarias", jornada.id(), "CIERRE_JORNADA", jornada.datos(), actor);
+        }
     }
+    private record JornadaAnterior(UUID id, String datos) {}
     public void darDeBaja(UUID id, UUID actor) {
         sql.sql("UPDATE perfiles_flota SET estado_registro = 'INACTIVO', actualizado_por = :actor, actualizado_en = now() WHERE id = :id")
                 .param("id", id).param("actor", actor).update();
@@ -148,6 +155,7 @@ public class RepositorioFlotaJdbc implements IRepositorioFlota {
         return switch (entidad) {
             case "repartidores" -> "perfiles_flota";
             case "furgonetas" -> "furgonetas";
+            case "asignaciones_diarias" -> "asignaciones_diarias";
             default -> throw new IllegalArgumentException("Entidad de auditoría no permitida");
         };
     }

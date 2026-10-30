@@ -14,7 +14,7 @@ public interface IRepositorioFlota {
     Furgoneta editarFurgoneta(UUID id, Capacidad datos, UUID actor);
     void bloquearOperacion();
     void comprobarSinDespachos(UUID id, boolean repartidor);
-    void cerrarJornadas(UUID id, boolean repartidor);
+    void cerrarJornadas(UUID id, boolean repartidor, UUID actor);
     void darDeBaja(UUID id, UUID actor);
     void vincular(UUID id, UUID usuario, UUID actor);
     void cambiarEstado(UUID id, EstadoFurgoneta estado, UUID actor);

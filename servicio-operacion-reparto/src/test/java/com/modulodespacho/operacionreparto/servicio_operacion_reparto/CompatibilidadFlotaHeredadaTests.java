@@ -66,6 +66,12 @@ class CompatibilidadFlotaHeredadaTests {
         assertThat(sql.sql("SELECT cerrada_en IS NOT NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
         assertThat(gestor.listarFurgonetas(1,50,EstadoFurgoneta.FUERA_DE_SERVICIO,null).totalElementos()).isEqualTo(1);
         gestor.darDeBaja(repartidor.idRepartidor(), actor);
-        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(5);
+        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(6);
+        assertThat(sql.sql("""
+                SELECT count(*) FROM auditoria_configuracion
+                WHERE entidad='asignaciones_diarias' AND entidad_id=:jornada AND usuario_id=:actor
+                  AND accion='CIERRE_JORNADA' AND datos_anteriores->>'estado'='ACTIVA'
+                  AND datos_nuevos->>'estado'='CERRADA'
+                """).param("jornada", jornada.toString()).param("actor", actor).query(Long.class).single()).isEqualTo(1);
     }
 }
