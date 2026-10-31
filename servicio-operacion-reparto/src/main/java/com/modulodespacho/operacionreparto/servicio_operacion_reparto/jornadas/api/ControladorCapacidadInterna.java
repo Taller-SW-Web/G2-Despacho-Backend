@@ -15,6 +15,10 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.d
 public class ControladorCapacidadInterna {
     private final GestorJornadas gestor;
     public ControladorCapacidadInterna(GestorJornadas gestor) { this.gestor=gestor; }
+    @PostMapping("/internal/v1/capacidad/transferencias")
+    public Transferencia transferir(@RequestHeader("Idempotency-Key") UUID clave,@Valid @RequestBody SolicitudesJornada.Transferir solicitud,@AuthenticationPrincipal Jwt token) {
+        return gestor.transferir(clave,solicitud.datos(),token.getSubject());
+    }
     @PostMapping("/internal/v1/capacidad/reservas")
     public ConfirmacionReserva reservar(@RequestHeader("Idempotency-Key") UUID clave,@Valid @RequestBody SolicitudesJornada.Reservar solicitud,@AuthenticationPrincipal Jwt token) {
         return gestor.reservar(clave,solicitud.datos(),token.getSubject());

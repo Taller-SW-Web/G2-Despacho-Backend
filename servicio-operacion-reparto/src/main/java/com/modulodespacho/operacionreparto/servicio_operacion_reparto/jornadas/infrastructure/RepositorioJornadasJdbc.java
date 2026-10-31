@@ -167,7 +167,7 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                 new Destino(fila.getString("direccion"),fila.getString("referencia"),null,null,
                         fila.getString("distrito"),null,null),fila.getObject("fecha_programada",LocalDate.class),
                 fila.getInt("numero_intentos"),fila.getLong("version"),actualizado == null ? null : actualizado.toInstant(),
-                (Integer) fila.getObject("maximo_intentos"));
+                (Integer) fila.getObject("maximo_intentos"),null,null);
     }
     private static final String RESERVA = "SELECT r.*,j.repartidor_id FROM reservas_capacidad r JOIN asignaciones_diarias j ON j.id=r.asignacion_diaria_id ";
     private Reserva mapearReserva(ResultSet fila,int indice) throws SQLException {
@@ -195,6 +195,17 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                 .param("id",id).param("motivo",motivo).param("actor",actor).param("ahora",java.sql.Timestamp.from(ahora)).update();
     }
     @Override public Optional<Long> buscarVersionProyeccion(UUID id) { return sql.sql("SELECT version FROM proyecciones_despacho WHERE despacho_id_externo=:id").param("id",id).query(Long.class).optional(); }
+    @Override public Optional<String> buscarTransferencia(UUID clave, String solicitud) {
+        return sql.sql("SELECT solicitud,respuesta::text FROM transferencias_capacidad WHERE clave=:clave").param("clave",clave)
+                .query((r,i) -> {
+                    if (!solicitud.equals(r.getString(1))) throw new ErrorJornada(409,"DESP_ERROR_CLAVE_REUTILIZADA","La clave corresponde a otra transferencia.");
+                    return r.getString(2);
+                }).optional();
+    }
+    @Override public void guardarTransferencia(UUID clave, String solicitud, String respuesta, String actor) {
+        sql.sql("INSERT INTO transferencias_capacidad(clave,solicitud,respuesta,ejecutor_id) VALUES (:clave,:solicitud,CAST(:respuesta AS jsonb),:actor)")
+                .param("clave",clave).param("solicitud",solicitud).param("respuesta",respuesta).param("actor",actor).update();
+    }
     @Override public void guardarProyeccion(Proyeccion d,String actor) {
         // El bloqueo común hace atómica esta decisión también cuando el esquema heredado expone una vista escribible.
         boolean existe = buscarVersionProyeccion(d.idDespacho()).isPresent();

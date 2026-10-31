@@ -1,12 +1,11 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +30,7 @@ class CompatibilidadFlotaHeredadaTests {
                 var recurso = getClass().getResourceAsStream("/flota/esquema-heredado.sql")) {
             sentencia.execute(new String(recurso.readAllBytes(), StandardCharsets.UTF_8));
             // La prueba ejecuta el mismo archivo operativo, sin una segunda copia del SQL.
-            sentencia.execute(Files.readString(Path.of("../operaciones/sql/F05__compatibilidad_operadores_flota.sql")));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F05__compatibilidad_operadores_flota.sql").getContentAsString(StandardCharsets.UTF_8));
         }
     }
     @Test
@@ -67,6 +66,12 @@ class CompatibilidadFlotaHeredadaTests {
         assertThat(sql.sql("SELECT cerrada_en IS NOT NULL FROM asignaciones_diarias").query(Boolean.class).single()).isTrue();
         assertThat(gestor.listarFurgonetas(1,50,EstadoFurgoneta.FUERA_DE_SERVICIO,null).totalElementos()).isEqualTo(1);
         gestor.darDeBaja(repartidor.idRepartidor(), actor);
-        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(5);
+        assertThat(sql.sql("SELECT count(*) FROM auditoria_configuracion").query(Long.class).single()).isEqualTo(6);
+        assertThat(sql.sql("""
+                SELECT count(*) FROM auditoria_configuracion
+                WHERE entidad='asignaciones_diarias' AND entidad_id=:jornada AND usuario_id=:actor
+                  AND accion='CIERRE_JORNADA' AND datos_anteriores->>'estado'='ACTIVA'
+                  AND datos_nuevos->>'estado'='CERRADA'
+                """).param("jornada", jornada.toString()).param("actor", actor).query(Long.class).single()).isEqualTo(1);
     }
 }

@@ -374,13 +374,28 @@ class ProgramacionHttpTests {
     }
 
     @Test void simulacionConZonaSoloPostalPreservaPrecisionSinRedondearCargaACero() throws Exception {
-        sql.sql("UPDATE zonas_distritos SET distrito_id=NULL, codigo_postal='15036'").update();
+        sql.sql("DELETE FROM zonas_distritos WHERE zona_id=:zona").param("zona", ZONA).update();
+        sql.sql("INSERT INTO zonas_codigos_postales(zona_id, distrito_id, codigo_postal) VALUES (:zona, :distrito, '15036')")
+                .param("zona", ZONA).param("distrito", DISTRITO).update();
         http.perform(post("/api/v1/despachos/simulaciones").header("Authorization", "Bearer " + gestor()).contentType("application/json")
                 .content("{\"pesoKg\":0.0000001,\"volumenM3\":0.000000000001}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.esSimulacion").value(true));
         assertThat(sql.sql("SELECT peso_kg FROM despachos").query(java.math.BigDecimal.class).single()).isEqualByComparingTo("0.0000001");
         assertThat(sql.sql("SELECT volumen_m3 FROM despachos").query(java.math.BigDecimal.class).single()).isEqualByComparingTo("0.000000000001");
         assertThat(sql.sql("SELECT codigo_postal FROM despachos").query(String.class).single()).isEqualTo("15036");
+        assertThat(sql.sql("SELECT distrito FROM despachos").query(String.class).single()).isEqualTo("San Borja");
+    }
+
+    @Test void simulacionConservaElDistritoDelCodigoPostalSeleccionado() throws Exception {
+        UUID otroDistrito = UUID.fromString("44444444-4444-4444-8444-444444444444");
+        sql.sql("INSERT INTO distrito(id, nombre) VALUES (:id, 'Ancón')").param("id", otroDistrito).update();
+        sql.sql("INSERT INTO zonas_distritos(zona_id, distrito_id) VALUES (:zona, :distrito)")
+                .param("zona", ZONA).param("distrito", otroDistrito).update();
+        sql.sql("INSERT INTO zonas_codigos_postales(zona_id, distrito_id, codigo_postal) VALUES (:zona, :distrito, '15036')")
+                .param("zona", ZONA).param("distrito", DISTRITO).update();
+        simular().andExpect(status().isCreated());
+        assertThat(sql.sql("SELECT codigo_postal FROM despachos").query(String.class).single()).isEqualTo("15036");
+        assertThat(sql.sql("SELECT distrito FROM despachos").query(String.class).single()).isEqualTo("San Borja");
     }
 
     @Test void unaRespuestaIncoherenteDeReservaConservaLaIntencionYNoConfirmaUnaCapacidadFalsa() throws Exception {

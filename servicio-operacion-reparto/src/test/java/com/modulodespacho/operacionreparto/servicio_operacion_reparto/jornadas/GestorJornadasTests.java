@@ -102,16 +102,33 @@ class GestorJornadasTests {
         assertThatThrownBy(() -> gestor.liberar(reserva,UUID.randomUUID(),"COMPENSACION","modulo-despacho")).isInstanceOf(ErrorJornada.class);
         verify(repositorio,never()).liberar(any(),any(),any(),any());
     }
+    @Test void transferenciaValidaCadaDimensionAntesDeTocarLaReservaOrigen() {
+        UUID origen=UUID.randomUUID(),despacho=UUID.randomUUID();
+        when(repositorio.obtenerJornada(id)).thenReturn(base("ACTIVA",false,Capacidad.cero()));
+        when(repositorio.obtenerPerfil(perfil)).thenReturn(habilitado);
+        when(repositorio.obtenerVehiculo(vehiculo)).thenReturn(disponible);
+        for(Capacidad carga:List.of(new Capacidad(new BigDecimal("501"),BigDecimal.ONE,1),
+                new Capacidad(BigDecimal.ONE,new BigDecimal("5"),1),new Capacidad(BigDecimal.ONE,BigDecimal.ONE,81))) {
+            when(repositorio.obtenerReserva(origen)).thenReturn(new Reserva(origen,null,despacho,UUID.randomUUID(),UUID.randomUUID(),carga,"ACTIVA",null,null,null));
+            assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),new SolicitudTransferencia(origen,despacho,perfil,id),"modulo-despacho"))
+                    .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(422));
+        }
+        when(repositorio.obtenerJornada(id)).thenReturn(base("ACTIVA",false,limites));
+        assertThatThrownBy(() -> gestor.transferir(UUID.randomUUID(),new SolicitudTransferencia(origen,despacho,perfil,id),"modulo-despacho"))
+                .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.estado()).isEqualTo(409));
+        verify(repositorio,never()).liberar(any(),any(),any(),any());
+        verify(repositorio,never()).guardarReserva(any(),any(),any(),any(),any(),any());
+    }
     @Test void proyeccionesAntiguasNoReemplazanLaVersionActualNiConsultanReferenciasViejas() {
         UUID despacho=UUID.randomUUID();when(repositorio.buscarVersionProyeccion(despacho)).thenReturn(Optional.of(3L));
-        gestor.proyectar(despacho,new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,UUID.randomUUID(),1,null,null,hoy,0,2,reloj.instant(),2),"modulo-despacho");
+        gestor.proyectar(despacho,new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,UUID.randomUUID(),1,null,null,hoy,0,2,reloj.instant(),2,null,null),"modulo-despacho");
         verify(repositorio,never()).guardarProyeccion(any(),any());verify(repositorio,never()).obtenerReserva(any());
     }
     @Test void proyeccionNuevaRechazaReservaDeOtroDespachoSinEscrituras() {
         UUID despacho=UUID.randomUUID(),reserva=UUID.randomUUID();
         when(repositorio.buscarVersionProyeccion(despacho)).thenReturn(Optional.empty());
         when(repositorio.obtenerReserva(reserva)).thenReturn(new Reserva(reserva,null,UUID.randomUUID(),id,perfil,limites,"ACTIVA",null,null,null));
-        var datos=new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,reserva,1,null,null,hoy,0,1,reloj.instant(),2);
+        var datos=new Proyeccion(despacho,"pedido","TRK","ASIGNADO",id,reserva,1,null,null,hoy,0,1,reloj.instant(),2,null,null);
         assertThatThrownBy(() -> gestor.proyectar(despacho,datos,"modulo-despacho"))
                 .isInstanceOfSatisfying(ErrorJornada.class,e -> assertThat(e.codigo()).isEqualTo("DESP_ERROR_PROYECCION_INCOMPATIBLE"));
         verify(repositorio,never()).guardarProyeccion(any(),any());
@@ -171,6 +188,10 @@ class GestorJornadasTests {
         assertThat(resumen.fallidosConIntento()).isEqualTo(1);
         assertThat(resumen.noIntentados()).isEqualTo(1);
         assertThat(resumen.pendientes()).isEqualTo(1);
+        assertThat(resumen.estadoJornada()).isEqualTo("CERRADA");
+        assertThat(resumen.cerradaEn()).isEqualTo(reloj.instant());
+        assertThat(resumen.paquetesPorDevolver()).hasSize(2)
+                .allSatisfy(paquete -> assertThat(paquete.direccion()).isEqualTo("Dirección de prueba"));
     }
     @Test void elCierrePropioConservaLaJornadaSolicitadaYNoPuedeCerrarUnaAjena() {
         when(repositorio.buscarPerfilDeUsuario(actor)).thenReturn(Optional.of(habilitado));
@@ -186,6 +207,6 @@ class GestorJornadasTests {
     private Proyeccion proyeccion(UUID despacho,String estado,int intentos) {
         return new Proyeccion(despacho,"pedido","TRK",estado,id,UUID.randomUUID(),1,
                 new Destinatario("Persona Prueba","999111222"),
-                new Destino("Dirección de prueba",null,null,null,"Prueba",null,null),hoy,intentos,1,reloj.instant(),2);
+                new Destino("Dirección de prueba",null,null,null,"Prueba",null,null),hoy,intentos,1,reloj.instant(),2,null,null);
     }
 }

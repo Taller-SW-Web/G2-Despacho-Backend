@@ -46,7 +46,7 @@ public class GestorFlota {
         if (actual.estadoRegistro() == EstadoRegistro.INACTIVO) return;
         repositorio.comprobarSinDespachos(id, true);
         String anterior = repositorio.fotografiar("repartidores", id);
-        repositorio.cerrarJornadas(id, true);
+        repositorio.cerrarJornadas(id, true, actor);
         repositorio.darDeBaja(id, actor);
         repositorio.auditar("repartidores", id, "BAJA", anterior, actor);
     }
@@ -82,7 +82,7 @@ public class GestorFlota {
             throw ConflictoFlota.conflicto("La furgoneta debe rehabilitarse antes de pasar a mantenimiento.");
         if (estado != EstadoFurgoneta.DISPONIBLE) repositorio.comprobarSinDespachos(id, false);
         String anterior = repositorio.fotografiar("furgonetas", id);
-        if (estado != EstadoFurgoneta.DISPONIBLE) repositorio.cerrarJornadas(id, false);
+        if (estado != EstadoFurgoneta.DISPONIBLE) repositorio.cerrarJornadas(id, false, actor);
         repositorio.cambiarEstado(id, estado, actor);
         repositorio.auditar("furgonetas", id, "CAMBIO_ESTADO", anterior, actor);
     }

@@ -51,6 +51,9 @@ public class ManejadorErroresApi {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ProblemDetail cuerpoInvalido(HttpMessageNotReadableException error, HttpServletRequest solicitud) {
+        if (solicitud.getRequestURI().endsWith("/devolucion-origen"))
+            return errorDeNegocio(com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.api.SolicitudesCierre
+                    .invalida("solicitud", "El cuerpo JSON no es válido"), solicitud);
         return problema(400, CodigosError.SOLICITUD_INVALIDA, "El cuerpo JSON no es válido", solicitud);
     }
 

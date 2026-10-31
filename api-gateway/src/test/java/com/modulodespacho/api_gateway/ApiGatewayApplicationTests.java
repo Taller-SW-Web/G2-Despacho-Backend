@@ -90,11 +90,21 @@ class ApiGatewayApplicationTests {
     @Test
     void enrutaFurgonetasYRepartidorAOperacion() {
         for (String ruta : java.util.List.of("/api/v1/furgonetas", "/api/v1/repartidor/mi-ruta",
-                "/api/v1/jornadas/jor-1/ruta")) {
+                "/api/v1/jornadas/jor-1")) {
             cliente.get().uri(ruta).header(HttpHeaders.AUTHORIZATION, "Bearer prueba")
                     .exchange().expectStatus().isOk()
                     .expectHeader().valueEquals("X-Destino-Prueba", "operacion");
         }
+    }
+
+    @Test
+    void enrutaConsultaYSecuenciaAdministrativasAGestion() {
+        cliente.get().uri("/api/v1/jornadas/jor-1/ruta").header(HttpHeaders.AUTHORIZATION, "Bearer prueba")
+                .exchange().expectStatus().isOk().expectHeader().valueEquals("X-Destino-Prueba", "gestion");
+        cliente.put().uri("/api/v1/jornadas/jor-1/secuencia").header(HttpHeaders.AUTHORIZATION, "Bearer prueba")
+                .header("If-Match", "\"version\"").header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+                .bodyValue("{\"despachos\":[]}").exchange().expectStatus().isOk()
+                .expectHeader().valueEquals("X-Destino-Prueba", "gestion");
     }
 
     @Test
@@ -114,6 +124,16 @@ class ApiGatewayApplicationTests {
                 .header(HttpHeaders.ORIGIN, "http://localhost:5173")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type")
+                .exchange().expectStatus().isOk()
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173");
+    }
+
+    @Test
+    void permitePreflightDelGuardadoVersionadoDeRuta() {
+        cliente.options().uri("/api/v1/jornadas/jor-1/secuencia")
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PUT")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type,if-match,idempotency-key")
                 .exchange().expectStatus().isOk()
                 .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173");
     }

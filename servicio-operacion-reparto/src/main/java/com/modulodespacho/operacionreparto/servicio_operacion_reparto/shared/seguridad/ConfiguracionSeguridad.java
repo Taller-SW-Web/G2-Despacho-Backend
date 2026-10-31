@@ -48,7 +48,7 @@ public class ConfiguracionSeguridad {
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
-        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL o active explícitamente compose.seguridad-local.yaml");
+        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
         URI origen = URI.create(urlSeguridad);
         Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
                         && origen.getHost() != null && origen.getRawUserInfo() == null
@@ -110,6 +110,10 @@ public class ConfiguracionSeguridad {
                                 "/swagger-ui.html").permitAll();
                     }
                     reglas
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/transferencias")
+                            .access((autenticacion, contexto) -> new AuthorizationDecision(
+                                    permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")
+                                    && permiteServicio(autenticacion.get(), "operacion:capacidad:liberar")))
                         .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas")
                             .access((autenticacion, contexto) -> new AuthorizationDecision(permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")))
                         .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas/*/liberacion")

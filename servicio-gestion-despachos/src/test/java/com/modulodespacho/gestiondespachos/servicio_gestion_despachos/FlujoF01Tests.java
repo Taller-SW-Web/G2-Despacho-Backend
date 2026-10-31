@@ -19,10 +19,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Distrito;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.Zona;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RepositorioZonas;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence.DistritoRepositorioJpa;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
@@ -42,18 +40,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class FlujoF01Tests {
 
-    private static final UUID SAN_BORJA = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    private static final UUID MIRAFLORES = UUID.fromString("00000000-0000-0000-0000-000000000002");
-    private static final UUID SURCO = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    private static final UUID USUARIO_GESTOR = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Autowired
     MockMvc cliente;
 
     @MockitoSpyBean
     RepositorioZonas zonas;
-
-    @Autowired
-    DistritoRepositorioJpa distritos;
 
     @Autowired
     org.springframework.jdbc.core.simple.JdbcClient sql;
@@ -63,28 +56,14 @@ class FlujoF01Tests {
 
     @BeforeEach
     void preparar() {
-        // Cada escenario mantiene su propia base al compartir un PostgreSQL externo de pruebas.
-        sql.sql("TRUNCATE zonas, distrito CASCADE").update();
-        sembrarDistrito(SAN_BORJA, "San Borja");
-        sembrarDistrito(MIRAFLORES, "Miraflores");
-        sembrarDistrito(SURCO, "Santiago de Surco");
+        // Limpiar los escenarios sin eliminar el catálogo de 50 distritos creado por Flyway.
+        sql.sql("TRUNCATE zonas CASCADE").update();
         when(decodificadorJwt.decode("gestor")).thenReturn(tokenGestor());
         when(decodificadorJwt.decode("servicio")).thenReturn(tokenServicio());
     }
 
-    private void sembrarDistrito(UUID id, String nombre) {
-        if (distritos.findById(id).isEmpty()) {
-            Distrito distrito = new Distrito();
-            distrito.setId(id);
-            distrito.setNombre(nombre);
-            distrito.setProvincia("Lima");
-            distrito.setDepartamento("Lima");
-            distritos.save(distrito);
-        }
-    }
-
     private Jwt tokenGestor() {
-        return Jwt.withTokenValue("gestor").header("alg", "RS256").subject(SAN_BORJA.toString())
+        return Jwt.withTokenValue("gestor").header("alg", "RS256").subject(USUARIO_GESTOR.toString())
                 .claim("tipo", "acceso").claim("roles", List.of("GESTOR_DESPACHO"))
                 .audience(List.of("api-despacho")).issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(300)).build();

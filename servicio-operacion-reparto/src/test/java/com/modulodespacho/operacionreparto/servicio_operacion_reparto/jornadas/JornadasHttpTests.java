@@ -63,6 +63,7 @@ class JornadasHttpTests {
     @MockitoBean JwtDecoder decodificador;
 
     @MockitoBean GestorJornadas gestor;
+    @MockitoBean com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.OperacionCampo campo;
 
     @MockitoBean ConsultaZonaHttp zonas;
 
@@ -102,6 +103,19 @@ class JornadasHttpTests {
 
         verifyNoInteractions(zonas);verify(gestor,never()).consultarMonitoreo(any(),anyInt(),anyInt(),any(),any());
 
+    }
+
+    @Test void transferenciaExigeAmbosScopesIdentidadTecnicaYDatosValidos() throws Exception {
+        String cuerpo="{\"idReservaOrigen\":\""+UUID.randomUUID()+"\",\"idDespacho\":\""+UUID.randomUUID()+"\",\"idNuevoRepartidor\":\""+repartidor+"\",\"idNuevaJornada\":\""+id+"\"}";
+        for(String credencial:List.of("gestor","otro","ajeno","sin-scope"))
+            http.perform(post("/internal/v1/capacidad/transferencias").header("Authorization","Bearer "+credencial)
+                    .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(cuerpo)).andExpect(status().isForbidden());
+        http.perform(post("/internal/v1/capacidad/transferencias").header("Authorization","Bearer servicio")
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{}"))
+                .andExpect(status().isBadRequest());
+        http.perform(post("/internal/v1/capacidad/transferencias").header("Authorization","Bearer servicio")
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(cuerpo)).andExpect(status().isOk());
+        verify(gestor).transferir(any(),any(),eq("modulo-despacho"));
     }
 
     @Test void unaAperturaValidaVerificaZonaYDevuelveLaJornadaConfirmada() throws Exception {
@@ -214,4 +228,3 @@ class JornadasHttpTests {
     private Jwt token(String tipo,String sujeto,List<String> roles,String scope) { return Jwt.withTokenValue("prueba").header("alg","RS256").subject(sujeto).claim("tipo",tipo).claim("roles",roles).claim("scope",scope).build(); }
 
 }
-

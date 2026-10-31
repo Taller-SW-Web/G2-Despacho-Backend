@@ -22,6 +22,9 @@ public final class SolicitudesJornada {
         public DatosJornada.SolicitudReserva datos() { return new DatosJornada.SolicitudReserva(idDespacho,idRepartidor,idJornada,requerido.datos()); }
     }
     public record Liberar(@NotNull UUID idDespacho,@NotNull @Pattern(regexp="ENTREGA|CANCELACION|RECEPCION_EN_CENTRO|REASIGNACION|COMPENSACION") String motivo) {}
+    public record Transferir(@NotNull UUID idReservaOrigen,@NotNull UUID idDespacho,@NotNull UUID idNuevoRepartidor,@NotNull UUID idNuevaJornada) {
+        public DatosJornada.SolicitudTransferencia datos() { return new DatosJornada.SolicitudTransferencia(idReservaOrigen,idDespacho,idNuevoRepartidor,idNuevaJornada); }
+    }
     public record CierrePropio(@NotNull UUID idJornada) {}
     public record Destinatario(@NotBlank @Size(max=160) String nombre,@NotBlank @Size(max=30) String telefono) {
         DatosJornada.Destinatario datos() { return new DatosJornada.Destinatario(nombre,telefono); }
@@ -36,8 +39,12 @@ public final class SolicitudesJornada {
             @NotNull UUID idJornada,@NotNull UUID idReserva,@Min(1) @Max(32767) Integer secuenciaRuta,
             @NotNull @Valid Destinatario destinatario,@NotNull @Valid Destino destino,@NotNull LocalDate fechaProgramada,
             @Min(0) int numeroIntentos,@NotNull @Min(0) Long version,@NotNull Instant actualizadoEn,
-            @Min(1) Integer maximoIntentos) {
+            @Min(1) Integer maximoIntentos,@Size(max=40) String motivoFallo,@Valid Hitos hitos) {
         public DatosJornada.Proyeccion datos() { return new DatosJornada.Proyeccion(idDespacho,idPedido,codigoRastreoInterno,estado,
-                idJornada,idReserva,secuenciaRuta,destinatario.datos(),destino.datos(),fechaProgramada,numeroIntentos,version,actualizadoEn,maximoIntentos); }
+                idJornada,idReserva,secuenciaRuta,destinatario.datos(),destino.datos(),fechaProgramada,numeroIntentos,version,actualizadoEn,maximoIntentos,
+                motivoFallo,hitos == null ? null : hitos.datos()); }
+    }
+    public record Hitos(Instant asignadoEn,Instant enCaminoEn,Instant entregadoEn,Instant fallidoEn) {
+        DatosJornada.Hitos datos() { return new DatosJornada.Hitos(asignadoEn,enCaminoEn,entregadoEn,fallidoEn); }
     }
 }
