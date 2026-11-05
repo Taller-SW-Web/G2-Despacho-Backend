@@ -272,6 +272,50 @@ Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up 
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
 
+## Prueba de humo reutilizable de F-04
+
+Desde la raíz del backend, con Python 3.10 o posterior y Docker, construir los tres servicios con sus Maven Wrapper y `clean verify`. Luego ejecutar:
+
+```powershell
+python pruebas/verificar_humo_f04.py --local
+```
+
+El comando reutiliza `pruebas/compose.f02.yaml` con un nombre de proyecto único, bases desechables y Seguridad local. Usa los puertos `18080` y `18090`, que deben estar disponibles, y retira sus contenedores al terminar. Comprueba salud del Gateway y el listado de fallidos por la ruta pública, con `401` sin token, `403` sin permiso y `200` con gestor. La consulta permite una lista vacía. El informe JSON queda en `pruebas/resultados/humo-f04.json`, fuera de Git. El proceso termina con código `1` si falla la preparación o alguna comprobación.
+
+Para un Gateway existente, preparar en el entorno del proceso `HUMO_TOKEN_GESTOR` y `HUMO_TOKEN_SIN_PERMISO` con dos tokens humanos vigentes del emisor que ese despliegue acepta. El primero debe tener `GESTOR_DESPACHO` y el segundo carecer de ese rol. Con G7, obtener las sesiones mediante su flujo de acceso y MFA. Ejecutar, sustituyendo el origen de ejemplo:
+
+```powershell
+python pruebas/verificar_humo_f04.py --gateway-url https://gateway-del-equipo.example --version-desplegada revision-confirmada
+```
+
+Las peticiones son de lectura y los tokens se reciben por variables de entorno. El informe guarda el estado HTTP y la estructura esperada, sin cuerpos de despachos ni credenciales. `commitVerificador` identifica el código de la herramienta y `versionDesplegada` registra la revisión indicada por el responsable del despliegue. Cada servicio sigue validando sus permisos. La ejecución local acredita el Gateway y los proveedores del entorno desechable con Seguridad temporal; la aceptación con G7 se registra al repetir la prueba con sus sesiones reales.
+
+Para comprobar que la herramienta falla ante acceso anónimo permitido, respuestas inválidas, filtración de contenido o redirecciones:
+
+```powershell
+python -m unittest discover -s pruebas -p test_verificar_humo_f04.py -v
+```
+
+## Prueba de contrato de recepción F-04 por Gateway
+
+Con los mismos requisitos y JAR construidos de la prueba de humo, desde la raíz del backend:
+
+```powershell
+python pruebas/verificar_contrato_recepcion_f04.py
+```
+
+El comando prepara datos sintéticos en su propio proyecto Compose desechable. Crea una zona, un perfil y un vehículo de prueba; abre una jornada, simula y asigna un despacho y prepara `FALLIDO/NO_INTENTADO` mediante la API interna real. Esa preparación acredita el estado requerido para recibir; la captura de un fallo con foto desde F-03 se verifica aparte.
+
+Comprueba el contrato vigente de [recepción en Gestión](../despacho-docs/integraciones/api-contract-gestion-despachos.md#521-confirmar-recepción-en-centro--es-f04-03) pasando por Gateway: `401/403`, seis variantes inválidas con `400`, incidencia o versión obsoletas con `409`, recepción `202` con sello `false` sin observación y repetición exacta. Verifica el código de error, Problem Details, `Cache-Control: no-store` en el `202` y ausencia de escrituras ante rechazos. Tras confirmar la liberación real en Operación, exige una recepción, un historial, una solicitud y una reserva original liberada, sin incrementar intentos ni generar eventos a Ventas. La ocupación de la jornada sintética pasa de 2 kg, 0,01 m³ y un paquete a cero; repetir conserva respuesta, fecha de liberación y conteos.
+
+Solo admite su entorno desechable; utiliza `18080/18090` y lo retira al finalizar. No apuntarlo a bases compartidas ni ejecutarlo a la vez que la prueba de humo u otro runner que use esos puertos. El informe `pruebas/resultados/contrato-recepcion-f04.json` queda fuera de Git, con resultados y datos sintéticos antes/después, sin tokens. Termina con código `1` ante un incumplimiento o error de preparación. G7 real, frontend, reinicios y aceptación en nube siguen pendientes.
+
+Las comprobaciones propias de ambos verificadores se ejecutan con:
+
+```powershell
+python -m unittest discover -s pruebas -p 'test_verificar_*.py' -v
+```
+
 ## Verificación integrada de rutas F-02
 
 La rama `feature/f02-rutas-transferencia-segura` añade Gestión V5 (resultado durable de secuencia y unicidad diferida de posiciones), V6 (intenciones/resultados y cerco de reasignación), V7 (cancelaciones durables por anulación) y Operación V7 (transferencias atómicas de capacidad; V6 ya pertenece a comandos F-03). No editar migraciones aplicadas ni activar Flyway sobre bases compartidas para probar. Las futuras migraciones empiezan en Gestión V8 y Operación V8.
