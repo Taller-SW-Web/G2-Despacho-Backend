@@ -8,3 +8,7 @@
 
 # Resultados locales del análisis de código
 /graphify-out/
+
+# Informes de pruebas de humo
+/pruebas/resultados/
+/pruebas/__pycache__/
