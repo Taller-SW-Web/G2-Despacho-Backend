@@ -152,6 +152,17 @@ $tokenServicio = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/api
 
 El secreto es ficticio y solo pertenece al emisor local. Los clientes de prueba incluyen `modulo-marketplace`, `modulo-chatbot`, `modulo-ventas` y `modulo-despacho`. Gestión tiene configurado el cliente técnico para consultar incidencias y reservar/liberar capacidad y publicar proyecciones en Operación.
 
+## Guías locales y planes de cotización
+
+| Documento | Contenido |
+|---|---|
+| [Pruebas desde Postman](servicio-gestion-despachos/docs/pruebas-postman-local.md) | Arranque, tokens, zona, tarifa y cotización con los productos simulados actuales. |
+| [Conexión de pgAdmin](servicio-gestion-despachos/docs/conexion-pgadmin-local.md) | Acceso desde Docker o el equipo, red compartida y consulta de tablas. |
+| [Plan de persistencia de cotizaciones](servicio-gestion-despachos/docs/plan-persistencia-cotizaciones.md) | Escritura del histórico exacto antes de responder; vinculación con Ventas aplazada. |
+| [Plan de integración con Productos](servicio-gestion-despachos/docs/plan-integracion-productos.md) | Selección del cliente HTTP real, credenciales propias, validación de lotes y pruebas. |
+
+Los planes describen trabajo pendiente y referencian los contratos de Specs. No acreditan la implementación de la persistencia ni de la consulta real a Productos en la cotización.
+
 ## Probar desde el administrador
 
 El Compose levanta únicamente los servicios del backend y PostgreSQL. El frontend se ejecuta por separado desde la raíz de `G2-Despacho-Frontend`, con Node.js 20 o superior y npm 10 o superior:
