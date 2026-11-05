@@ -94,7 +94,7 @@ def esperar_salud(url):
 
 
 @contextmanager
-def entorno_local():
+def entorno_local_con_comandos():
     motor = subprocess.run(["docker", "info"], capture_output=True)
     if motor.returncode != 0:
         raise RuntimeError("El motor de Docker no está disponible")
@@ -129,10 +129,16 @@ def entorno_local():
             if estado != 200 or not isinstance(datos, dict) or not isinstance(datos.get("accessToken"), str):
                 raise RuntimeError("No se pudo emitir la identidad de prueba")
             tokens.append(datos["accessToken"])
-        yield gateway, tokens[0], tokens[1]
+        yield gateway, tokens[0], tokens[1], compose
     finally:
         subprocess.run(compose + ["down", "--remove-orphans"], cwd=RAIZ, check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+@contextmanager
+def entorno_local():
+    with entorno_local_con_comandos() as (gateway, gestor, sin_permiso, _):
+        yield gateway, gestor, sin_permiso
 
 
 def origen_gateway(valor):

@@ -284,6 +284,26 @@ Para comprobar que la herramienta falla ante acceso anónimo permitido, respuest
 python -m unittest discover -s pruebas -p test_verificar_humo_f04.py -v
 ```
 
+## Prueba de contrato de recepción F-04 por Gateway
+
+Con los mismos requisitos y JAR construidos de la prueba de humo, desde la raíz del backend:
+
+```powershell
+python pruebas/verificar_contrato_recepcion_f04.py
+```
+
+El comando prepara datos sintéticos en su propio proyecto Compose desechable. Crea una zona, un perfil y un vehículo de prueba; abre una jornada, simula y asigna un despacho y prepara `FALLIDO/NO_INTENTADO` mediante la API interna real. Esa preparación acredita el estado requerido para recibir; la captura de un fallo con foto desde F-03 se verifica aparte.
+
+Comprueba el contrato vigente de [recepción en Gestión](../despacho-docs/integraciones/api-contract-gestion-despachos.md#521-confirmar-recepción-en-centro--es-f04-03) pasando por Gateway: `401/403`, seis variantes inválidas con `400`, incidencia o versión obsoletas con `409`, recepción `202` con sello `false` sin observación y repetición exacta. Verifica el código de error, Problem Details, `Cache-Control: no-store` en el `202` y ausencia de escrituras ante rechazos. Tras confirmar la liberación real en Operación, exige una recepción, un historial, una solicitud y una reserva original liberada, sin incrementar intentos ni generar eventos a Ventas. La ocupación de la jornada sintética pasa de 2 kg, 0,01 m³ y un paquete a cero; repetir conserva respuesta, fecha de liberación y conteos.
+
+Solo admite su entorno desechable; utiliza `18080/18090` y lo retira al finalizar. No apuntarlo a bases compartidas ni ejecutarlo a la vez que la prueba de humo u otro runner que use esos puertos. El informe `pruebas/resultados/contrato-recepcion-f04.json` queda fuera de Git, con resultados y datos sintéticos antes/después, sin tokens. Termina con código `1` ante un incumplimiento o error de preparación. G7 real, frontend, reinicios y aceptación en nube siguen pendientes.
+
+Las comprobaciones propias de ambos verificadores se ejecutan con:
+
+```powershell
+python -m unittest discover -s pruebas -p 'test_verificar_*.py' -v
+```
+
 ## Verificación integrada de rutas F-02
 
 La rama `feature/f02-rutas-transferencia-segura` añade Gestión V5 (resultado durable de secuencia y unicidad diferida de posiciones), V6 (intenciones/resultados y cerco de reasignación), V7 (cancelaciones durables por anulación) y Operación V7 (transferencias atómicas de capacidad; V6 ya pertenece a comandos F-03). No editar migraciones aplicadas ni activar Flyway sobre bases compartidas para probar. Las futuras migraciones empiezan en Gestión V8 y Operación V8.
