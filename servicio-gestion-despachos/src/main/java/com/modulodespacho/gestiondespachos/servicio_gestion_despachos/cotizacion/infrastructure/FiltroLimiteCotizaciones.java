@@ -53,8 +53,7 @@ public class FiltroLimiteCotizaciones extends OncePerRequestFilter {
             if (actual == null || actual.minuto != minuto) {
                 return new Contador(minuto, 1);
             }
-            actual.conteo++;
-            return actual;
+            return new Contador(minuto, actual.conteo + 1);
         }).conteo;
 
         if (conteo > limitePorMinuto) {
@@ -98,7 +97,7 @@ public class FiltroLimiteCotizaciones extends OncePerRequestFilter {
 
     private static final class Contador {
         private final long minuto;
-        private int conteo;
+        private final int conteo;
 
         private Contador(long minuto, int conteo) {
             this.minuto = minuto;

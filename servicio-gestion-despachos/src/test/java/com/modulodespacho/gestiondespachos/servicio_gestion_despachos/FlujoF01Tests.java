@@ -24,6 +24,8 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.appl
 
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doAnswer;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -54,12 +56,23 @@ class FlujoF01Tests {
     @MockitoBean
     JwtDecoder decodificadorJwt;
 
+    @MockitoBean(name = "productosProgramacion")
+    com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ProveedorDatosFisicos productos;
+
     @BeforeEach
     void preparar() {
         // Limpiar los escenarios sin eliminar el catálogo de 50 distritos creado por Flyway.
         sql.sql("TRUNCATE zonas CASCADE").update();
+        sql.sql("TRUNCATE auditoria_configuracion, comandos_configuracion").update();
         when(decodificadorJwt.decode("gestor")).thenReturn(tokenGestor());
         when(decodificadorJwt.decode("servicio")).thenReturn(tokenServicio());
+        when(productos.obtener(any())).thenReturn(java.util.Map.of(
+                "POL-NEG-M", new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos(
+                        new java.math.BigDecimal("0.25"), new java.math.BigDecimal("30"), new java.math.BigDecimal("25"),
+                        new java.math.BigDecimal("3"), "ACTIVO", Instant.parse("2026-09-22T14:00:00Z")),
+                "ZAP-RUN-42", new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos(
+                        new java.math.BigDecimal("1.4"), new java.math.BigDecimal("35"), new java.math.BigDecimal("22"),
+                        new java.math.BigDecimal("13"), "ACTIVO", Instant.parse("2026-09-20T10:00:00Z"))));
     }
 
     private Jwt tokenGestor() {
@@ -121,7 +134,7 @@ class FlujoF01Tests {
                 .andExpect(jsonPath("$.tipoCotizacion").value("EXACTA"))
                 .andExpect(jsonPath("$.nombreZona").value("Lima Centro"))
                 .andExpect(jsonPath("$.pesoTotalKg").value(2.65))
-                .andExpect(jsonPath("$.volumenTotalM3").value(0.021))
+                .andExpect(jsonPath("$.volumenTotalM3").value(0.022))
                 .andExpect(jsonPath("$.costoEnvio").value(10.0))
                 .andExpect(jsonPath("$.plazoEstimadoDiasHabiles").value(2))
                 .andExpect(jsonPath("$.fechaEstimadaEntrega").exists());
@@ -325,4 +338,124 @@ class FlujoF01Tests {
                 }))
                 .andExpect(status().isInternalServerError());
     }
+
+    @Test
+    void reintentoIdentificadoNoDuplicaZonaNiAuditoriaYContenidoDistintoEsConflicto() throws Exception {
+        String clave = UUID.randomUUID().toString();
+        String cuerpo = "{\"nombre\":\"Idempotente\",\"distritos\":[{\"distrito\":\"San Borja\"}]}";
+        String original = cliente.perform(post("/api/v1/zonas").header("Authorization", "Bearer gestor")
+                .header("Idempotency-Key", clave).contentType("application/json").content(cuerpo))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.creadoEn").isNotEmpty())
+                .andExpect(jsonPath("$.versionZona").value(0)).andReturn().getResponse().getContentAsString();
+        cliente.perform(post("/api/v1/zonas").header("Authorization", "Bearer gestor").header("Idempotency-Key", clave)
+                .contentType("application/json").content(cuerpo)).andExpect(status().isCreated())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json(original));
+        cliente.perform(post("/api/v1/zonas").header("Authorization", "Bearer gestor").header("Idempotency-Key", clave)
+                .contentType("application/json").content(cuerpo.replace("Idempotente", "Otra decisión")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DESP_ERROR_OPERACION_REUTILIZADA"));
+        assertThat(contar("zonas")).isEqualTo(1);
+        assertThat(contar("auditoria_configuracion")).isEqualTo(1);
+        assertThat(contar("comandos_configuracion")).isEqualTo(1);
+    }
+
+    @Test
+    void coberturaPostalExclusivaNoHabilitaTodoElDistrito() throws Exception {
+        String id = crearZona("Postal", "\"distrito\":\"San Borja\",\"soloCodigosPostales\":true,\"codigosPostales\":[\"15036\"]");
+        assertThat(contar("zonas_distritos")).isZero();
+        cliente.perform(get("/api/v1/zonas/{id}", id).header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.distritos[0].soloCodigosPostales").value(true));
+        cliente.perform(get("/api/v1/zonas").param("distrito", "San Borja").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(1));
+        for (String destino : List.of("{\"distrito\":\"San Borja\"}", "{\"distrito\":\"San Borja\",\"codigoPostal\":\"15037\"}")) {
+            cliente.perform(post("/api/v1/cotizaciones").header("Authorization", "Bearer servicio").contentType("application/json")
+                    .content("{\"destino\":" + destino + "}")).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.coberturaDisponible").value(false));
+        }
+        cliente.perform(post("/api/v1/cotizaciones").header("Authorization", "Bearer servicio").contentType("application/json")
+                .content("{\"destino\":{\"distrito\":\"San Borja\",\"codigoPostal\":\"15036\"}}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.coberturaDisponible").value(true));
+    }
+
+    @Test
+    void versionDesactualizadaNoRevierteEstadoNiDuplicaAuditoriaYDespachoConservaZona() throws Exception {
+        String id = crearZona("Versionada", "\"distrito\":\"San Borja\"");
+        sql.sql("INSERT INTO despachos(pedido_id,zona_id,estado) VALUES ('PED-F01',:zona,'PENDIENTE_ASIGNACION')")
+                .param("zona", UUID.fromString(id)).update();
+        String inactivar = "{\"estado\":\"INACTIVO\",\"versionZona\":0}";
+        cliente.perform(patch("/api/v1/zonas/{id}/estado", id).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content(inactivar)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.versionZona").value(1));
+        cliente.perform(patch("/api/v1/zonas/{id}/estado", id).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content(inactivar)).andExpect(status().isOk());
+        cliente.perform(patch("/api/v1/zonas/{id}/estado", id).header("Authorization", "Bearer gestor")
+                .contentType("application/json").content("{\"estado\":\"ACTIVO\",\"versionZona\":0}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DESP_ERROR_ZONA_DESACTUALIZADA"))
+                .andExpect(jsonPath("$.estadoActual").value("INACTIVO"));
+        assertThat(contar("auditoria_configuracion")).isEqualTo(2);
+        assertThat(sql.sql("SELECT zona_id FROM despachos WHERE pedido_id='PED-F01'").query(UUID.class).single())
+                .isEqualTo(UUID.fromString(id));
+    }
+
+    @Test
+    void edicionesConcurrentesNoSePisan() throws Exception {
+        String id = crearZona("Concurrente", "\"distrito\":\"San Borja\"");
+        var barrera = new java.util.concurrent.CyclicBarrier(2);
+        var lecturas = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(invocacion -> {
+            Object resultado = invocacion.callRealMethod();
+            if (lecturas.incrementAndGet() <= 2) barrera.await(10, java.util.concurrent.TimeUnit.SECONDS);
+            return resultado;
+        }).when(zonas).buscarPorId(UUID.fromString(id));
+        try (var hilos = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var tareas = List.of("Edición A", "Edición B").stream().map(nombre -> hilos.submit(() ->
+                    cliente.perform(put("/api/v1/zonas/{id}", id).header("Authorization", "Bearer gestor")
+                            .contentType("application/json").content("{\"nombre\":\"" + nombre + "\",\"distritos\":[{\"distrito\":\"San Borja\"}]}"))
+                            .andReturn().getResponse())).toList();
+            assertThat(List.of(tareas.get(0).get(15, java.util.concurrent.TimeUnit.SECONDS).getStatus(),
+                    tareas.get(1).get(15, java.util.concurrent.TimeUnit.SECONDS).getStatus())).containsExactlyInAnyOrder(200, 409);
+        }
+        assertThat(contar("auditoria_configuracion")).isEqualTo(2);
+    }
+
+    @Test
+    void reintentoDeTarifaConservaHistorialYSustitucionRegistraAmbasIdentidades() throws Exception {
+        String id = crearZona("Tarifas", "\"distrito\":\"San Borja\"");
+        String clave = UUID.randomUUID().toString();
+        String tarifa = "{\"tarifaBase\":8.12,\"pesoIncluidoKg\":3,\"recargoKgAdicional\":2,\"factorVolumetrico\":1.25,\"moneda\":\"PEN\",\"plazoEstimadoDiasHabiles\":2}";
+        for (int i = 0; i < 2; i++) cliente.perform(put("/api/v1/zonas/{id}/tarifa", id).header("Authorization", "Bearer gestor")
+                .header("Idempotency-Key", clave).contentType("application/json").content(tarifa)).andExpect(status().isOk());
+        assertThat(contar("tarifas_zona")).isEqualTo(1);
+        cliente.perform(put("/api/v1/zonas/{id}/tarifa", id).header("Authorization", "Bearer gestor")
+                .header("Idempotency-Key", UUID.randomUUID()).contentType("application/json").content(tarifa.replace("8.12", "15.13")))
+                .andExpect(status().isOk());
+        cliente.perform(get("/api/v1/zonas/{id}/tarifa/historial", id).header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].vigente").value(true)).andExpect(jsonPath("$[1].vigente").value(false));
+        assertThat(sql.sql("SELECT datos_nuevos->'sustituida'->>'usuarioDesactivacion' FROM auditoria_configuracion WHERE entidad='tarifa' AND accion='MODIFICAR'")
+                .query(String.class).single()).isEqualTo(USUARIO_GESTOR.toString());
+        assertThat(contar("auditoria_configuracion")).isEqualTo(3);
+    }
+
+    @Test
+    void fallaAuditoriaRevierteZonaYComando() throws Exception {
+        sql.sql("ALTER TABLE auditoria_configuracion ADD CONSTRAINT prueba_fallo_auditoria CHECK (entidad <> 'zona') NOT VALID").update();
+        try {
+            cliente.perform(post("/api/v1/zonas").header("Authorization", "Bearer gestor")
+                    .header("Idempotency-Key", UUID.randomUUID()).contentType("application/json")
+                    .content("{\"nombre\":\"Rollback\",\"distritos\":[{\"distrito\":\"San Borja\"}]}"))
+                    .andExpect(status().isInternalServerError());
+            assertThat(contar("zonas")).isZero();
+            assertThat(contar("comandos_configuracion")).isZero();
+            assertThat(contar("auditoria_configuracion")).isZero();
+        } finally { sql.sql("ALTER TABLE auditoria_configuracion DROP CONSTRAINT prueba_fallo_auditoria").update(); }
+    }
+
+    private String crearZona(String nombre, String distrito) throws Exception {
+        String respuesta = cliente.perform(post("/api/v1/zonas").header("Authorization", "Bearer gestor")
+                .contentType("application/json").content("{\"nombre\":\"" + nombre + "\",\"distritos\":[{" + distrito + "}]}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return JsonPath.read(respuesta, "$.id");
+    }
+
+    private long contar(String tabla) { return sql.sql("SELECT count(*) FROM " + tabla).query(Long.class).single(); }
 }

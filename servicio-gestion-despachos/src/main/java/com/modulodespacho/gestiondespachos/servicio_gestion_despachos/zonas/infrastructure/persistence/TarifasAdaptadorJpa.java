@@ -41,14 +41,19 @@ public class TarifasAdaptadorJpa implements RepositorioTarifas {
 
     @Override
     public TarifaZona guardar(TarifaZona tarifa) {
-        return tarifas.save(tarifa);
+        return tarifas.saveAndFlush(tarifa);
     }
 
     @Override
     public void desactivarVigente(UUID zonaId) {
         tarifas.findFirstByZonaIdAndActivaTrue(zonaId).ifPresent(tarifa -> {
             tarifa.setActiva(false);
-            tarifas.save(tarifa);
+            tarifas.saveAndFlush(tarifa);
         });
+    }
+
+    @Override
+    public List<TarifaZona> historial(UUID zonaId) {
+        return tarifas.findByZonaIdOrderByCreadoEnDescIdDesc(zonaId);
     }
 }

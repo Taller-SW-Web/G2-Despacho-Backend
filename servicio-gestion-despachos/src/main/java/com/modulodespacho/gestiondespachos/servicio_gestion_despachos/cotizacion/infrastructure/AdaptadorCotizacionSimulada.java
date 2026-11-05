@@ -12,6 +12,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.PuertoCotizacion;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.SolicitudCotizacion;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.ResultadoCotizacion;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.RedondeoCotizacion;
 
 /** Datos de prueba: no consulta Productos, tarifas ni zonas reales. */
 @Component
@@ -61,7 +62,7 @@ public class AdaptadorCotizacionSimulada implements PuertoCotizacion {
             }
         }
         return new ResultadoCotizacion(true, "EXACTA", "Lima Centro", destino.direccion(),
-                destino.distrito(), destino.codigoPostal(), peso, volumen, new BigDecimal("10.00"),
+                destino.distrito(), destino.codigoPostal(), peso, RedondeoCotizacion.volumen(volumen), new BigDecimal("10.00"),
                 "PEN", 2, fecha, ahora, null);
     }
 }

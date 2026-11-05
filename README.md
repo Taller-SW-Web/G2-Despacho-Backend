@@ -213,7 +213,19 @@ Los registros creados o preparados durante las pruebas permanecen en el volumen 
 
 ## Integraciones pendientes y frontends
 
-- Productos y Ventas no se levantan en este Compose. La cotización utiliza el catálogo de productos de prueba configurado en Gestión. La recepción real de pedidos requiere Productos y sus credenciales; las notificaciones a Ventas pueden quedar pendientes hasta configurar el destino y la identidad técnica.
+- Productos y Ventas no se levantan en este Compose. El perfil normal de Gestión consulta Productos por HTTP tanto para cotizar como para recibir pedidos. Configurar `PRODUCTOS_URL` y una credencial propia de `modulo-despacho`: `PRODUCTOS_CLIENT_SECRET` para obtenerla de Seguridad o `PRODUCTOS_TOKEN_SERVICIO` para suministrarla externamente. G6 exige audiencia `api-productos` y scope `productos:fisicos:leer`. La ausencia de esa integración produce indisponibilidad; las consultas de solo cobertura siguen siendo locales. Las notificaciones a Ventas pueden quedar pendientes hasta configurar destino e identidad técnica.
+
+### Cotizaciones F-01 e integración con G6
+
+El perfil normal usa el cliente HTTP compartido `ClienteDatosFisicosHttp`. Las pruebas de contrato e integración utilizan un doble HTTP explícito y PostgreSQL desechable; no acreditan autorización G7 ni despliegue de G6. El perfil adicional `productos-simulados` selecciona expresamente el catálogo local solo para cotizaciones de prueba y marca sus instantáneas como simuladas. Para usarlo en Compose, cambiar explícitamente `SPRING_PROFILES_ACTIVE` de Gestión mediante una configuración local; no es el perfil por defecto.
+
+Los parámetros operativos son `LIMITE_COTIZACIONES_POR_MINUTO` (60 por defecto), `PRODUCTOS_URL`, `PRODUCTOS_CLIENT_ID` (`modulo-despacho`), `PRODUCTOS_CLIENT_SECRET` y `PRODUCTOS_TOKEN_SERVICIO`. Las plantillas contienen únicamente nombres y marcadores, nunca credenciales reales. No se reenvía el JWT del canal a G6. El transporte actual utiliza un segundo para conexión y 1.5 segundos para lectura; el acuerdo de rendimiento y caché con los equipos externos sigue pendiente de medición.
+
+Las reglas públicas se mantienen en el contrato externo de Specs: el costo final se eleva al siguiente múltiplo de medio sol y el volumen informado a tres decimales. El cálculo utiliza el volumen exacto. Cada cotización exacta exitosa confirma una instantánea antes de responder; su detalle conserva perfiles, tarifa, valores exactos y ajuste de redondeo. El plazo actual cuenta lunes a viernes en `America/Lima`; feriados y horas de corte requieren el acuerdo operativo pendiente.
+
+Las migraciones V8–V10 amplían la precisión de pesos históricos, añaden control optimista a zonas y guardan la identidad de reintentos administrativos. Se prueban con bases temporales. El perfil `render` conserva Flyway deshabilitado por defecto: la aplicación de estas migraciones a una base persistente debe prepararse como despliegue independiente.
+
+La configuración admite reintentos identificados y control de versión, conforme al contrato de Gestión en Specs. El frontend consumidor debe conservar `soloCodigosPostales` al editar y puede enviar `versionZona` al cambiar estado. Las operaciones anteriores siguen admitidas. Las pruebas backend se ejecutan desde `servicio-gestion-despachos` con `./mvnw clean verify`; requieren Docker. Los reportes se generan en `target/surefire-reports`.
 - Las fotografías requieren un bucket privado y `EVIDENCIAS_STORAGE_URL`, `EVIDENCIAS_BUCKET` y `EVIDENCIAS_CLAVE_SERVICIO` en Operación. Vacíos, esos recorridos no están disponibles; no se sustituye Storage por un servicio local.
 - Los frontends pueden usar `VITE_API_BASE_URL=http://localhost:8080` y un token temporal mediante su configuración de desarrollo. CORS admite los puertos 5173 y 5174. Si el frontend necesita refrescar tokens, debe usar la configuración vigente de su propio repositorio.
 - La información de errores incorpora un identificador de correlación; buscarlo en `docker compose logs` para seguir una petición entre servicios.

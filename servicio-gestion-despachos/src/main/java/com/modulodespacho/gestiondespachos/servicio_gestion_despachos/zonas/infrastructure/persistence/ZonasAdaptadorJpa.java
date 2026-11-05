@@ -24,17 +24,25 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
     private final ZonaRepositorioJpa zonas;
     private final ZonaDistritoRepositorioJpa coberturas;
     private final ZonaCodigoPostalRepositorioJpa codigosPostales;
+    private final org.springframework.jdbc.core.simple.JdbcClient sql;
 
     public ZonasAdaptadorJpa(ZonaRepositorioJpa zonas, ZonaDistritoRepositorioJpa coberturas,
-            ZonaCodigoPostalRepositorioJpa codigosPostales) {
+            ZonaCodigoPostalRepositorioJpa codigosPostales, org.springframework.jdbc.core.simple.JdbcClient sql) {
         this.zonas = zonas;
         this.coberturas = coberturas;
         this.codigosPostales = codigosPostales;
+        this.sql = sql;
     }
 
     @Override
     public Zona guardar(Zona zona) {
-        return zonas.save(zona);
+        return zonas.saveAndFlush(zona);
+    }
+
+    @Override
+    public void bloquearConfiguracion() {
+        // Serializa la comprobación de exclusividad entre zonas distintas en PostgreSQL.
+        sql.sql("SELECT pg_advisory_xact_lock(1540101)").query((fila, indice) -> 1).single();
     }
 
     @Override
