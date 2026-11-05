@@ -26,7 +26,9 @@ import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderInitializationException;
 import org.springframework.security.oauth2.jwt.JwtException;
-import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.MappedJwtClaimSetConverter;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.SupplierJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -74,8 +76,15 @@ public class ConfiguracionSeguridad {
             NimbusJwtDecoder resultado = NimbusJwtDecoder.withJwkSetUri(claves)
                     .jwsAlgorithm(algoritmoFirma).restOperations(
                             new org.springframework.web.client.RestTemplate(peticiones)).build();
+            var conversorClaims = MappedJwtClaimSetConverter.withDefaults(Map.of());
+            resultado.setClaimSetConverter(claims -> {
+                // Spring puede completar iat: el contrato de G7 exige que venga en el JWT.
+                if (claims.get("iat") == null) throw new BadJwtException("El token no contiene iat");
+                return conversorClaims.convert(claims);
+            });
             resultado.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                    JwtValidators.createDefaultWithIssuer(emisor), new ValidadorTokenDespacho(audiencia)));
+                    new JwtTimestampValidator(Duration.ZERO), new JwtIssuerValidator(emisor),
+                    new ValidadorTokenDespacho(audiencia)));
             return resultado;
         });
         return token -> {
