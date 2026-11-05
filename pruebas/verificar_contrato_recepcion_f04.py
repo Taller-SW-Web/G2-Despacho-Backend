@@ -30,6 +30,19 @@ def consultar_sql(compose, base, sentencia):
     return resultado.stdout.strip()
 
 
+def validar_problema(documento, estado):
+    exigir(documento.get("status") == estado and isinstance(documento.get("code"), str)
+           and bool(documento["code"]), "Error sin estado o código contractual")
+    exigir(all(isinstance(documento.get(campo), str) and bool(documento[campo])
+               for campo in ("title", "detail", "instance", "correlationId", "timestamp")),
+           "Problem Details incompleto")
+    # RFC 7807 permite omitir type; en ese caso su valor implícito es about:blank.
+    exigir("type" not in documento or (isinstance(documento["type"], str) and bool(documento["type"])),
+           "Tipo de problema inválido")
+    exigir(not ({"recepcion", "incidencia", "historial", "contenido"} & documento.keys()),
+           "El rechazo expone datos protegidos")
+
+
 def peticion(url, token, cuerpo=None, esperado=200, codigo=None):
     cabeceras = {"Accept": "application/json, application/problem+json"}
     if token:
@@ -49,17 +62,10 @@ def peticion(url, token, cuerpo=None, esperado=200, codigo=None):
         exigir(isinstance(documento, dict), "El cuerpo debe ser un objeto JSON")
         if esperado >= 400:
             exigir(respuesta.headers.get_content_type() == "application/problem+json", "Falta Problem Details")
-            exigir(documento.get("status") == esperado and isinstance(documento.get("code"), str)
-                   and bool(documento["code"]),
-                   "Error sin estado o código contractual")
-            exigir(all(isinstance(documento.get(campo), str) and bool(documento[campo])
-                       for campo in ("type", "title", "detail", "instance", "correlationId", "timestamp")),
-                   "Problem Details incompleto")
+            validar_problema(documento, esperado)
             if esperado == 401:
                 exigir(respuesta.headers.get("WWW-Authenticate", "").startswith("Bearer"),
                        "El 401 debe informar WWW-Authenticate Bearer")
-            exigir(not ({"recepcion", "incidencia", "historial", "contenido"} & documento.keys()),
-                   "El rechazo expone datos protegidos")
             if codigo:
                 exigir(documento["code"] == codigo, "Código de error diferente al contrato")
             if esperado == 400:

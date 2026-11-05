@@ -2,7 +2,27 @@
 from copy import deepcopy
 import unittest
 
-from verificar_contrato_recepcion_f04 import IncumplimientoContrato, verificar_persistencia
+from verificar_contrato_recepcion_f04 import IncumplimientoContrato, validar_problema, verificar_persistencia
+
+
+class ProblemaRecepcionTests(unittest.TestCase):
+    def setUp(self):
+        self.problema = {"status": 401, "code": "DESP_ERROR_TOKEN_INVALIDO", "title": "Token no aceptado",
+            "detail": "No fue posible autenticar la solicitud", "instance": "/api/v1/despachos/prueba/recepcion-centro",
+            "correlationId": "correlacion-sintetica", "timestamp": "2026-11-05T15:00:00Z"}
+
+    def test_admite_tipo_generico_implicito_y_tipo_explicito(self):
+        validar_problema(self.problema, 401)
+        validar_problema(dict(self.problema, type="about:blank"), 401)
+
+    def test_rechaza_estado_codigo_o_correlacion_incorrectos(self):
+        for cambio in ({"status": 200}, {"code": ""}, {"correlationId": None}, {"type": []}):
+            with self.subTest(cambio=cambio), self.assertRaises(IncumplimientoContrato):
+                validar_problema(dict(self.problema, **cambio), 401)
+
+    def test_rechaza_datos_protegidos_en_el_error(self):
+        with self.assertRaises(IncumplimientoContrato):
+            validar_problema(dict(self.problema, recepcion={"idUsuario": "ajeno"}), 401)
 
 
 class PersistenciaRecepcionTests(unittest.TestCase):
