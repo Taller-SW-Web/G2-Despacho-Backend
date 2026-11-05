@@ -5,3 +5,6 @@
 
 # Configuración personal del IDE
 /.idea/
+
+# Resultados locales del análisis de código
+/graphify-out/
