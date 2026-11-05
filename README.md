@@ -269,6 +269,10 @@ El recorrido verifica teclado, descarte, guardado con respuesta perdida y llegad
 
 ## Integración continua
 
+La preparación de identidad F-05/F-06 se registra en [Specs](../despacho-docs/docs/integracion-seguridad-f05-f06.md). Operación consume el descubrimiento del origen `SEGURIDAD_URL` y valida RS256, issuer y vigencia; además exige `iat` original, `jti`, `sub` UUID y `roles` como arreglo para personas (admite `[]`), o audiencia `api-despacho` y `scope` textual para servicios. La cuenta sin roles de un repartidor se autoriza por su perfil local activo/vinculado. No se añade un rol global ni se consulta la base de Seguridad.
+
+Para verificar criptografía sin cuentas ni bases externas, desde `servicio-operacion-reparto` ejecutar `./mvnw.cmd "-Dtest=ValidadorTokenDespachoTests,ValidadorPerfilRepartidorTests,IntegracionJwtSeguridadTests,GestorJornadasTests" test`. El servidor JWKS de esas pruebas usa loopback y claves efímeras; no acredita autenticación contra G7. El registro/vínculo manual no comprueba activación global; cuentas, scopes reales y eventos/reconciliación permanecen pendientes. La suite completa de `clean verify` requiere Docker y PostgreSQL desechable.
+
 [CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
 
 Una cuarta comprobación compila y ejecuta las pruebas propias de `seguridad-local`, que levantan su emisor aislado con puerto efímero. El workflow no despliega servicios, no publica releases y no crea tags.
