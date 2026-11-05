@@ -12,14 +12,15 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClient;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.ProveedorTokenServicio;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.productos.infrastructure.ClienteDatosFisicosHttp;
 
 @Configuration(proxyBeanMethods = false)
 @Profile("!integracion-local")
 @EnableScheduling
 public class ConfiguracionProgramacion {
     @Bean @ConditionalOnMissingBean(Clock.class) Clock relojProgramacion() { return Clock.systemUTC(); }
-    @Bean ProductosProgramacionHttp productosProgramacion(Environment entorno, Clock reloj) {
-        return new ProductosProgramacionHttp(cliente(entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1")),
+    @Bean ClienteDatosFisicosHttp productosProgramacion(Environment entorno, Clock reloj) {
+        return new ClienteDatosFisicosHttp(cliente(entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1")),
                 credenciales(entorno, "productos", "productos:fisicos:leer", reloj));
     }
     @Bean CapacidadProgramacionHttp capacidadProgramacion(Environment entorno, Clock reloj) {

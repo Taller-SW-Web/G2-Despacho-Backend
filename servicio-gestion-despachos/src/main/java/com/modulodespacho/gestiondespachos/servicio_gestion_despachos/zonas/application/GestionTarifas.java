@@ -45,6 +45,7 @@ public class GestionTarifas {
 
     @Transactional
     public TarifaVista guardar(UUID zonaId, SolicitudTarifa solicitud) {
+        repositorioZonas.bloquearConfiguracion();
         var zona = repositorioZonas.buscarPorId(zonaId).orElseThrow(() -> ErrorDeNegocio.de(
                 404, CodigosError.ZONA_NO_ENCONTRADA, "La zona no existe"));
         if (zona.getEstado() != EstadoZona.ACTIVO) {
@@ -54,7 +55,7 @@ public class GestionTarifas {
         validar(solicitud);
 
         Optional<TarifaZona> anterior = repositorioTarifas.vigente(zonaId);
-        String datosAnteriores = anterior.map(tarifa -> serializar(aVista(tarifa))).orElse(null);
+        String datosAnteriores = anterior.map(tarifa -> serializar(aHistorica(tarifa))).orElse(null);
         anterior.ifPresent(tarifa -> repositorioTarifas.desactivarVigente(zonaId));
 
         TarifaZona tarifa = new TarifaZona();
@@ -70,13 +71,38 @@ public class GestionTarifas {
         tarifa.setPlazoMaxDias(solicitud.plazoEstimadoDiasHabiles());
         tarifa.setActiva(true);
         tarifa.setCreadoPor(usuario.idUuid().orElse(null));
-        repositorioTarifas.guardar(tarifa);
+        tarifa = repositorioTarifas.guardar(tarifa);
 
         TarifaVista vista = aVista(tarifa);
+        var datosNuevos = new java.util.LinkedHashMap<String, Object>();
+        datosNuevos.put("nueva", aHistorica(tarifa));
+        if (anterior.isPresent()) {
+            datosNuevos.put("sustituida", java.util.Map.of("id", anterior.get().getId(), "vigente", false,
+                    "usuarioDesactivacion", usuario.identificador(), "desactivadoEn", anterior.get().getActualizadoEn()));
+        }
         auditoria.registrar("tarifa", tarifa.getId().toString(),
                 anterior.isPresent() ? AccionAuditoria.MODIFICAR : AccionAuditoria.CREAR,
-                datosAnteriores, serializar(vista), usuario.identificador());
+                datosAnteriores, serializar(datosNuevos), usuario.identificador());
         return vista;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<TarifaAplicada> capturar(UUID zonaId) {
+        return repositorioTarifas.vigente(zonaId)
+                .map(tarifa -> new TarifaAplicada(tarifa.getId(), zonaId, aVista(tarifa)));
+    }
+
+    @Transactional(readOnly = true)
+    public List<TarifaHistoricaVista> historial(UUID zonaId) {
+        if (repositorioZonas.buscarPorId(zonaId).isEmpty()) {
+            throw ErrorDeNegocio.de(404, CodigosError.ZONA_NO_ENCONTRADA, "La zona no existe");
+        }
+        return repositorioTarifas.historial(zonaId).stream().map(GestionTarifas::aHistorica).toList();
+    }
+
+    private static TarifaHistoricaVista aHistorica(TarifaZona tarifa) {
+        return new TarifaHistoricaVista(tarifa.getId(), tarifa.isActiva(), aVista(tarifa),
+                tarifa.getCreadoPor(), tarifa.getCreadoEn(), tarifa.getActualizadoEn());
     }
 
     private void validar(SolicitudTarifa solicitud) {
@@ -95,6 +121,9 @@ public class GestionTarifas {
         }
         if (solicitud.plazoEstimadoDiasHabiles() == null || solicitud.plazoEstimadoDiasHabiles() < 0) {
             errores.add(new ErrorDeCampo("plazoEstimadoDiasHabiles", "El plazo debe ser un entero no negativo"));
+        }
+        if (!"PEN".equals(moneda(solicitud.moneda()))) {
+            errores.add(new ErrorDeCampo("moneda", "La cotización de F-01 utiliza PEN"));
         }
         if (!errores.isEmpty()) {
             throw ErrorDeNegocio.de(400, CodigosError.TARIFA_INVALIDA,

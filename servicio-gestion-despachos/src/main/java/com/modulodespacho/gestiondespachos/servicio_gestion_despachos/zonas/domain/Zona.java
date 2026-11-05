@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "zonas")
@@ -32,6 +33,12 @@ public class Zona extends EntidadConFechas {
 
     @Column(name = "actualizado_por")
     private UUID actualizadoPor;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
+    public Long getVersion() { return version; }
 
     public UUID getId() {
         return id;

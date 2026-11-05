@@ -12,4 +12,6 @@ public interface TarifaZonaRepositorioJpa extends JpaRepository<TarifaZona, UUID
     Optional<TarifaZona> findFirstByZonaIdAndActivaTrue(UUID zonaId);
 
     List<TarifaZona> findByZonaIdInAndActivaTrue(Collection<UUID> zonaIds);
+
+    List<TarifaZona> findByZonaIdOrderByCreadoEnDescIdDesc(UUID zonaId);
 }
