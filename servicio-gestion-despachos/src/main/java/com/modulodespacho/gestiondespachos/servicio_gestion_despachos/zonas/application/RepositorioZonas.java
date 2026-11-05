@@ -11,6 +11,8 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.doma
 
 public interface RepositorioZonas {
 
+    void bloquearConfiguracion();
+
     Zona guardar(Zona zona);
 
     void agregarCoberturas(Zona zona, List<ZonaDistrito> coberturas, List<ZonaCodigoPostal> codigosPostales);

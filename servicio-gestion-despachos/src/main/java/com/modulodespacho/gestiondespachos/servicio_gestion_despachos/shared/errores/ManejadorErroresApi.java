@@ -46,6 +46,9 @@ public class ManejadorErroresApi {
         problema.setTitle("Operación rechazada");
         problema.setProperty("errores", error.getErrores());
         if (error.getEstadoActual() != null) problema.setProperty("estadoActual", error.getEstadoActual());
+        if (!error.getSkusAfectados().isEmpty()) {
+            problema.setProperty("details", java.util.Map.of("skusAfectados", error.getSkusAfectados()));
+        }
         return problema;
     }
 

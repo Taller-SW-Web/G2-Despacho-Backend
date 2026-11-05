@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.ComandosConfiguracion;
 import org.springframework.web.bind.annotation.RestController;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeCampo;
@@ -31,9 +33,11 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.doma
 public class ControladorZonas {
 
     private final GestionZonas gestionZonas;
+    private final ComandosConfiguracion comandos;
 
-    public ControladorZonas(GestionZonas gestionZonas) {
+    public ControladorZonas(GestionZonas gestionZonas, ComandosConfiguracion comandos) {
         this.gestionZonas = gestionZonas;
+        this.comandos = comandos;
     }
 
     @GetMapping
@@ -52,8 +56,9 @@ public class ControladorZonas {
     @Operation(summary = "Crear una zona de cobertura",
             description = "Distritos como objetos {distrito, codigosPostales}. Se valida la existencia del distrito, "
                     + "sin validar aún la pertenencia de los códigos postales.")
-    public ResponseEntity<ZonaVista> crear(@RequestBody SolicitudZona solicitud) {
-        ZonaVista vista = gestionZonas.crear(solicitud);
+    public ResponseEntity<ZonaVista> crear(@RequestBody SolicitudZona solicitud,
+            @RequestHeader(value = "Idempotency-Key", required = false) String clave) {
+        ZonaVista vista = comandos.ejecutar("CREAR_ZONA", solicitud, clave, ZonaVista.class, () -> gestionZonas.crear(solicitud));
         return ResponseEntity.created(URI.create("/api/v1/zonas/" + vista.id())).body(vista);
     }
 
@@ -66,19 +71,25 @@ public class ControladorZonas {
     @PutMapping("/{idZona}")
     @Operation(summary = "Editar el nombre o la delimitación de una zona",
             description = "Reemplaza los distritos y sus códigos postales usando el mismo formato que la creación.")
-    public ZonaVista editar(@PathVariable UUID idZona, @RequestBody SolicitudZona solicitud) {
-        return gestionZonas.editar(idZona, solicitud);
+    public ZonaVista editar(@PathVariable UUID idZona, @RequestBody SolicitudZona solicitud,
+            @RequestHeader(value = "Idempotency-Key", required = false) String clave) {
+        return comandos.ejecutar("EDITAR_ZONA:" + idZona, solicitud, clave, ZonaVista.class, () -> gestionZonas.editar(idZona, solicitud));
     }
 
     @PatchMapping("/{idZona}/estado")
     @Operation(summary = "Activar o desactivar una zona")
-    public ZonaVista cambiarEstado(@PathVariable UUID idZona, @RequestBody SolicitudEstado solicitud) {
+    public ZonaVista cambiarEstado(@PathVariable UUID idZona, @RequestBody SolicitudEstado solicitud,
+            @RequestHeader(value = "Idempotency-Key", required = false) String clave) {
         if (solicitud == null || solicitud.estado() == null) {
             throw ErrorDeNegocio.de(400, CodigosError.CAMPOS_INVALIDOS,
                     "La solicitud contiene campos inválidos",
                     List.of(new ErrorDeCampo("estado", "El estado es obligatorio")));
         }
-        return gestionZonas.cambiarEstado(idZona, solicitud.estado());
+        if (solicitud.versionZona() != null && solicitud.versionZona() < 0) {
+            throw ErrorDeNegocio.de(400, CodigosError.CAMPOS_INVALIDOS, "La versión de zona no puede ser negativa");
+        }
+        return comandos.ejecutar("ESTADO_ZONA:" + idZona, solicitud, clave, ZonaVista.class,
+                () -> gestionZonas.cambiarEstado(idZona, solicitud.estado(), solicitud.versionZona()));
     }
 
     private void validarPaginacion(int pagina, int tamanoPagina) {

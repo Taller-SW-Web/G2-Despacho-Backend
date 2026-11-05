@@ -472,11 +472,14 @@ class ProgramacionHttpTests {
             String modo = MODO_PRODUCTOS.get();
             if (modo.equals("CAIDA")) { responder(solicitud, 503, "{}"); return; }
             if (modo.equals("LENTO")) try { Thread.sleep(1800); } catch (InterruptedException error) { Thread.currentThread().interrupt(); }
-            if (modo.equals("DESCONOCIDO")) { responder(solicitud, 200, "{\"productos\":[],\"noEncontrados\":[\"POL-NEG-M\"]}"); return; }
+            if (modo.equals("DESCONOCIDO")) { responder(solicitud, 200, "{\"productos\":[],\"noEncontrados\":[\"POL-NEG-M\",\"ZAP-RUN-42\"]}"); return; }
+            if (modo.equals("INCOMPLETO")) {
+                responder(solicitud, 422, "{\"status\":422,\"code\":\"DATOS_FISICOS_INCOMPLETOS\",\"details\":{\"skusAfectados\":[\"POL-NEG-M\"]}}"); return;
+            }
             responder(solicitud, 200, """
-                    {"productos":[{"sku":"POL-NEG-M","pesoKg":%s,"dimensionesCm":{"largo":30,"ancho":25,"alto":3}},
-                      {"sku":"ZAP-RUN-42","pesoKg":1.4,"dimensionesCm":{"largo":35,"ancho":22,"alto":13}}],"noEncontrados":[]}
-                    """.formatted(modo.equals("INCOMPLETO") ? "null" : "0.25")); return;
+                    {"productos":[{"sku":"POL-NEG-M","estado":"ACTIVO","actualizadoEn":"2026-09-22T14:00:00Z","pesoKg":0.25,"dimensionesCm":{"largo":30,"ancho":25,"alto":3}},
+                      {"sku":"ZAP-RUN-42","estado":"ACTIVO","actualizadoEn":"2026-09-20T10:00:00Z","pesoKg":1.4,"dimensionesCm":{"largo":35,"ancho":22,"alto":13}}],"noEncontrados":[]}
+                    """); return;
         }
         if (ruta.equals("/internal/v1/capacidad/reservas")) {
             if (!"Bearer tecnico-operacion".equals(solicitud.getRequestHeaders().getFirst("Authorization"))) { responder(solicitud, 403, "{}"); return; }
