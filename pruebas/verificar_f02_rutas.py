@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Recorrido real aislado. No carga .env ni utiliza bases/volúmenes del desarrollador."""
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -12,9 +11,9 @@ import urllib.request
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from verificar_f02_publicado import verificar
 
 RAIZ = Path(__file__).resolve().parents[1]
-FRONTEND = RAIZ.parent / "G2-Despacho-Frontend"
 PROYECTO = "f02-pruebas-" + uuid.uuid4().hex[:12]
 COMPOSE = ["docker", "compose", "--env-file", "/dev/null", "-p", PROYECTO,
            "-f", str(RAIZ / "pruebas/compose.f02.yaml")]
@@ -169,12 +168,18 @@ def main():
                 despacho = solicitar(api + "/despachos/simulaciones", {"idZona": zona, "pesoKg": 2, "volumenM3": 0.01}, gestor)
                 solicitar(api + "/despachos/" + despacho["idDespacho"] + "/asignacion",
                           {"idRepartidor": perfil, "idJornada": jornada}, gestor)
-            entorno = dict(os.environ, F02_GESTOR_TOKEN=gestor, F02_REPARTIDOR_TOKEN=repartidor, F02_JORNADA=jornada,
-                           F02_DESTINO_TOKEN=destino_token, F02_JORNADA_DESTINO=jornada_destino, F02_REPARTIDOR_ORIGEN=perfil, F02_ZONA=zona,
-                           F02_VENTAS_TOKEN=ventas)
-            ejecutar(["npm", "run", "test:f02:rutas:e2e"], cwd=FRONTEND, env=entorno)
+            # El script npm test:f02:rutas:e2e previsto históricamente no existe en el frontend actual.
+            # Comprobar APIs reales sin atribuirles evidencia de interacción en navegador.
+            for _ in range(40):
+                pasos = verificar("http://127.0.0.1:18080", gestor, repartidor, destino_token,
+                                  despacho["idDespacho"], jornada)
+                if all(paso["correcto"] for paso in pasos):
+                    break
+                time.sleep(0.5)
+            else:
+                raise RuntimeError("No convergió la asignación en F-03: " + json.dumps(pasos))
             verificar_anulacion_fallido(api, gestor, ventas, perfil, jornada, zona)
-            print("F02_RUTAS_VERIFICADO: navegador, Gateway, Gestión, Operación y consulta F-03 reales; Seguridad temporal.")
+            print("F02_RUTAS_VERIFICADO: APIs Gateway, Gestión, Operación y consulta F-03 reales; Seguridad temporal. Navegador no verificado.")
         except BaseException:
             with registro.open("w") as archivo:
                 subprocess.run(COMPOSE + ["logs", "--no-color", "--tail", "100"], stdout=archivo, stderr=subprocess.STDOUT)
