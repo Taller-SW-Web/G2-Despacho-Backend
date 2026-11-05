@@ -14,5 +14,6 @@ public record ZonaVista(
         List<DistritoVista> distritos,
         TarifaVista tarifaVigente,
         Instant creadoEn,
-        Instant actualizadoEn) {
+        Instant actualizadoEn,
+        Long versionZona) {
 }

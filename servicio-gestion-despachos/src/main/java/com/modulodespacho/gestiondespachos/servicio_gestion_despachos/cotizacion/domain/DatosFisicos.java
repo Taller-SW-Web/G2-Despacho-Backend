@@ -1,9 +1,11 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 /** Datos físicos vigentes de un producto, provistos por Productos y Ofertas. */
-public record DatosFisicos(BigDecimal pesoKg, BigDecimal largoCm, BigDecimal anchoCm, BigDecimal altoCm) {
+public record DatosFisicos(BigDecimal pesoKg, BigDecimal largoCm, BigDecimal anchoCm, BigDecimal altoCm,
+        String estado, Instant actualizadoEn) {
 
     private static final BigDecimal CENTIMETROS_POR_METRO = new BigDecimal("100");
 

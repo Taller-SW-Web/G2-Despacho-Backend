@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ServicioCotizacion;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.SolicitudCotizacion;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 
 @RestController
 @Profile("!integracion-local")
@@ -25,11 +23,11 @@ public class ControladorCotizacionReal {
     @PostMapping
     @Operation(summary = "Cotizar el envío: cobertura y costo con la tarifa vigente de la zona",
             description = "Requiere tipo=servicio, audiencia api-despacho y scope cotizaciones:calcular.")
-    public RespuestaCotizacion cotizar(@RequestBody(required = false) SolicitudCotizacion solicitud) {
-        if (solicitud == null) {
-            throw ErrorDeNegocio.de(400, CodigosError.DESTINO_REQUERIDO,
-                    "Debe informar el distrito del destino");
-        }
+    public RespuestaCotizacion cotizar(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @io.swagger.v3.oas.annotations.media.Content(
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = SolicitudCotizacion.class)))
+            @RequestBody(required = false) tools.jackson.databind.JsonNode cuerpo) {
+        SolicitudCotizacion solicitud = SolicitudesCotizacion.desdeJson(cuerpo);
         return RespuestaCotizacion.desde(servicioCotizacion.cotizar(solicitud));
     }
 }

@@ -9,6 +9,7 @@ public class ErrorDeNegocio extends RuntimeException {
     private final String codigo;
     private final List<ErrorDeCampo> errores;
     private String estadoActual;
+    private List<String> skusAfectados = List.of();
 
     private ErrorDeNegocio(int estado, String codigo, String mensaje, List<ErrorDeCampo> errores) {
         super(mensaje);
@@ -43,4 +44,11 @@ public class ErrorDeNegocio extends RuntimeException {
     }
 
     public String getEstadoActual() { return estadoActual; }
+
+    public ErrorDeNegocio conSkusAfectados(List<String> skus) {
+        this.skusAfectados = List.copyOf(skus);
+        return this;
+    }
+
+    public List<String> getSkusAfectados() { return skusAfectados; }
 }

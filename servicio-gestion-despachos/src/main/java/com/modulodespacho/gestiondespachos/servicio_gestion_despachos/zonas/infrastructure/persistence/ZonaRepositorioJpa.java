@@ -24,7 +24,9 @@ public interface ZonaRepositorioJpa extends JpaRepository<Zona, UUID> {
               AND (:estado IS NULL OR z.estado = :estado)
               AND (cast(:distrito as string) IS NULL OR EXISTS (
                     SELECT 1 FROM ZonaDistrito c
-                    WHERE c.zona = z AND lower(c.distrito.nombre) = lower(cast(:distrito as string))))
+                    WHERE c.zona = z AND lower(c.distrito.nombre) = lower(cast(:distrito as string))) OR EXISTS (
+                    SELECT 1 FROM ZonaCodigoPostal cp
+                    WHERE cp.zona = z AND lower(cp.distrito.nombre) = lower(cast(:distrito as string))))
             """)
     Page<Zona> buscar(@Param("nombre") String nombre, @Param("distrito") String distrito,
             @Param("estado") EstadoZona estado, Pageable pageable);

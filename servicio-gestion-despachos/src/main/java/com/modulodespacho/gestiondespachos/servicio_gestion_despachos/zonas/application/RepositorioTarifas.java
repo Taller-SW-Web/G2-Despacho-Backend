@@ -15,4 +15,6 @@ public interface RepositorioTarifas {
     TarifaZona guardar(TarifaZona tarifa);
 
     void desactivarVigente(UUID zonaId);
+
+    java.util.List<TarifaZona> historial(UUID zonaId);
 }

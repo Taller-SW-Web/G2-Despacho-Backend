@@ -80,12 +80,15 @@ public class GestionZonas {
 
     @Transactional
     public ZonaVista crear(SolicitudZona solicitud) {
+        repositorioZonas.bloquearConfiguracion();
         DatosValidados datos = validar(solicitud);
         validarNombreUnico(datos.nombre(), null);
 
         UUID zonaId = UUID.randomUUID();
         CoberturasValidadas coberturas = construirCoberturas(datos);
-        validarSolapamiento(zonaId, coberturas, datos.nombre());
+        if (solicitud.estado() == null || solicitud.estado() == EstadoZona.ACTIVO) {
+            validarSolapamiento(zonaId, coberturas, datos.nombre());
+        }
 
         Zona zona = new Zona();
         zona.setId(zonaId);
@@ -96,7 +99,7 @@ public class GestionZonas {
         zona.setCreadoPor(usuarioId);
         zona.setActualizadoPor(usuarioId);
 
-        repositorioZonas.guardar(zona);
+        zona = repositorioZonas.guardar(zona);
         repositorioZonas.agregarCoberturas(zona, coberturas.distritos(), coberturas.codigos());
         ZonaVista vista = aVista(zona, coberturas.distritos(), coberturas.codigos(), null);
         auditoria.registrar("zona", zonaId.toString(), AccionAuditoria.CREAR, null, serializar(vista),
@@ -107,11 +110,12 @@ public class GestionZonas {
     @Transactional
     public ZonaVista editar(UUID id, SolicitudZona solicitud) {
         Zona zona = buscarOLanzar(id);
+        repositorioZonas.bloquearConfiguracion();
         DatosValidados datos = validar(solicitud);
         validarNombreUnico(datos.nombre(), id);
 
         CoberturasValidadas coberturas = construirCoberturas(datos);
-        validarSolapamiento(id, coberturas, datos.nombre());
+        if (zona.getEstado() == EstadoZona.ACTIVO) validarSolapamiento(id, coberturas, datos.nombre());
 
         String anteriores = serializar(aVista(zona, repositorioZonas.coberturasDe(List.of(id)),
                 repositorioZonas.codigosPostalesDe(List.of(id)),
@@ -129,12 +133,17 @@ public class GestionZonas {
     }
 
     @Transactional
-    public ZonaVista cambiarEstado(UUID id, EstadoZona nuevoEstado) {
+    public ZonaVista cambiarEstado(UUID id, EstadoZona nuevoEstado, Long versionZona) {
         Zona zona = buscarOLanzar(id);
+        repositorioZonas.bloquearConfiguracion();
         List<ZonaDistrito> coberturas = repositorioZonas.coberturasDe(List.of(id));
         List<ZonaCodigoPostal> codigos = repositorioZonas.codigosPostalesDe(List.of(id));
         if (zona.getEstado() == nuevoEstado) {
             return aVista(zona, coberturas, codigos, repositorioTarifas.vigente(id).orElse(null));
+        }
+        if (versionZona != null && !versionZona.equals(zona.getVersion())) {
+            throw ErrorDeNegocio.de(409, "DESP_ERROR_ZONA_DESACTUALIZADA",
+                    "La zona fue modificada; vuelve a consultar").conEstadoActual(zona.getEstado().name());
         }
         if (nuevoEstado == EstadoZona.ACTIVO) {
             validarSolapamiento(id, new CoberturasValidadas(coberturas, codigos), zona.getNombre());
@@ -215,7 +224,11 @@ public class GestionZonas {
                     if (!nombresDistritos.add(distrito.toLowerCase(Locale.ROOT))) {
                         errores.add(new ErrorDeCampo("distritos", "Distrito repetido: " + distrito));
                     }
-                    distritos.add(new SolicitudDistritoZona(distrito, limpiarLista(entrada.codigosPostales())));
+                    List<String> codigos = limpiarLista(entrada.codigosPostales());
+                    if (entrada.soloCodigosPostales() && codigos.isEmpty()) {
+                        errores.add(new ErrorDeCampo("codigosPostales", "La delimitación exclusivamente postal requiere códigos"));
+                    }
+                    distritos.add(new SolicitudDistritoZona(distrito, codigos, entrada.soloCodigosPostales()));
                 }
             }
         }
@@ -245,7 +258,7 @@ public class GestionZonas {
         List<ZonaCodigoPostal> codigos = new ArrayList<>();
         datos.distritos().forEach(entrada -> {
             Distrito distrito = porNombre.get(entrada.distrito().toLowerCase(Locale.ROOT));
-            coberturas.add(ZonaDistrito.deDistrito(distrito));
+            if (!entrada.soloCodigosPostales()) coberturas.add(ZonaDistrito.deDistrito(distrito));
             entrada.codigosPostales().forEach(codigo -> codigos.add(ZonaCodigoPostal.de(distrito, codigo)));
         });
         return new CoberturasValidadas(coberturas, codigos);
@@ -256,17 +269,22 @@ public class GestionZonas {
         Map<UUID, List<String>> codigosPorDistrito = codigos.stream()
                 .collect(Collectors.groupingBy(codigo -> codigo.getDistrito().getId(),
                         Collectors.mapping(ZonaCodigoPostal::getCodigoPostal, Collectors.toList())));
-        List<DistritoVista> distritos = coberturas.stream()
-                .filter(cobertura -> cobertura.getDistrito() != null)
-                .map(cobertura -> new DistritoVista(cobertura.getDistrito().getId(),
-                        cobertura.getDistrito().getNombre(),
-                        codigosPorDistrito.getOrDefault(cobertura.getDistrito().getId(), List.of()).stream()
-                                .distinct().sorted().toList()))
+        Map<UUID, Distrito> incluidos = new java.util.LinkedHashMap<>();
+        Set<UUID> completos = new LinkedHashSet<>();
+        coberturas.stream().filter(c -> c.getDistrito() != null).forEach(c -> {
+            incluidos.put(c.getDistrito().getId(), c.getDistrito());
+            completos.add(c.getDistrito().getId());
+        });
+        codigos.forEach(c -> incluidos.putIfAbsent(c.getDistrito().getId(), c.getDistrito()));
+        List<DistritoVista> distritos = incluidos.values().stream()
+                .map(distrito -> new DistritoVista(distrito.getId(), distrito.getNombre(),
+                        codigosPorDistrito.getOrDefault(distrito.getId(), List.of()).stream()
+                                .distinct().sorted().toList(), !completos.contains(distrito.getId())))
                 .sorted(Comparator.comparing(DistritoVista::nombre))
                 .toList();
         return new ZonaVista(zona.getId(), zona.getNombre(), zona.getEstado(), zona.getOrigenDelimitacion(),
                 distritos, tarifa == null ? null : GestionTarifas.aVista(tarifa),
-                zona.getCreadoEn(), zona.getActualizadoEn());
+                 zona.getCreadoEn(), zona.getActualizadoEn(), zona.getVersion());
     }
 
     private static List<String> limpiarLista(List<String> valores) {
