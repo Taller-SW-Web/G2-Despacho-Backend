@@ -7,4 +7,7 @@
 /.idea/
 
 # Resultados locales del análisis de código
-/graphify-out/
+graphify-out/
+
+# Caché local de los verificadores Python
+__pycache__/

@@ -37,6 +37,8 @@ Cada aplicación conserva su código, pruebas, recursos, `pom.xml`, Maven Wrappe
 
 Las APIs de negocio se consumen mediante el Gateway, bajo `/api/v1`. Las rutas internas entre microservicios no se publican por el Gateway. Los puertos se exponen únicamente en `127.0.0.1`.
 
+En local y con el perfil `render`, la consulta de ruta y el guardado de secuencia de `/api/v1/jornadas/{id}/...` se dirigen a Gestión antes que la ruta genérica de jornadas de Operación. La reasignación pertenece también a Gestión. El Gateway conserva `If-Match`, `Idempotency-Key` y ETag; no habilita por ello las llamadas técnicas públicas ni omite JWT. La UI limita el reordenamiento a rutas continuas mientras se aclara el tratamiento de huecos históricos. Los mecanismos internos de identidad y la integración G6 siguen pendientes de acuerdo y no cambian con este incremento.
+
 ## Arranque local
 
 Requisitos: Docker Desktop iniciado, contenedores Linux y arquitectura `amd64` (x86-64) para la imagen PostGIS. Docker compila Java 21 dentro de las imágenes; no hace falta instalar Java o Maven en el equipo para este arranque.
@@ -151,6 +153,21 @@ $tokenServicio = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/api
 ```
 
 El secreto es ficticio y solo pertenece al emisor local. Los clientes de prueba incluyen `modulo-marketplace`, `modulo-chatbot`, `modulo-ventas` y `modulo-despacho`. Gestión tiene configurado el cliente técnico para consultar incidencias y reservar/liberar capacidad y publicar proyecciones en Operación.
+
+## Verificación F-02 publicada, sin escrituras
+
+Con un despacho ya asignado en un entorno autorizado, `pruebas/verificar_f02_publicado.py` comprueba salud, rechazo anónimo, cola autorizada, ruta de Gestión, ruta propia de F-03, coincidencia de jornada/secuencia/ocupación y rechazo de consulta desde un segundo repartidor (`404` conforme al contrato). Solo ejecuta GET por el Gateway; no carga `.env`, no crea recursos, no sigue redirecciones ni imprime JWT o cuerpos de respuesta.
+
+Proporcionar por un canal seguro las variables `F02_GATEWAY` (origen HTTPS; HTTP solo en loopback), `F02_GESTOR_TOKEN`, `F02_REPARTIDOR_TOKEN`, `F02_OTRO_REPARTIDOR_TOKEN`, `F02_DESPACHO` y `F02_JORNADA`. Las tres sesiones deben ser distintas y los dos repartidores deben estar activos/vinculados. Declarar también `F02_SHA_BACKEND`, `F02_SHA_FRONTEND` y `F02_SHA_DOCS` de la revisión publicada para trazabilidad; el verificador no comprueba por sí mismo esos SHA.
+
+Desde la raíz, con Python 3:
+
+```bash
+python3 -B pruebas/verificar_f02_publicado.py > /tmp/opencode/f02-publicado.json
+python3 -B -m unittest discover -s pruebas -p 'test_verificar_f02_publicado.py' -v
+```
+
+El primer comando requiere el directorio de salida creado previamente; puede elegirse otra ruta privada. Devuelve `0` si todas las comprobaciones pasan, `1` si falla alguna y `2` si falta configuración. Ejecutarlo antes de iniciar traslado y después de converger la proyección de F-03. El reporte no acredita login/MFA, variación de capacidad antes/después, captura de ambas apps ni F-04; conservar esa evidencia aparte. Las pruebas unitarias usan dobles explícitos, no el despliegue.
 
 ## Guías locales y planes de cotización
 
