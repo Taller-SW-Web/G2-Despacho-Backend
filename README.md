@@ -37,6 +37,8 @@ Cada aplicación conserva su código, pruebas, recursos, `pom.xml`, Maven Wrappe
 
 Las APIs de negocio se consumen mediante el Gateway, bajo `/api/v1`. Las rutas internas entre microservicios no se publican por el Gateway. Los puertos se exponen únicamente en `127.0.0.1`.
 
+En local y con el perfil `render`, la consulta de ruta y el guardado de secuencia de `/api/v1/jornadas/{id}/...` se dirigen a Gestión antes que la ruta genérica de jornadas de Operación. La reasignación pertenece también a Gestión. El Gateway conserva `If-Match`, `Idempotency-Key` y ETag; no habilita por ello las llamadas técnicas públicas ni omite JWT. La UI limita el reordenamiento a rutas continuas mientras se aclara el tratamiento de huecos históricos. Los mecanismos internos de identidad y la integración G6 siguen pendientes de acuerdo y no cambian con este incremento.
+
 ## Arranque local
 
 Requisitos: Docker Desktop iniciado, contenedores Linux y arquitectura `amd64` (x86-64) para la imagen PostGIS. Docker compila Java 21 dentro de las imágenes; no hace falta instalar Java o Maven en el equipo para este arranque.
@@ -153,6 +155,21 @@ $tokenServicio = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/api
 ```
 
 El secreto es ficticio y solo pertenece al emisor local. Los clientes de prueba incluyen `modulo-marketplace`, `modulo-chatbot`, `modulo-ventas` y `modulo-despacho`. Gestión tiene configurado el cliente técnico para consultar incidencias y reservar/liberar capacidad y publicar proyecciones en Operación.
+
+## Verificación F-02 publicada, sin escrituras
+
+Con un despacho ya asignado en un entorno autorizado, `pruebas/verificar_f02_publicado.py` comprueba salud, rechazo anónimo, cola autorizada, ruta de Gestión, ruta propia de F-03, coincidencia de jornada/secuencia/ocupación y rechazo de consulta desde un segundo repartidor (`404` conforme al contrato). Solo ejecuta GET por el Gateway; no carga `.env`, no crea recursos, no sigue redirecciones ni imprime JWT o cuerpos de respuesta.
+
+Proporcionar por un canal seguro las variables `F02_GATEWAY` (origen HTTPS; HTTP solo en loopback), `F02_GESTOR_TOKEN`, `F02_REPARTIDOR_TOKEN`, `F02_OTRO_REPARTIDOR_TOKEN`, `F02_DESPACHO` y `F02_JORNADA`. Las tres sesiones deben ser distintas y los dos repartidores deben estar activos/vinculados. Declarar también `F02_SHA_BACKEND`, `F02_SHA_FRONTEND` y `F02_SHA_DOCS` de la revisión publicada para trazabilidad; el verificador no comprueba por sí mismo esos SHA.
+
+Desde la raíz, con Python 3:
+
+```bash
+python3 -B pruebas/verificar_f02_publicado.py > /tmp/opencode/f02-publicado.json
+python3 -B -m unittest discover -s pruebas -p 'test_verificar_f02_publicado.py' -v
+```
+
+El primer comando requiere el directorio de salida creado previamente; puede elegirse otra ruta privada. Devuelve `0` si todas las comprobaciones pasan, `1` si falla alguna y `2` si falta configuración. Ejecutarlo antes de iniciar traslado y después de converger la proyección de F-03. El reporte no acredita login/MFA, variación de capacidad antes/después, captura de ambas apps ni F-04; conservar esa evidencia aparte. Las pruebas unitarias usan dobles explícitos, no el despliegue.
 
 ## Guías locales y planes de cotización
 
@@ -273,6 +290,50 @@ Para ejecutar Maven Wrapper fuera de Docker se necesita Java 21. Las suites de i
 Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up --build` no ejecuta estas suites. El recorrido manual registrado arriba tampoco sustituye sus resultados.
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
+
+## Prueba de humo reutilizable de F-04
+
+Desde la raíz del backend, con Python 3.10 o posterior y Docker, construir los tres servicios con sus Maven Wrapper y `clean verify`. Luego ejecutar:
+
+```powershell
+python pruebas/verificar_humo_f04.py --local
+```
+
+El comando reutiliza `pruebas/compose.f02.yaml` con un nombre de proyecto único, bases desechables y Seguridad local. Usa los puertos `18080` y `18090`, que deben estar disponibles, y retira sus contenedores al terminar. Comprueba salud del Gateway y el listado de fallidos por la ruta pública, con `401` sin token, `403` sin permiso y `200` con gestor. La consulta permite una lista vacía. El informe JSON queda en `pruebas/resultados/humo-f04.json`, fuera de Git. El proceso termina con código `1` si falla la preparación o alguna comprobación.
+
+Para un Gateway existente, preparar en el entorno del proceso `HUMO_TOKEN_GESTOR` y `HUMO_TOKEN_SIN_PERMISO` con dos tokens humanos vigentes del emisor que ese despliegue acepta. El primero debe tener `GESTOR_DESPACHO` y el segundo carecer de ese rol. Con G7, obtener las sesiones mediante su flujo de acceso y MFA. Ejecutar, sustituyendo el origen de ejemplo:
+
+```powershell
+python pruebas/verificar_humo_f04.py --gateway-url https://gateway-del-equipo.example --version-desplegada revision-confirmada
+```
+
+Las peticiones son de lectura y los tokens se reciben por variables de entorno. El informe guarda el estado HTTP y la estructura esperada, sin cuerpos de despachos ni credenciales. `commitVerificador` identifica el código de la herramienta y `versionDesplegada` registra la revisión indicada por el responsable del despliegue. Cada servicio sigue validando sus permisos. La ejecución local acredita el Gateway y los proveedores del entorno desechable con Seguridad temporal; la aceptación con G7 se registra al repetir la prueba con sus sesiones reales.
+
+Para comprobar que la herramienta falla ante acceso anónimo permitido, respuestas inválidas, filtración de contenido o redirecciones:
+
+```powershell
+python -m unittest discover -s pruebas -p test_verificar_humo_f04.py -v
+```
+
+## Prueba de contrato de recepción F-04 por Gateway
+
+Con los mismos requisitos y JAR construidos de la prueba de humo, desde la raíz del backend:
+
+```powershell
+python pruebas/verificar_contrato_recepcion_f04.py
+```
+
+El comando prepara datos sintéticos en su propio proyecto Compose desechable. Crea una zona, un perfil y un vehículo de prueba; abre una jornada, simula y asigna un despacho y prepara `FALLIDO/NO_INTENTADO` mediante la API interna real. Esa preparación acredita el estado requerido para recibir; la captura de un fallo con foto desde F-03 se verifica aparte.
+
+Comprueba el contrato vigente de [recepción en Gestión](../despacho-docs/integraciones/api-contract-gestion-despachos.md#521-confirmar-recepción-en-centro--es-f04-03) pasando por Gateway: `401/403`, seis variantes inválidas con `400`, incidencia o versión obsoletas con `409`, recepción `202` con sello `false` sin observación y repetición exacta. Verifica el código de error, Problem Details, `Cache-Control: no-store` en el `202` y ausencia de escrituras ante rechazos. Tras confirmar la liberación real en Operación, exige una recepción, un historial, una solicitud y una reserva original liberada, sin incrementar intentos ni generar eventos a Ventas. La ocupación de la jornada sintética pasa de 2 kg, 0,01 m³ y un paquete a cero; repetir conserva respuesta, fecha de liberación y conteos.
+
+Solo admite su entorno desechable; utiliza `18080/18090` y lo retira al finalizar. No apuntarlo a bases compartidas ni ejecutarlo a la vez que la prueba de humo u otro runner que use esos puertos. El informe `pruebas/resultados/contrato-recepcion-f04.json` queda fuera de Git, con resultados y datos sintéticos antes/después, sin tokens. Termina con código `1` ante un incumplimiento o error de preparación. G7 real, frontend, reinicios y aceptación en nube siguen pendientes.
+
+Las comprobaciones propias de ambos verificadores se ejecutan con:
+
+```powershell
+python -m unittest discover -s pruebas -p 'test_verificar_*.py' -v
+```
 
 ## Verificación integrada de rutas F-02
 
