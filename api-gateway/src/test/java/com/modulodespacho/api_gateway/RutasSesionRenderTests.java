@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("render")
 class RutasSesionRenderTests {
+    private static final String[] ORIGENES = {"https://despacho-administrativo.vercel.app", "https://despacho-repartidor.vercel.app"};
     private static final AtomicReference<String> RECIBIDO = new AtomicReference<>();
     private static final HttpServer SEGURIDAD = servidor();
     @LocalServerPort int puerto;
@@ -50,6 +51,52 @@ class RutasSesionRenderTests {
         cliente.post().uri("/api/v1/auth/token").exchange().expectStatus().isUnauthorized();
         assertThat(RECIBIDO.get()).isNull();
     }
+    @Test void conservaUnSoloOrigenCorsCuandoSeguridadTambienLoPublica() {
+        var cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        for (String origen : ORIGENES) {
+            for (String ruta : new String[]{"login", "otp/solicitar", "otp/verificar", "refresh", "logout"}) {
+                cliente.post().uri("/api/v1/auth/" + ruta).header("Origin", origen)
+                        .header("Content-Type", "application/json").bodyValue("{\"prueba\":\"valor\"}")
+                        .exchange().expectStatus().isOk()
+                        .expectHeader().valueEquals("Access-Control-Allow-Origin", origen)
+                        .expectBody().json("{}");
+                assertThat(RECIBIDO.get()).contains("POST /api/v1/auth/" + ruta, "valor");
+            }
+        }
+    }
+    @Test void conservaCorsYEstadoOriginalEnRespuestasDeSeguridad() {
+        var cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        for (String origen : ORIGENES) {
+            for (int estado : new int[]{202, 204, 401, 429, 503}) {
+                var respuesta = cliente.post().uri("/api/v1/auth/login?estadoPrueba=" + estado)
+                        .header("Origin", origen).header("Content-Type", "application/json").bodyValue("{}")
+                        .exchange().expectStatus().isEqualTo(estado)
+                        .expectHeader().valueEquals("Access-Control-Allow-Origin", origen);
+                if (estado == 204) respuesta.expectBody().isEmpty();
+                else respuesta.expectBody().json("{}");
+            }
+        }
+    }
+    @Test void permitePreflightPublicadoYRechazaOrigenAjenoSinLlamarASeguridad() {
+        var cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        for (String origen : ORIGENES) {
+            RECIBIDO.set(null);
+            cliente.options().uri("/api/v1/auth/login").header("Origin", origen)
+                    .header("Access-Control-Request-Method", "POST")
+                    .header("Access-Control-Request-Headers", "Content-Type")
+                    .exchange().expectStatus().isOk()
+                    .expectHeader().valueEquals("Access-Control-Allow-Origin", origen);
+            assertThat(RECIBIDO.get()).isNull();
+        }
+        for (String metodo : new String[]{"OPTIONS", "POST"}) {
+            RECIBIDO.set(null);
+            cliente.method(org.springframework.http.HttpMethod.valueOf(metodo)).uri("/api/v1/auth/login")
+                    .header("Origin", "https://ajeno.example").header("Access-Control-Request-Method", "POST")
+                    .exchange().expectStatus().isForbidden()
+                    .expectHeader().doesNotExist("Access-Control-Allow-Origin");
+            assertThat(RECIBIDO.get()).isNull();
+        }
+    }
     private static HttpServer servidor() {
         try {
             var servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -59,8 +106,13 @@ class RutasSesionRenderTests {
                         + new String(solicitud.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
                 byte[] respuesta = "{}".getBytes(StandardCharsets.UTF_8);
                 solicitud.getResponseHeaders().set("Content-Type", "application/json");
-                solicitud.sendResponseHeaders(200, respuesta.length);
-                try (var salida = solicitud.getResponseBody()) { salida.write(respuesta); }
+                // Reproduce G7: el destino también añade CORS y el Gateway ya lo añadió.
+                String origen = solicitud.getRequestHeaders().getFirst("Origin");
+                if (origen != null) solicitud.getResponseHeaders().set("Access-Control-Allow-Origin", origen);
+                String consulta = solicitud.getRequestURI().getQuery();
+                int estado = consulta == null ? 200 : Integer.parseInt(consulta.substring("estadoPrueba=".length()));
+                solicitud.sendResponseHeaders(estado, estado == 204 ? -1 : respuesta.length);
+                if (estado != 204) try (var salida = solicitud.getResponseBody()) { salida.write(respuesta); }
                 solicitud.close();
             });
             servidor.start(); return servidor;
