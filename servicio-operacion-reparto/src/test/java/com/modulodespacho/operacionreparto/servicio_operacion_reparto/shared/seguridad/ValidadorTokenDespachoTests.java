@@ -13,8 +13,11 @@ class ValidadorTokenDespachoTests {
     private final ValidadorTokenDespacho validador = new ValidadorTokenDespacho("api-despacho");
 
     private Jwt token(String tipo, List<String> audiencia) {
-        return Jwt.withTokenValue("prueba").header("alg", "RS256").subject(
-                    "acceso".equals(tipo) ? "11111111-1111-1111-1111-111111111111" : "modulo-despacho")
+        return token(tipo, audiencia, "acceso".equals(tipo) ? "11111111-1111-1111-1111-111111111111" : "modulo-despacho");
+    }
+
+    private Jwt token(String tipo, List<String> audiencia, String sujeto) {
+        return Jwt.withTokenValue("prueba").header("alg", "RS256").subject(sujeto)
                 .claim("tipo", tipo).audience(audiencia)
                 .claim("roles", List.of()).claim("scope", "").claim("jti", "id-prueba")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
@@ -23,8 +26,16 @@ class ValidadorTokenDespachoTests {
     @Test
     void aceptaServicioParaDespachoYRechazaAudienciaAusenteOAjena() {
         assertThat(validador.validate(token("servicio", List.of("api-despacho"))).hasErrors()).isFalse();
-        assertThat(validador.validate(token("servicio", List.of())).hasErrors()).isTrue();
-        assertThat(validador.validate(token("servicio", List.of("api-ventas"))).hasErrors()).isTrue();
+        assertThat(validador.validate(token("servicio", List.of(), "modulo-ventas")).hasErrors()).isTrue();
+        assertThat(validador.validate(token("servicio", List.of("api-ventas"), "modulo-ventas")).hasErrors()).isTrue();
+    }
+
+    @Test
+    void aceptaClienteInternoConAudienciasEmitidasPorG7SinApiDespacho() {
+        var audienciasG7 = List.of("api-productos", "api-seguridad", "api-ventas");
+        assertThat(validador.validate(token("servicio", audienciasG7)).hasErrors()).isFalse();
+        assertThat(validador.validate(token("servicio", List.of())).hasErrors()).isFalse();
+        assertThat(validador.validate(token("servicio", audienciasG7, "modulo-marketplace")).hasErrors()).isTrue();
         Jwt sinAudiencia = Jwt.withTokenValue("prueba").header("alg", "RS256").subject("modulo-chatbot")
                 .claim("tipo", "servicio").expiresAt(Instant.now().plusSeconds(300)).build();
         assertThat(validador.validate(sinAudiencia).hasErrors()).isTrue();
