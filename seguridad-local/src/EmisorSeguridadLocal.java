@@ -41,6 +41,7 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
     private static final Map<String, Perfil> PERFILES = Map.of(
             "gestor", new Perfil("11111111-1111-4111-8111-111111111111", List.of("GESTOR_DESPACHO")),
             "repartidor", new Perfil("22222222-2222-4222-8222-222222222222", List.of()),
+            "repartidor-kevin", new Perfil("44444444-4444-4444-8444-444444444444", List.of()),
             "sin-rol", new Perfil("33333333-3333-4333-8333-333333333333", List.of()));
 
     /** Cuentas ficticias del login propuesto; Seguridad y Usuarios entregará las cuentas reales. */
@@ -48,6 +49,8 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
     private static final Map<String, String> USUARIOS = Map.of(
             "repartidor.prueba", "repartidor",
             "mrojas@despacho.pe", "repartidor",
+            "gerardo@despacho.pe", "repartidor",
+            "kevin@despacho.pe", "repartidor-kevin",
             "gestor.prueba", "gestor");
 
     private final HttpServer servidor;
@@ -176,7 +179,7 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
         Perfil perfil = PERFILES.get(formulario.getOrDefault("perfil", ""));
         if (perfil == null) {
             throw new SolicitudInvalida(400, "PERFIL_INVALIDO",
-                    "Utilizar perfil=gestor, repartidor o sin-rol");
+                    "Utilizar perfil=gestor, repartidor, repartidor-kevin o sin-rol");
         }
         Map<String, Object> claims = claims(perfil.sujeto(), "acceso", 900);
         claims.put("roles", perfil.roles());

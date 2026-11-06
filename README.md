@@ -133,13 +133,15 @@ Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS25
 
 | Usuario de prueba (`POST /api/v1/auth/login`) | Clave | Perfil emitido |
 |---|---|---|
-| `repartidor.prueba` o `mrojas@despacho.pe` | `Ruta2026!` | `repartidor` |
+| `gerardo@despacho.pe` (alias anteriores: `repartidor.prueba`, `mrojas@despacho.pe`) | `Ruta2026!` | `repartidor` |
+| `kevin@despacho.pe` | `Ruta2026!` | `repartidor-kevin` |
 | `gestor.prueba` | `Ruta2026!` | `gestor` |
 
 | Perfil de prueba | Identificador | Uso |
 |---|---|---|
 | `gestor` | `11111111-1111-4111-8111-111111111111` | Rol `GESTOR_DESPACHO`. |
 | `repartidor` | `22222222-2222-4222-8222-222222222222` | Requiere perfil local activo, vínculo con ese usuario y propiedad del recurso. |
+| `repartidor-kevin` | `44444444-4444-4444-8444-444444444444` | Segunda identidad independiente; requiere su propio perfil local activo y vinculado. |
 | `sin-rol` | `33333333-3333-4333-8333-333333333333` | Comprobaciones de denegación de permisos. |
 
 Los tokens de usuario duran 15 minutos. Las claves RSA se generan en memoria al arrancar; al reiniciar Seguridad, obtener tokens nuevos y reiniciar los consumidores si conservan las claves en caché. El emisor interno es `http://seguridad-local:8090/api/v1/auth`.
@@ -185,7 +187,7 @@ Recorrido inicial, usando siempre el origen `localhost` para conservar la sesió
 
 1. Abrir `http://localhost:5173/desarrollo/f01`, seleccionar **Gestor de Despacho** y pulsar **Generar sesión de prueba**. La misma sesión permite navegar a las otras funcionalidades administrativas. Renovarla desde ese probador cuando venza.
 2. En **Zonas y tarifas**, crear una zona activa y configurar una tarifa si se desea probar cotizaciones.
-3. En **Repartidores**, registrar un perfil de prueba. Desde **Más acciones > Vincular cuenta**, asociar el usuario temporal `22222222-2222-4222-8222-222222222222`. Ese identificador solo puede vincularse a un repartidor; representa el único perfil repartidor del emisor temporal.
+3. En **Repartidores**, registrar los perfiles de prueba. Desde **Más acciones > Vincular cuenta**, asociar `22222222-2222-4222-8222-222222222222` a Gerardo y `44444444-4444-4444-8444-444444444444` a Kevin. Cada identidad solo puede vincularse a un perfil. El emisor no crea estos registros en la base automáticamente.
 4. En **Vehículos**, registrar una furgoneta disponible con capacidades positivas. Por ejemplo: 100 kg, 1 m³ y 10 paquetes.
 5. En **Monitoreo de flota**, pulsar **Abrir jornada**, seleccionar el repartidor vinculado, el vehículo, la zona y la fecha de hoy. Estar vinculado por sí solo no lo hace disponible para asignación.
 6. En **Programación**, usar **Generar pedido de prueba** y asignarlo a un candidato con jornada activa y capacidad suficiente. Los pedidos simulados se guardan en PostgreSQL local y comienzan pendientes de asignación.
