@@ -62,7 +62,7 @@ class ReasignacionHttpTests {
         TRANSFERENCIAS.clear(); CLAVES.clear(); MODO.set("OK");
         when(identidad.decode("gestor")).thenReturn(token("acceso","gestor-reasignacion",List.of("GESTOR_DESPACHO"),""));
         when(identidad.decode("otro")).thenReturn(token("acceso","otro",List.of(),""));
-        when(identidad.decode("servicio")).thenReturn(token("servicio","modulo-despacho",List.of(),"gestion:despachos:transicionar"));
+        when(identidad.decode("servicio")).thenReturn(token("servicio","modulo-despacho",List.of(),""));
         insertar(despacho,repOrigen,jornadaOrigen,1,"ASIGNADO");
         insertar(fijo,repOrigen,jornadaOrigen,2,"EN_CAMINO");
         insertar(otro,repOrigen,jornadaOrigen,3,"ASIGNADO");
