@@ -121,8 +121,8 @@ public class ConfiguracionSeguridad {
                     }
                     reglas
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/motivos-fallo").hasRole("GESTOR_DESPACHO")
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/despachos/*/transiciones").access(operacionConScope("gestion:despachos:transicionar"))
-                        .requestMatchers(HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo").access(operacionConScope("gestion:catalogos:leer"))
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/despachos/*/transiciones").access(operacionInterna())
+                        .requestMatchers(HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo").access(operacionInterna())
                         .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones").access(servicioConScope("cotizaciones:calcular"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))
@@ -169,12 +169,11 @@ public class ConfiguracionSeguridad {
         };
     }
 
-    /** Rutas /internal: solo el cliente técnico del propio módulo, con el scope de la operación. */
-    private AuthorizationManager<RequestAuthorizationContext> operacionConScope(String scope) {
+    /** Rutas /internal: solo el cliente técnico del propio módulo; la autorización no depende de scopes. */
+    private AuthorizationManager<RequestAuthorizationContext> operacionInterna() {
         return (autenticacion, contexto) -> {
             Authentication identidad = autenticacion.get();
-            return new AuthorizationDecision(esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName())
-                    && identidad.getAuthorities().stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope)));
+            return new AuthorizationDecision(esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName()));
         };
     }
 
