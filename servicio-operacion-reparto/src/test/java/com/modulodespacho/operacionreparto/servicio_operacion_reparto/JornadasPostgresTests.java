@@ -47,7 +47,7 @@ class JornadasPostgresTests {
         sql.sql("TRUNCATE transferencias_capacidad").update();
         sql.sql("TRUNCATE auditoria_configuracion,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
         when(decodificador.decode("gestor")).thenReturn(token("acceso",actor.toString(),""));
-        when(decodificador.decode("capacidad")).thenReturn(token("servicio","modulo-despacho","operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir"));
+        when(decodificador.decode("capacidad")).thenReturn(token("servicio","modulo-despacho",""));
         sql.sql("""
             INSERT INTO repartidores(id,nombres,apellidos,dni,telefono,correo,numero_brevete,turno_habitual,estado_registro,
               id_usuario_seguridad,estado_vinculacion,creado_por,actualizado_por)

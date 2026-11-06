@@ -88,7 +88,7 @@ class IntegracionJwtSeguridadTests {
     @Test
     void validaServicioParaDespachoYRechazaAudienciaAjenaYRefresco() throws Exception {
         var servicio = Map.<String, Object>of("tipo", "servicio", "sub", "modulo-despacho",
-                "scope", "gestion:catalogos:leer", "aud", List.of("api-despacho"));
+                "aud", List.of("api-despacho"));
         assertThat(decodificador.decode(firmar(servicio, null, clave)).getSubject()).isEqualTo("modulo-despacho");
         var ajeno = new java.util.HashMap<>(servicio); ajeno.put("aud", List.of("api-ventas"));
         String tokenAjeno = firmar(ajeno, null, clave);

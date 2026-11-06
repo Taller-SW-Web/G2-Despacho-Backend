@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConsultaIncidenciasOperativasHttpTests {
 
     private static final String RUTA = "/internal/v1/operacion/consulta-incidencias";
-    private static final String SCOPE = "operacion:incidencias:leer";
+    private static final String SCOPE = "";
     @Autowired MockMvc http;
     @Autowired JdbcClient sql;
     @MockitoBean JwtDecoder decodificador;
