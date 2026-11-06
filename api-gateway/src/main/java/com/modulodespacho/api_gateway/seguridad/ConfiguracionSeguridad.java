@@ -101,7 +101,9 @@ public class ConfiguracionSeguridad {
                 .cors(configuracion -> configuracion.configurationSource(fuenteCors))
                 .authorizeExchange(reglas -> {
                     reglas.pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
-                    reglas.pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll();
+                    // Cada endpoint valida su propia credencial: contraseña, desafío o refresh.
+                    reglas.pathMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/otp/solicitar",
+                            "/api/v1/auth/otp/verificar", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll();
                     if (modoDemo) reglas.pathMatchers("/api/v1/**").permitAll();
                     else reglas.pathMatchers("/api/v1/**").authenticated();
                     reglas.anyExchange().denyAll();

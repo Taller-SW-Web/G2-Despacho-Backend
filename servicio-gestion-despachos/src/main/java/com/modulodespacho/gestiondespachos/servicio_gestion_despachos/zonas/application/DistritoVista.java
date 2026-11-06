@@ -3,5 +3,5 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.app
 import java.util.List;
 import java.util.UUID;
 
-public record DistritoVista(UUID id, String nombre, List<String> codigosPostales) {
+public record DistritoVista(UUID id, String nombre, List<String> codigosPostales, boolean soloCodigosPostales) {
 }

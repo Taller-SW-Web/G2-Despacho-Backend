@@ -13,8 +13,10 @@ class ValidadorTokenDespachoTests {
     private final ValidadorTokenDespacho validador = new ValidadorTokenDespacho("api-despacho");
 
     private Jwt token(String tipo, List<String> audiencia) {
-        return Jwt.withTokenValue("prueba").header("alg", "RS256").subject("identidad-prueba")
+        return Jwt.withTokenValue("prueba").header("alg", "RS256").subject(
+                    "acceso".equals(tipo) ? "11111111-1111-1111-1111-111111111111" : "modulo-despacho")
                 .claim("tipo", tipo).audience(audiencia)
+                .claim("roles", List.of()).claim("scope", "gestion:catalogos:leer").claim("jti", "id-prueba")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
     }
 
@@ -39,6 +41,33 @@ class ValidadorTokenDespachoTests {
         Jwt sinVencimiento = Jwt.withTokenValue("prueba").header("alg", "RS256").subject("prueba")
                 .claim("tipo", "acceso").build();
         assertThat(validador.validate(sinVencimiento).hasErrors()).isTrue();
+    }
+
+    @Test
+    void exigeElPerfilDeClaimsDeG7SinExigirRolGlobalDeRepartidor() {
+        var base = token("acceso", List.of());
+        assertThat(validador.validate(base).hasErrors()).isFalse();
+        for (String campo : List.of("iat", "jti", "roles")) {
+            Jwt incompleto = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                    .claims(c -> { c.putAll(base.getClaims()); c.remove(campo); }).build();
+            assertThat(validador.validate(incompleto).hasErrors()).as(campo).isTrue();
+        }
+        for (Object roles : List.of("GESTOR_DESPACHO", List.of(1))) {
+            Jwt invalido = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                    .claims(c -> { c.putAll(base.getClaims()); c.put("roles", roles); }).build();
+            assertThat(validador.validate(invalido).hasErrors()).isTrue();
+        }
+        Jwt sujetoInvalido = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                .claims(c -> c.putAll(base.getClaims())).subject("no-es-uuid").build();
+        assertThat(validador.validate(sujetoInvalido).hasErrors()).isTrue();
+    }
+
+    @Test
+    void rechazaScopeDeServicioConFormaDistintaDeTexto() {
+        var base = token("servicio", List.of("api-despacho"));
+        Jwt invalido = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                .claims(c -> { c.putAll(base.getClaims()); c.put("scope", List.of("gestion:catalogos:leer")); }).build();
+        assertThat(validador.validate(invalido).hasErrors()).isTrue();
     }
 
     @Test

@@ -8,6 +8,10 @@ spring:
       server:
         webflux:
           routes:
+            - id: gestion-rutas-programacion
+              uri: ${GESTION_DESPACHOS_URL:https://taller-servicio-gestion-despachos.onrender.com}
+              predicates:
+                - Path=/api/v1/jornadas/*/ruta,/api/v1/jornadas/*/secuencia
             - id: gestion-despachos
               uri: ${GESTION_DESPACHOS_URL:https://taller-servicio-gestion-despachos.onrender.com}
               predicates:

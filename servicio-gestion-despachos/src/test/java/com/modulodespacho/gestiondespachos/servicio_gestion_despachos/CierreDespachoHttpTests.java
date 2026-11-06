@@ -119,6 +119,57 @@ class CierreDespachoHttpTests {
         for (String ruta : List.of("/api/v1/despachos/fallidos", "/api/v1/despachos/pendientes"))
             http.perform(get(ruta).header("Authorization", "Bearer gestor")).andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(0));
     }
+
+    @Test void consultaCiclosAnterioresConDesempateEstableSinAlterarElHistorial() throws Exception {
+        String incidenciaAnterior = id(150);
+        String asignacionAnterior = id(151);
+        String falloAnterior = id(152);
+        String recepcionAnterior = id(153);
+        sql.sql("""
+                INSERT INTO historial_estados_despacho(id,despacho_id,tipo_operacion,estado_anterior,estado_nuevo,
+                  funcionalidad_origen,ejecutor_tipo,ejecutor_id,origen,datos,registrado_en)
+                VALUES
+                  (CAST(:fallo AS uuid),CAST(:despacho AS uuid),'TRANSICION','EN_CAMINO','FALLIDO',
+                    'F-03','USUARIO',:actor,'MANUAL',jsonb_build_object('idIncidencia',CAST(:incidencia AS text)),
+                    TIMESTAMPTZ '2026-10-23 15:00:00Z'),
+                  (CAST(:asignacion AS uuid),CAST(:despacho AS uuid),'TRANSICION','PENDIENTE_ASIGNACION','ASIGNADO',
+                    'F-02','USUARIO',:actor,'MANUAL','{}',TIMESTAMPTZ '2026-10-23 15:00:00Z'),
+                  (CAST(:recepcion AS uuid),CAST(:despacho AS uuid),'RECEPCION_EN_CENTRO','FALLIDO','FALLIDO',
+                    'F-04','USUARIO',:actor,'MANUAL',
+                    jsonb_build_object('idIncidencia',CAST(:incidencia AS text),'idReserva','reserva-anterior',
+                      'selloIntacto',true,'observacionRecepcion','Primer retorno'),TIMESTAMPTZ '2026-10-23 16:00:00Z')
+                """).param("despacho", DESPACHO).param("actor", ACTOR).param("incidencia", incidenciaAnterior)
+                .param("asignacion", asignacionAnterior).param("fallo", falloAnterior).param("recepcion", recepcionAnterior)
+                .update();
+        ((RelojMutable) reloj).ahora.set(AHORA.plusSeconds(1));
+        enviar("gestor", cuerpo("Cierre del segundo ciclo", null)).andExpect(status().isOk());
+
+        String historialAntes = historialPersistido();
+        String detalleRuta = "/api/v1/despachos/" + DESPACHO + "/incidencia";
+        http.perform(get(detalleRuta)).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.historial").doesNotExist());
+        http.perform(get(detalleRuta).header("Authorization", "Bearer otro"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.historial").doesNotExist());
+        for (int lectura = 0; lectura < 2; lectura++) {
+            http.perform(get(detalleRuta).header("Authorization", "Bearer gestor"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.historial.length()").value(6))
+                    .andExpect(jsonPath("$.historial[0].id").value(asignacionAnterior))
+                    .andExpect(jsonPath("$.historial[1].id").value(falloAnterior))
+                    .andExpect(jsonPath("$.historial[1].datos.idIncidencia").value(incidenciaAnterior))
+                    .andExpect(jsonPath("$.historial[2].id").value(recepcionAnterior))
+                    .andExpect(jsonPath("$.historial[2].datos.idReserva").value("reserva-anterior"))
+                    .andExpect(jsonPath("$.historial[2].datos.observacionRecepcion").value("Primer retorno"))
+                    .andExpect(jsonPath("$.historial[4].datos.idIncidencia").value(INCIDENCIA))
+                    .andExpect(jsonPath("$.historial[4].datos.selloIntacto").value(false))
+                    .andExpect(jsonPath("$.historial[5].datos.idIncidencia").value(INCIDENCIA))
+                    .andExpect(jsonPath("$.historial[5].datos.motivoCierre").value("Cierre del segundo ciclo"))
+                    .andExpect(jsonPath("$.historial[5].datos.controlCierre").doesNotExist());
+        }
+        assertThat(historialPersistido()).isEqualTo(historialAntes);
+        assertThat(numero("SELECT version FROM despachos")).isEqualTo(10);
+        assertThat(numero("SELECT count(*) FROM eventos_salientes")).isEqualTo(1);
+        assertThat(numero("SELECT count(*) FROM liberaciones_capacidad")).isEqualTo(1);
+    }
+
     @Test void cierrePermiteAnulacionLimiteSuperadoIntentosDisponiblesYNoIntentado() throws Exception {
       for (boolean simulado : List.of(false,true)) {
         for (int intentos : List.of(0, 1, 2, 3)) {
@@ -240,6 +291,7 @@ class CierreDespachoHttpTests {
     }
     @Test void liberacionPendienteContinuaDespuesDelCierreSinCambiarSuVersion() throws Exception {
         enviar("gestor", cuerpo("Cierre",null)).andExpect(status().isOk());
+        String historialAntes = historialPersistido();
         var puerto = org.mockito.Mockito.mock(LiberadorCapacidad.class);
         when(puerto.liberar(any())).thenReturn(new LiberadorCapacidad.Resultado(true,false,null,AHORA));
         var pendientes = new LiberacionesCapacidadJdbc(sql);
@@ -248,6 +300,7 @@ class CierreDespachoHttpTests {
         }
         assertThat(texto("SELECT estado FROM liberaciones_capacidad")).isEqualTo("CONFIRMADA");
         assertThat(numero("SELECT version FROM despachos")).isEqualTo(10);
+        assertThat(historialPersistido()).isEqualTo(historialAntes);
     }
     @Test void anulacionRealImpideReprogramarYPermiteCierreConVersionActualizada() throws Exception {
         when(decodificador.decode("ventas")).thenReturn(Jwt.withTokenValue("ventas").header("alg","RS256").subject("modulo-ventas")
@@ -294,6 +347,7 @@ class CierreDespachoHttpTests {
         try {
             String original = enviar("gestor", cuerpo("Decisión operativa", null)).andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString();
+            String historialAntes = historialPersistido();
             var cliente = org.springframework.web.client.RestClient.builder()
                     .baseUrl("http://127.0.0.1:" + servidor.getAddress().getPort()).build();
             var entrega = new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.infrastructure.EntregaEventosProgramacion(
@@ -306,6 +360,7 @@ class CierreDespachoHttpTests {
                 entrega.ejecutar();
                 assertThat(texto("SELECT estado_envio FROM eventos_salientes")).isEqualTo(intento == 5 ? "ENVIO_FALLIDO" : "PENDIENTE");
                 assertThat(texto("SELECT estado FROM despachos")).isEqualTo("DEVUELTO_A_ORIGEN");
+                assertThat(historialPersistido()).isEqualTo(historialAntes);
             }
             enviar("gestor", cuerpo("Decisión operativa", null)).andExpect(status().isOk()).andExpect(content().json(original));
             // Reenvío del mismo evento controlado: no crea otra decisión.
@@ -315,6 +370,7 @@ class CierreDespachoHttpTests {
             entrega.ejecutar();
             assertThat(texto("SELECT estado_envio FROM eventos_salientes")).isEqualTo("ENVIADO");
             assertThat(numero("SELECT intentos_envio FROM eventos_salientes")).isEqualTo(7);
+            assertThat(historialPersistido()).isEqualTo(historialAntes);
             assertThat(cuerpos).hasSize(7).allMatch(cuerpo -> cuerpo.equals(cuerpos.getFirst()));
             var evento = json.readTree(cuerpos.getFirst());
             assertThat(evento.path("tipo").asString()).isEqualTo("DESPACHO_DEVUELTO_A_ORIGEN");
@@ -334,7 +390,7 @@ class CierreDespachoHttpTests {
             sentencia.execute("INSERT INTO historial_estados_despacho(despacho_id,tipo_operacion,estado_anterior,estado_nuevo,funcionalidad_origen,ejecutor_tipo,origen,datos) VALUES ('"+DESPACHO+"','TRANSICION','FALLIDO','DEVUELTO_A_ORIGEN','F-04','SISTEMA','MANUAL','{}')");
         }
         var migracion = Flyway.configure().dataSource(url,postgres.getUsername(),postgres.getPassword()).load();
-        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("7");
+        migracion.migrate(); assertThat(migracion.info().current().getVersion().toString()).isEqualTo("10");
         try (var conexion = java.sql.DriverManager.getConnection(url,postgres.getUsername(),postgres.getPassword()); var sentencia = conexion.createStatement()) {
             var filas = sentencia.executeQuery("SELECT datos::text FROM historial_estados_despacho");
             assertThat(filas.next()).isTrue(); assertThat(filas.getString(1)).isEqualTo("{}");
@@ -370,6 +426,9 @@ class CierreDespachoHttpTests {
     private String ruta() { return "/api/v1/despachos/"+DESPACHO+"/devolucion-origen"; }
     private int numero(String consulta) { return sql.sql(consulta).query(Integer.class).single(); }
     private String texto(String consulta) { return sql.sql(consulta).query(String.class).single(); }
+    private String historialPersistido() {
+        return texto("SELECT jsonb_agg(to_jsonb(h) ORDER BY h.registrado_en, h.id)::text FROM historial_estados_despacho h");
+    }
     private static String id(long valor) { return new UUID(0,valor).toString(); }
     private Jwt token(String actor,String tipo,List<String> roles) {
         return Jwt.withTokenValue("prueba").header("alg","RS256").subject(actor).claim("tipo",tipo).claim("roles",roles)

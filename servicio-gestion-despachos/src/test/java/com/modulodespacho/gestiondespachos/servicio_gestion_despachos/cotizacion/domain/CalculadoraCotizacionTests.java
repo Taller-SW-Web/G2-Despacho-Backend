@@ -11,9 +11,9 @@ class CalculadoraCotizacionTests {
     @Test
     void calculaTotalesYCostoSegunElCasoCa01() {
         DatosFisicos pol = new DatosFisicos(new BigDecimal("0.25"), new BigDecimal("10"),
-                new BigDecimal("10"), new BigDecimal("10"));
+                new BigDecimal("10"), new BigDecimal("10"), "ACTIVO", java.time.Instant.EPOCH);
         DatosFisicos zap = new DatosFisicos(new BigDecimal("1.40"), new BigDecimal("20"),
-                new BigDecimal("20"), new BigDecimal("40"));
+                new BigDecimal("20"), new BigDecimal("40"), "ACTIVO", java.time.Instant.EPOCH);
 
         CalculadoraCotizacion.Totales totales = CalculadoraCotizacion.calcular(
                 List.of(new CalculadoraCotizacion.ItemCalculo(pol, 5),
@@ -39,7 +39,7 @@ class CalculadoraCotizacionTests {
     @Test
     void detectaDatosFisicosIncompletos() {
         DatosFisicos incompleto = new DatosFisicos(BigDecimal.ZERO, new BigDecimal("10"),
-                new BigDecimal("10"), new BigDecimal("10"));
+                new BigDecimal("10"), new BigDecimal("10"), "ACTIVO", java.time.Instant.EPOCH);
         assertThat(incompleto.completo()).isFalse();
     }
 }

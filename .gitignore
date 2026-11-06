@@ -5,3 +5,14 @@
 
 # Configuración personal del IDE
 /.idea/
+
+# Resultados locales del análisis de código
+graphify-out/
+
+# Caché local de los verificadores Python
+__pycache__/
+/graphify-out/
+
+# Informes de pruebas de humo
+/pruebas/resultados/
+/pruebas/__pycache__/

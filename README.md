@@ -37,6 +37,8 @@ Cada aplicación conserva su código, pruebas, recursos, `pom.xml`, Maven Wrappe
 
 Las APIs de negocio se consumen mediante el Gateway, bajo `/api/v1`. Las rutas internas entre microservicios no se publican por el Gateway. Los puertos se exponen únicamente en `127.0.0.1`.
 
+En local y con el perfil `render`, la consulta de ruta y el guardado de secuencia de `/api/v1/jornadas/{id}/...` se dirigen a Gestión antes que la ruta genérica de jornadas de Operación. La reasignación pertenece también a Gestión. El Gateway conserva `If-Match`, `Idempotency-Key` y ETag; no habilita por ello las llamadas técnicas públicas ni omite JWT. La UI limita el reordenamiento a rutas continuas mientras se aclara el tratamiento de huecos históricos. Los mecanismos internos de identidad y la integración G6 siguen pendientes de acuerdo y no cambian con este incremento.
+
 ## Arranque local
 
 Requisitos: Docker Desktop iniciado, contenedores Linux y arquitectura `amd64` (x86-64) para la imagen PostGIS. Docker compila Java 21 dentro de las imágenes; no hace falta instalar Java o Maven en el equipo para este arranque.
@@ -129,20 +131,30 @@ El mismo token se puede introducir en `Authorize` de Swagger. Rutas iniciales pa
 
 ## Seguridad temporal
 
-Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Implementa el login propuesto a Seguridad (contrato externo §8.6) con cuentas ficticias para probar la app del repartidor. No utilizar el emisor temporal para un despliegue público.
+Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Reproduce el acceso humano documentado por G7 (contrato externo §8.6) con cuentas ficticias para probar ambas apps. No utilizar el emisor temporal para un despliegue público.
 
 | Usuario de prueba (`POST /api/v1/auth/login`) | Clave | Perfil emitido |
 |---|---|---|
-| `repartidor.prueba` o `mrojas@despacho.pe` | `Ruta2026!` | `repartidor` |
-| `gestor.prueba` | `Ruta2026!` | `gestor` |
+| `gerardo@despacho.pe` (alias anteriores: `repartidor.prueba`, `mrojas@despacho.pe`) | `Ruta2026!` | `repartidor` |
+| `kevin@despacho.pe` | `Ruta2026!` | `repartidor-kevin` |
+| `gestor@despacho.pe` (alias: `gestor.prueba`) | `Ruta2026!` | `gestor`, con desafío MFA al iniciar sesión |
 
 | Perfil de prueba | Identificador | Uso |
 |---|---|---|
 | `gestor` | `11111111-1111-4111-8111-111111111111` | Rol `GESTOR_DESPACHO`. |
 | `repartidor` | `22222222-2222-4222-8222-222222222222` | Requiere perfil local activo, vínculo con ese usuario y propiedad del recurso. |
+| `repartidor-kevin` | `44444444-4444-4444-8444-444444444444` | Segunda identidad independiente; requiere su propio perfil local activo y vinculado. |
 | `sin-rol` | `33333333-3333-4333-8333-333333333333` | Comprobaciones de denegación de permisos. |
 
 Los tokens de usuario duran 15 minutos. Las claves RSA se generan en memoria al arrancar; al reiniciar Seguridad, obtener tokens nuevos y reiniciar los consumidores si conservan las claves en caché. El emisor interno es `http://seguridad-local:8090/api/v1/auth`.
+
+El acceso de ambas apps usa ahora el intercambio JSON de G7: login, solicitud/verificación OTP, renovación rotativa y logout; `/me` consulta el perfil con Bearer. Las rutas y formatos se mantienen en [el contrato externo §8.6](../G2-Despacho-Specs/integraciones/api-contract.md#86-acceso-humano-de-ambas-aplicaciones). El Gateway enruta únicamente esas operaciones humanas a `SEGURIDAD_URL` tanto en el perfil base como en `render`; no publica el emisor de tokens técnicos ni el buzón de pruebas.
+
+En Compose, el gestor recibe un desafío de cinco minutos. Cada solicitud genera un código de seis dígitos para su buzón simulado, con tres intentos y un máximo de tres envíos por usuario cada quince minutos. El proxy de desarrollo del frontend permite consultar el buzón con `POST /pruebas/codigo-otp` y `challengeToken`; no es una API real de G7. Reenviar sustituye el código sin extender el desafío. Las identidades de repartidor acceden sin MFA obligatorio. El emisor conserva en memoria desafíos, sesiones y familias de refrescos; reiniciar invalida ese estado.
+
+Logout es idempotente, no exige un JWT vigente y bloquea la renovación. Reutilizar un refresco ya rotado revoca su familia. Los JWT ya emitidos pueden seguir siendo aceptados por los servicios que validan firma y vigencia localmente hasta su vencimiento; no se ha añadido revocación distribuida.
+
+La primera fase se preparó sin ejecutar pruebas por indicación del usuario. En la verificación posterior autorizada aprobaron las comprobaciones del emisor local y `clean verify` del Gateway con 30 pruebas, además del acceso en navegador usando el Compose que el usuario ya había iniciado. La ruta humana se registra desde `RutasAccesoSeguridad`, común a los perfiles; si Seguridad no está configurada en modo demo, no se registra un destino vacío. El kit G7 recibido se identifica como revisión local no publicada: falta contrastar servidor, cuentas, activación, OTP y CORS antes de acreditar integración real.
 
 Para un token de servicio de cotización:
 
@@ -151,6 +163,32 @@ $tokenServicio = (Invoke-RestMethod -Method Post -Uri 'http://localhost:8090/api
 ```
 
 El secreto es ficticio y solo pertenece al emisor local. Los clientes de prueba incluyen `modulo-marketplace`, `modulo-chatbot`, `modulo-ventas` y `modulo-despacho`. Gestión tiene configurado el cliente técnico para consultar incidencias y reservar/liberar capacidad y publicar proyecciones en Operación.
+
+## Verificación F-02 publicada, sin escrituras
+
+Con un despacho ya asignado en un entorno autorizado, `pruebas/verificar_f02_publicado.py` comprueba salud, rechazo anónimo, cola autorizada, ruta de Gestión, ruta propia de F-03, coincidencia de jornada/secuencia/ocupación y rechazo de consulta desde un segundo repartidor (`404` conforme al contrato). Solo ejecuta GET por el Gateway; no carga `.env`, no crea recursos, no sigue redirecciones ni imprime JWT o cuerpos de respuesta.
+
+Proporcionar por un canal seguro las variables `F02_GATEWAY` (origen HTTPS; HTTP solo en loopback), `F02_GESTOR_TOKEN`, `F02_REPARTIDOR_TOKEN`, `F02_OTRO_REPARTIDOR_TOKEN`, `F02_DESPACHO` y `F02_JORNADA`. Las tres sesiones deben ser distintas y los dos repartidores deben estar activos/vinculados. Declarar también `F02_SHA_BACKEND`, `F02_SHA_FRONTEND` y `F02_SHA_DOCS` de la revisión publicada para trazabilidad; el verificador no comprueba por sí mismo esos SHA.
+
+Desde la raíz, con Python 3:
+
+```bash
+python3 -B pruebas/verificar_f02_publicado.py > /tmp/opencode/f02-publicado.json
+python3 -B -m unittest discover -s pruebas -p 'test_verificar_f02_publicado.py' -v
+```
+
+El primer comando requiere el directorio de salida creado previamente; puede elegirse otra ruta privada. Devuelve `0` si todas las comprobaciones pasan, `1` si falla alguna y `2` si falta configuración. Ejecutarlo antes de iniciar traslado y después de converger la proyección de F-03. El reporte no acredita login/MFA, variación de capacidad antes/después, captura de ambas apps ni F-04; conservar esa evidencia aparte. Las pruebas unitarias usan dobles explícitos, no el despliegue.
+
+## Guías locales y planes de cotización
+
+| Documento | Contenido |
+|---|---|
+| [Pruebas desde Postman](servicio-gestion-despachos/docs/pruebas-postman-local.md) | Arranque, tokens, zona, tarifa y cotización con los productos simulados actuales. |
+| [Conexión de pgAdmin](servicio-gestion-despachos/docs/conexion-pgadmin-local.md) | Acceso desde Docker o el equipo, red compartida y consulta de tablas. |
+| [Plan de persistencia de cotizaciones](servicio-gestion-despachos/docs/plan-persistencia-cotizaciones.md) | Escritura del histórico exacto antes de responder; vinculación con Ventas aplazada. |
+| [Plan de integración con Productos](servicio-gestion-despachos/docs/plan-integracion-productos.md) | Selección del cliente HTTP real, credenciales propias, validación de lotes y pruebas. |
+
+Los planes describen trabajo pendiente y referencian los contratos de Specs. No acreditan la implementación de la persistencia ni de la consulta real a Productos en la cotización.
 
 ## Probar desde el administrador
 
@@ -174,7 +212,7 @@ Recorrido inicial, usando siempre el origen `localhost` para conservar la sesió
 
 1. Abrir `http://localhost:5173/desarrollo/f01`, seleccionar **Gestor de Despacho** y pulsar **Generar sesión de prueba**. La misma sesión permite navegar a las otras funcionalidades administrativas. Renovarla desde ese probador cuando venza.
 2. En **Zonas y tarifas**, crear una zona activa y configurar una tarifa si se desea probar cotizaciones.
-3. En **Repartidores**, registrar un perfil de prueba. Desde **Más acciones > Vincular cuenta**, asociar el usuario temporal `22222222-2222-4222-8222-222222222222`. Ese identificador solo puede vincularse a un repartidor; representa el único perfil repartidor del emisor temporal.
+3. En **Repartidores**, registrar los perfiles de prueba. Desde **Más acciones > Vincular cuenta**, asociar `22222222-2222-4222-8222-222222222222` a Gerardo y `44444444-4444-4444-8444-444444444444` a Kevin. Cada identidad solo puede vincularse a un perfil. El emisor no crea estos registros en la base automáticamente.
 4. En **Vehículos**, registrar una furgoneta disponible con capacidades positivas. Por ejemplo: 100 kg, 1 m³ y 10 paquetes.
 5. En **Monitoreo de flota**, pulsar **Abrir jornada**, seleccionar el repartidor vinculado, el vehículo, la zona y la fecha de hoy. Estar vinculado por sí solo no lo hace disponible para asignación.
 6. En **Programación**, usar **Generar pedido de prueba** y asignarlo a un candidato con jornada activa y capacidad suficiente. Los pedidos simulados se guardan en PostgreSQL local y comienzan pendientes de asignación.
@@ -202,7 +240,19 @@ Los registros creados o preparados durante las pruebas permanecen en el volumen 
 
 ## Integraciones pendientes y frontends
 
-- Productos y Ventas no se levantan en este Compose. La cotización utiliza el catálogo de productos de prueba configurado en Gestión. La recepción real de pedidos requiere Productos y sus credenciales; las notificaciones a Ventas pueden quedar pendientes hasta configurar el destino y la identidad técnica.
+- Productos y Ventas no se levantan en este Compose. El perfil normal de Gestión consulta Productos por HTTP tanto para cotizar como para recibir pedidos. Configurar `PRODUCTOS_URL` y una credencial propia de `modulo-despacho`: `PRODUCTOS_CLIENT_SECRET` para obtenerla de Seguridad o `PRODUCTOS_TOKEN_SERVICIO` para suministrarla externamente. G6 exige audiencia `api-productos` y scope `productos:fisicos:leer`. La ausencia de esa integración produce indisponibilidad; las consultas de solo cobertura siguen siendo locales. Las notificaciones a Ventas pueden quedar pendientes hasta configurar destino e identidad técnica.
+
+### Cotizaciones F-01 e integración con G6
+
+El perfil normal usa el cliente HTTP compartido `ClienteDatosFisicosHttp`. Las pruebas de contrato e integración utilizan un doble HTTP explícito y PostgreSQL desechable; no acreditan autorización G7 ni despliegue de G6. El perfil adicional `productos-simulados` selecciona expresamente el catálogo local solo para cotizaciones de prueba y marca sus instantáneas como simuladas. Para usarlo en Compose, cambiar explícitamente `SPRING_PROFILES_ACTIVE` de Gestión mediante una configuración local; no es el perfil por defecto.
+
+Los parámetros operativos son `LIMITE_COTIZACIONES_POR_MINUTO` (60 por defecto), `PRODUCTOS_URL`, `PRODUCTOS_CLIENT_ID` (`modulo-despacho`), `PRODUCTOS_CLIENT_SECRET` y `PRODUCTOS_TOKEN_SERVICIO`. Las plantillas contienen únicamente nombres y marcadores, nunca credenciales reales. No se reenvía el JWT del canal a G6. El transporte actual utiliza un segundo para conexión y 1.5 segundos para lectura; el acuerdo de rendimiento y caché con los equipos externos sigue pendiente de medición.
+
+Las reglas públicas se mantienen en el contrato externo de Specs: el costo final se eleva al siguiente múltiplo de medio sol y el volumen informado a tres decimales. El cálculo utiliza el volumen exacto. Cada cotización exacta exitosa confirma una instantánea antes de responder; su detalle conserva perfiles, tarifa, valores exactos y ajuste de redondeo. El plazo actual cuenta lunes a viernes en `America/Lima`; feriados y horas de corte requieren el acuerdo operativo pendiente.
+
+Las migraciones V8–V10 amplían la precisión de pesos históricos, añaden control optimista a zonas y guardan la identidad de reintentos administrativos. Se prueban con bases temporales. El perfil `render` conserva Flyway deshabilitado por defecto: la aplicación de estas migraciones a una base persistente debe prepararse como despliegue independiente.
+
+La configuración admite reintentos identificados y control de versión, conforme al contrato de Gestión en Specs. El frontend consumidor debe conservar `soloCodigosPostales` al editar y puede enviar `versionZona` al cambiar estado. Las operaciones anteriores siguen admitidas. Las pruebas backend se ejecutan desde `servicio-gestion-despachos` con `./mvnw clean verify`; requieren Docker. Los reportes se generan en `target/surefire-reports`.
 - Las fotografías requieren un bucket privado y `EVIDENCIAS_STORAGE_URL`, `EVIDENCIAS_BUCKET` y `EVIDENCIAS_CLAVE_SERVICIO` en Operación. Vacíos, esos recorridos no están disponibles; no se sustituye Storage por un servicio local.
 - Los frontends pueden usar `VITE_API_BASE_URL=http://localhost:8080` y un token temporal mediante su configuración de desarrollo. CORS admite los puertos 5173 y 5174. Si el frontend necesita refrescar tokens, debe usar la configuración vigente de su propio repositorio.
 - La información de errores incorpora un identificador de correlación; buscarlo en `docker compose logs` para seguir una petición entre servicios.
@@ -249,6 +299,50 @@ Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up 
 
 Las pruebas de Seguridad temporal permanecen en `seguridad-local/pruebas`. Se retiraron los Compose y verificadores específicos de las demos; los datos y adaptaciones usados por pruebas se conservaron dentro de Operación.
 
+## Prueba de humo reutilizable de F-04
+
+Desde la raíz del backend, con Python 3.10 o posterior y Docker, construir los tres servicios con sus Maven Wrapper y `clean verify`. Luego ejecutar:
+
+```powershell
+python pruebas/verificar_humo_f04.py --local
+```
+
+El comando reutiliza `pruebas/compose.f02.yaml` con un nombre de proyecto único, bases desechables y Seguridad local. Usa los puertos `18080` y `18090`, que deben estar disponibles, y retira sus contenedores al terminar. Comprueba salud del Gateway y el listado de fallidos por la ruta pública, con `401` sin token, `403` sin permiso y `200` con gestor. La consulta permite una lista vacía. El informe JSON queda en `pruebas/resultados/humo-f04.json`, fuera de Git. El proceso termina con código `1` si falla la preparación o alguna comprobación.
+
+Para un Gateway existente, preparar en el entorno del proceso `HUMO_TOKEN_GESTOR` y `HUMO_TOKEN_SIN_PERMISO` con dos tokens humanos vigentes del emisor que ese despliegue acepta. El primero debe tener `GESTOR_DESPACHO` y el segundo carecer de ese rol. Con G7, obtener las sesiones mediante su flujo de acceso y MFA. Ejecutar, sustituyendo el origen de ejemplo:
+
+```powershell
+python pruebas/verificar_humo_f04.py --gateway-url https://gateway-del-equipo.example --version-desplegada revision-confirmada
+```
+
+Las peticiones son de lectura y los tokens se reciben por variables de entorno. El informe guarda el estado HTTP y la estructura esperada, sin cuerpos de despachos ni credenciales. `commitVerificador` identifica el código de la herramienta y `versionDesplegada` registra la revisión indicada por el responsable del despliegue. Cada servicio sigue validando sus permisos. La ejecución local acredita el Gateway y los proveedores del entorno desechable con Seguridad temporal; la aceptación con G7 se registra al repetir la prueba con sus sesiones reales.
+
+Para comprobar que la herramienta falla ante acceso anónimo permitido, respuestas inválidas, filtración de contenido o redirecciones:
+
+```powershell
+python -m unittest discover -s pruebas -p test_verificar_humo_f04.py -v
+```
+
+## Prueba de contrato de recepción F-04 por Gateway
+
+Con los mismos requisitos y JAR construidos de la prueba de humo, desde la raíz del backend:
+
+```powershell
+python pruebas/verificar_contrato_recepcion_f04.py
+```
+
+El comando prepara datos sintéticos en su propio proyecto Compose desechable. Crea una zona, un perfil y un vehículo de prueba; abre una jornada, simula y asigna un despacho y prepara `FALLIDO/NO_INTENTADO` mediante la API interna real. Esa preparación acredita el estado requerido para recibir; la captura de un fallo con foto desde F-03 se verifica aparte.
+
+Comprueba el contrato vigente de [recepción en Gestión](../despacho-docs/integraciones/api-contract-gestion-despachos.md#521-confirmar-recepción-en-centro--es-f04-03) pasando por Gateway: `401/403`, seis variantes inválidas con `400`, incidencia o versión obsoletas con `409`, recepción `202` con sello `false` sin observación y repetición exacta. Verifica el código de error, Problem Details, `Cache-Control: no-store` en el `202` y ausencia de escrituras ante rechazos. Tras confirmar la liberación real en Operación, exige una recepción, un historial, una solicitud y una reserva original liberada, sin incrementar intentos ni generar eventos a Ventas. La ocupación de la jornada sintética pasa de 2 kg, 0,01 m³ y un paquete a cero; repetir conserva respuesta, fecha de liberación y conteos.
+
+Solo admite su entorno desechable; utiliza `18080/18090` y lo retira al finalizar. No apuntarlo a bases compartidas ni ejecutarlo a la vez que la prueba de humo u otro runner que use esos puertos. El informe `pruebas/resultados/contrato-recepcion-f04.json` queda fuera de Git, con resultados y datos sintéticos antes/después, sin tokens. Termina con código `1` ante un incumplimiento o error de preparación. G7 real, frontend, reinicios y aceptación en nube siguen pendientes.
+
+Las comprobaciones propias de ambos verificadores se ejecutan con:
+
+```powershell
+python -m unittest discover -s pruebas -p 'test_verificar_*.py' -v
+```
+
 ## Verificación integrada de rutas F-02
 
 La rama `feature/f02-rutas-transferencia-segura` añade Gestión V5 (resultado durable de secuencia y unicidad diferida de posiciones), V6 (intenciones/resultados y cerco de reasignación), V7 (cancelaciones durables por anulación) y Operación V7 (transferencias atómicas de capacidad; V6 ya pertenece a comandos F-03). No editar migraciones aplicadas ni activar Flyway sobre bases compartidas para probar. Las futuras migraciones empiezan en Gestión V8 y Operación V8.
@@ -268,6 +362,10 @@ El recorrido verifica teclado, descarte, guardado con respuesta perdida y llegad
 `CancelarDespacho` persiste intención/cerco antes de liberar una reserva de `ASIGNADO`; confirma `200` solo tras liberación y guardado local. Los fallos/timeout conservan el cerco y se recuperan con la misma clave/cuerpo y reserva. No se debe borrar la intención ni recrear una reserva para compensar. El procesador de programación retoma pendientes con lease vencido; una referencia o motivo remoto inconsistente deja bloqueo para revisión operativa. En `FALLIDO`, solo registra la marca temporal y responde `202`; la liberación corresponde a recepción física. No se añade pantalla de cancelación administrativa. Contrato y evidencia: [Común §7.2](../despacho-docs/integraciones/api-contract.md#72-cancelar-por-anulación-del-pedido), [ES-F02-07](../despacho-docs/especificaciones/ES-F02-07-CancelarDespachoPorAnulacion/evidence.md).
 
 ## Integración continua
+
+La preparación de identidad F-05/F-06 se registra en [Specs](../despacho-docs/docs/integracion-seguridad-f05-f06.md). Operación consume el descubrimiento del origen `SEGURIDAD_URL` y valida RS256, issuer y vigencia; además exige `iat` original, `jti`, `sub` UUID y `roles` como arreglo para personas (admite `[]`), o audiencia `api-despacho` y `scope` textual para servicios. La cuenta sin roles de un repartidor se autoriza por su perfil local activo/vinculado. No se añade un rol global ni se consulta la base de Seguridad.
+
+Para verificar criptografía sin cuentas ni bases externas, desde `servicio-operacion-reparto` ejecutar `./mvnw.cmd "-Dtest=ValidadorTokenDespachoTests,ValidadorPerfilRepartidorTests,IntegracionJwtSeguridadTests,GestorJornadasTests" test`. El servidor JWKS de esas pruebas usa loopback y claves efímeras; no acredita autenticación contra G7. El registro/vínculo manual no comprueba activación global; cuentas, scopes reales y eventos/reconciliación permanecen pendientes. La suite completa de `clean verify` requiere Docker y PostgreSQL desechable.
 
 [CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
 

@@ -12,11 +12,11 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
 
 /**
  * Stub configurable de Productos y Ofertas. Usa un catálogo local ampliable u reemplazable mediante
- * las propiedades {@code despacho.productos.stub.catalogo.*} mientras no exista la API real.
+ * las propiedades {@code despacho.productos.stub.catalogo.*} en el perfil explícito de simulación.
  */
 @Component
 @org.springframework.context.annotation.Primary
-@Profile("!integracion-local")
+@Profile("productos-simulados & !integracion-local")
 @ConfigurationProperties(prefix = "despacho.productos.stub")
 public class CatalogoProductosStub implements ProveedorDatosFisicos {
 
@@ -36,8 +36,14 @@ public class CatalogoProductosStub implements ProveedorDatosFisicos {
             ProductoStub producto = catalogo.get(sku);
             if (producto != null) {
                 resultado.put(sku, new DatosFisicos(producto.getPesoKg(), producto.getLargoCm(),
-                        producto.getAnchoCm(), producto.getAltoCm()));
+                        producto.getAnchoCm(), producto.getAltoCm(), "ACTIVO", java.time.Instant.EPOCH));
             }
+        }
+        var ausentes = skus.stream().filter(sku -> !resultado.containsKey(sku)).toList();
+        if (!ausentes.isEmpty()) {
+            throw com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio.de(
+                    422, "DESP_ERROR_PRODUCTO_NO_ENCONTRADO", "SKU no encontrado en el catálogo simulado")
+                    .conSkusAfectados(ausentes);
         }
         return resultado;
     }
