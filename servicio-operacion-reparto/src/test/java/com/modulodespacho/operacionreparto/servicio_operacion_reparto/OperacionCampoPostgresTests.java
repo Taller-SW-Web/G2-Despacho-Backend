@@ -53,7 +53,7 @@ class OperacionCampoPostgresTests {
         when(decodificador.decode("repartidor")).thenReturn(token("acceso", actor.toString(), "", List.of()));
         when(decodificador.decode("gestor")).thenReturn(token("acceso", actor.toString(), "", List.of("GESTOR_DESPACHO")));
         when(decodificador.decode("capacidad")).thenReturn(token("servicio", "modulo-despacho",
-                "operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir", List.of()));
+                "", List.of()));
         sql.sql("""
             INSERT INTO repartidores(id,nombres,apellidos,dni,telefono,correo,numero_brevete,turno_habitual,estado_registro,
               id_usuario_seguridad,estado_vinculacion,creado_por,actualizado_por)

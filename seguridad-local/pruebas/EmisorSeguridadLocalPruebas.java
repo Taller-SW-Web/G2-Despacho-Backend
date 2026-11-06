@@ -70,6 +70,20 @@ public final class EmisorSeguridadLocalPruebas {
 
             var scopeAjeno = enviar(cliente, rutaToken, formularioServicio("despachos:crear"));
             comprobar(scopeAjeno.statusCode() == 403, "No escalar permisos de Marketplace");
+            String sinScopes = formulario(Map.of("grant_type", "client_credentials",
+                    "client_id", "modulo-despacho", "client_secret", "despacho-local-no-produccion"));
+            var tecnico = enviar(cliente, rutaToken, sinScopes);
+            comprobar(tecnico.statusCode() == 200, "modulo-despacho obtiene token de servicio sin pedir scopes");
+            String claimsTecnico = decodificar(extraer(tecnico.body(), "accessToken").split("\\.")[1]);
+            comprobar(claimsTecnico.contains("\"sub\":\"modulo-despacho\"")
+                    && claimsTecnico.contains("\"tipo\":\"servicio\"")
+                    && !claimsTecnico.contains("operacion:") && !claimsTecnico.contains("gestion:"),
+                    "El token tecnico no lleva scopes internos");
+            String scopeInterno = formulario(Map.of("grant_type", "client_credentials",
+                    "client_id", "modulo-despacho", "client_secret", "despacho-local-no-produccion",
+                    "scope", "operacion:capacidad:reservar"));
+            comprobar(enviar(cliente, rutaToken, scopeInterno).statusCode() == 403,
+                    "Los scopes internos ya no se conceden");
             String credencialesIncorrectas = formulario(Map.of("grant_type", "client_credentials",
                     "client_id", "modulo-marketplace", "client_secret", "incorrecto"));
             comprobar(enviar(cliente, rutaToken, credencialesIncorrectas).statusCode() == 401,

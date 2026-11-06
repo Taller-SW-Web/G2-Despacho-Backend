@@ -59,7 +59,6 @@ services:
       OPERACION_REPARTO_URL: http://servicio-operacion-reparto:8082
       OPERACION_CLIENT_ID: modulo-despacho
       OPERACION_CLIENT_SECRET: despacho-local-no-produccion
-      OPERACION_CAPACIDAD_SCOPES: operacion:incidencias:leer operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir
       PRODUCTOS_URL: ${PRODUCTOS_URL:-http://host.docker.internal:8083}
       PRODUCTOS_CLIENT_ID: ${PRODUCTOS_CLIENT_ID:-modulo-despacho}
       PRODUCTOS_CLIENT_SECRET: ${PRODUCTOS_CLIENT_SECRET:-}
@@ -86,7 +85,6 @@ services:
       GESTION_DESPACHOS_URL: http://servicio-gestion-despachos:8081
       GESTION_CLIENT_ID: modulo-despacho
       GESTION_CLIENT_SECRET: despacho-local-no-produccion
-      GESTION_SCOPES: gestion:despachos:transicionar gestion:catalogos:leer
       EVIDENCIAS_STORAGE_URL: ${EVIDENCIAS_STORAGE_URL:-}
       EVIDENCIAS_BUCKET: ${EVIDENCIAS_BUCKET:-}
       EVIDENCIAS_CLAVE_SERVICIO: ${EVIDENCIAS_CLAVE_SERVICIO:-}

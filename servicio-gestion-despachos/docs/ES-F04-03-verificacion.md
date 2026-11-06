@@ -53,7 +53,7 @@ Informes reproducibles: `target/surefire-reports/TEST-*.xml` y `target/surefire-
 
 1. La incidencia canónica debe conservar la reserva, jornada y repartidor de la salida. Referencias históricas ausentes o parciales reciben error sin inventar datos. Las recepciones antiguas sin solicitud durable requieren reconciliación verificable; esta entrega no fabrica su respuesta original ni las reenvía.
 2. Operación debe cumplir su contrato de liberación por reserva, pertenencia al despacho e idempotencia, incluyendo la respuesta original al repetir. Su controlador de liberación ya existe según lectura estática del código; las llamadas de esta entrega prueban únicamente el cliente de Gestión, sin ejecutar ni modificar el servicio receptor.
-3. Seguridad debe conceder `operacion:capacidad:liberar` a `modulo-despacho` con audiencia `api-despacho`; las credenciales de producción no se comprobaron ni se modificaron.
+3. Seguridad debe emitir a `modulo-despacho` un token de servicio con audiencia `api-despacho`; las rutas internas de Operación ya no exigen scopes. Las credenciales de producción no se comprobaron ni se modificaron.
 4. F-02/F-06 deben impedir una nueva asignación mientras exista la reserva anterior activa y reflejar la ocupación después de liberarla.
 5. El frontend debe conectar el modal, recuperar resultados desconocidos y refrescar listado/detalle conforme al contrato. Tampoco se implementan ES-F04-04/05 en esta entrega.
 

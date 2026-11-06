@@ -28,26 +28,22 @@ final class FiltroIdentidadDemo extends OncePerRequestFilter {
         String ruta = solicitud.getRequestURI().substring(solicitud.getContextPath().length());
         String sujeto = usuario;
         String tipo = "acceso";
-        String scope = "";
         if ("POST".equals(solicitud.getMethod()) && ruta.equals("/internal/v1/operacion/consulta-incidencias")) {
             sujeto = "modulo-despacho";
             tipo = "servicio";
-            scope = "operacion:incidencias:leer";
         } else if ("POST".equals(solicitud.getMethod()) && (ruta.equals("/internal/v1/capacidad/reservas")
                 || ruta.matches("/internal/v1/capacidad/reservas/[^/]+/liberacion")
                 || ruta.matches("/internal/v1/proyecciones/despachos/[^/]+"))) {
             sujeto = "modulo-despacho";
             tipo = "servicio";
-            scope = ruta.equals("/internal/v1/capacidad/reservas") ? "operacion:capacidad:reservar"
-                    : ruta.endsWith("/liberacion") ? "operacion:capacidad:liberar" : "operacion:proyecciones:escribir";
         }
         Instant ahora = Instant.now();
         Jwt identidad = Jwt.withTokenValue("identidad-demo-interna").header("alg", "none")
                 .subject(sujeto).issuedAt(ahora).expiresAt(ahora.plusSeconds(300))
                 .claim("tipo", tipo).claim("roles", List.of("GESTOR_DESPACHO"))
-                .claim("scope", scope).claim("demo", true).build();
-        var permisos = List.of(new SimpleGrantedAuthority(
-                tipo.equals("servicio") ? "SCOPE_" + scope : "ROLE_GESTOR_DESPACHO"));
+                .claim("demo", true).build();
+        List<SimpleGrantedAuthority> permisos = tipo.equals("servicio")
+                ? List.of() : List.of(new SimpleGrantedAuthority("ROLE_GESTOR_DESPACHO"));
         var contexto = SecurityContextHolder.createEmptyContext();
         contexto.setAuthentication(new JwtAuthenticationToken(identidad, permisos));
         SecurityContextHolder.setContext(contexto);

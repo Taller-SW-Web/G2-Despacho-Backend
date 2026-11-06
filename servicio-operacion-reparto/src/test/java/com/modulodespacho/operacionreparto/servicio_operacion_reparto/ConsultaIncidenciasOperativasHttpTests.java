@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConsultaIncidenciasOperativasHttpTests {
 
     private static final String RUTA = "/internal/v1/operacion/consulta-incidencias";
-    private static final String SCOPE = "operacion:incidencias:leer";
+    private static final String SCOPE = "";
     @Autowired MockMvc http;
     @Autowired JdbcClient sql;
     @MockitoBean JwtDecoder decodificador;
@@ -57,7 +57,7 @@ class ConsultaIncidenciasOperativasHttpTests {
         sql.sql("UPDATE repartidores SET estado_registro = 'INACTIVO'").update();
         when(decodificador.decode("servicio")).thenReturn(token("servicio", "modulo-despacho", SCOPE));
         when(decodificador.decode("gestor")).thenReturn(token("acceso", id(999).toString(), SCOPE));
-        when(decodificador.decode("sin-scope")).thenReturn(token("servicio", "modulo-despacho", "otro"));
+        when(decodificador.decode("scope-ajeno")).thenReturn(token("servicio", "modulo-despacho", "otro"));
         when(decodificador.decode("otro-cliente")).thenReturn(token("servicio", "modulo-ventas", SCOPE));
     }
 
@@ -85,10 +85,14 @@ class ConsultaIncidenciasOperativasHttpTests {
         try {
             http.perform(post(RUTA).contentType("application/json").content("{}"))
                     .andExpect(status().isUnauthorized());
-            for (String token : List.of("gestor", "sin-scope", "otro-cliente")) {
+            for (String token : List.of("gestor", "otro-cliente")) {
                 http.perform(post(RUTA).header("Authorization", "Bearer " + token).contentType("application/json").content("{}"))
                         .andExpect(status().isForbidden());
             }
+            // La ruta interna ya no exige scopes: el cliente tecnico de modulo-despacho pasa la autorizacion
+            // con cualquier scope y la solicitud llega a la validacion del cuerpo.
+            http.perform(post(RUTA).header("Authorization", "Bearer scope-ajeno").contentType("application/json").content("{}"))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("DESP_ERROR_CAMPOS_INVALIDOS"));
             for (String cuerpo : List.of("{}", "{\"idsRepartidor\":[],\"idsJornada\":[]}",
                     "{\"idsRepartidor\":[\"a\",\"a\"],\"idsJornada\":[]}",
                     "{\"idsRepartidor\":[1],\"idsJornada\":[]}",

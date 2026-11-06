@@ -62,7 +62,7 @@ class CancelacionHttpTests {
         when(identidad.decode("gestor")).thenReturn(token("acceso", "gestor", List.of("GESTOR_DESPACHO"), "despachos:cancelar"));
         when(identidad.decode("ajeno")).thenReturn(token("servicio", "otro-modulo", List.of(), "despachos:cancelar"));
         when(identidad.decode("sin-scope")).thenReturn(token("servicio", "modulo-ventas", List.of(), "despachos:crear"));
-        when(identidad.decode("servicio")).thenReturn(token("servicio", "modulo-despacho", List.of(), "gestion:despachos:transicionar"));
+        when(identidad.decode("servicio")).thenReturn(token("servicio", "modulo-despacho", List.of(), ""));
         when(operacion.consultar(any(), any())).thenReturn(new DatosOperativos(Map.of(), Map.of(jornada.toString(),
                 new DatosOperativos.Jornada(jornada.toString(), DatosOperativos.EstadoJornada.ACTIVA, null, Instant.now()))));
         insertar(despacho, "ASIGNADO", 1);

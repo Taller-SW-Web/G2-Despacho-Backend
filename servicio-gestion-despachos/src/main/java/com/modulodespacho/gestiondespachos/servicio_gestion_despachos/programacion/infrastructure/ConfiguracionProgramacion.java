@@ -25,7 +25,7 @@ public class ConfiguracionProgramacion {
     }
     @Bean CapacidadProgramacionHttp capacidadProgramacion(Environment entorno, Clock reloj) {
         return new CapacidadProgramacionHttp(cliente(entorno.getRequiredProperty("despacho.operacion.url")),
-                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj),
+                credenciales(entorno, "operacion", "", reloj),
                 entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
     }
     @Bean EntregaEventosProgramacion entregaEventosProgramacion(Environment entorno, Clock reloj,
@@ -34,7 +34,7 @@ public class ConfiguracionProgramacion {
                 cliente(entorno.getProperty("despacho.ventas.url", "http://127.0.0.1:1")),
                 credenciales(entorno, "ventas", "ventas:pedidos:estado", reloj),
                 cliente(entorno.getRequiredProperty("despacho.operacion.url")),
-                credenciales(entorno, "operacion", entorno.getProperty("despacho.operacion.scopes-capacidad", ""), reloj),
+                credenciales(entorno, "operacion", "", reloj),
                 entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
     }
     private static java.util.function.Supplier<String> credenciales(Environment entorno, String dependencia, String scopes, Clock reloj) {

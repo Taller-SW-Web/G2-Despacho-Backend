@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -25,8 +26,9 @@ class ProveedorTokenOperacionTests {
             servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token"))
                     .andExpect(content().string(containsString("grant_type=client_credentials")))
                     .andExpect(content().string(containsString("client_secret=secreto-prueba")))
+                    .andExpect(content().string(not(containsString("scope="))))
                     .andRespond(withSuccess("{\"accessToken\":\"cabecera.cuerpo." + firma
-                            + "\",\"tokenType\":\"Bearer\",\"expiresIn\":100,\"scopes\":[\"operacion:incidencias:leer\"]}", MediaType.APPLICATION_JSON));
+                            + "\",\"tokenType\":\"Bearer\",\"expiresIn\":100}", MediaType.APPLICATION_JSON));
         }
         servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token")).andRespond(withServiceUnavailable());
         Clock reloj = mock(Clock.class);

@@ -79,11 +79,10 @@ class JornadasHttpTests {
 
         when(decodificador.decode("otro")).thenReturn(token("acceso",actor.toString(),List.of(),""));
 
-        when(decodificador.decode("servicio")).thenReturn(token("servicio","modulo-despacho",List.of(),"operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir"));
+        when(decodificador.decode("servicio")).thenReturn(token("servicio","modulo-despacho",List.of(),""));
 
-        when(decodificador.decode("ajeno")).thenReturn(token("servicio","modulo-ajeno",List.of(),"operacion:capacidad:reservar"));
+        when(decodificador.decode("ajeno")).thenReturn(token("servicio","modulo-ajeno",List.of(),""));
 
-        when(decodificador.decode("sin-scope")).thenReturn(token("servicio","modulo-despacho",List.of(),""));
 
         when(gestor.obtenerFechaActual()).thenReturn(hoy);
 
@@ -105,9 +104,9 @@ class JornadasHttpTests {
 
     }
 
-    @Test void transferenciaExigeAmbosScopesIdentidadTecnicaYDatosValidos() throws Exception {
+    @Test void transferenciaExigeIdentidadTecnicaYDatosValidos() throws Exception {
         String cuerpo="{\"idReservaOrigen\":\""+UUID.randomUUID()+"\",\"idDespacho\":\""+UUID.randomUUID()+"\",\"idNuevoRepartidor\":\""+repartidor+"\",\"idNuevaJornada\":\""+id+"\"}";
-        for(String credencial:List.of("gestor","otro","ajeno","sin-scope"))
+        for(String credencial:List.of("gestor","otro","ajeno"))
             http.perform(post("/internal/v1/capacidad/transferencias").header("Authorization","Bearer "+credencial)
                     .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(cuerpo)).andExpect(status().isForbidden());
         http.perform(post("/internal/v1/capacidad/transferencias").header("Authorization","Bearer servicio")
@@ -164,22 +163,21 @@ class JornadasHttpTests {
 
     }
 
-    @Test void rutasInternasExigenIdentidadTecnicaYScopeExactos() throws Exception {
+    @Test void rutasInternasExigenIdentidadTecnicaDelModuloSinScopes() throws Exception {
 
         String ruta="/internal/v1/capacidad/reservas",cuerpo=reserva();
 
-        for(String credencial:List.of("gestor","otro","sin-scope","ajeno")) {
+        for(String credencial:List.of("gestor","otro","ajeno")) {
 
             http.perform(post(ruta).header("Authorization","Bearer "+credencial).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(cuerpo)).andExpect(status().isForbidden());
 
         }
 
-        when(decodificador.decode("solo-reservar")).thenReturn(token("servicio","modulo-despacho",List.of(),"operacion:capacidad:reservar"));
         for(String protegida:List.of("/internal/v1/capacidad/reservas/"+id+"/liberacion","/internal/v1/proyecciones/despachos/"+id)) {
 
-            // Un token con permiso de reserva no concede liberación ni escritura de proyecciones.
+            // Un servicio ajeno no accede a liberación ni a proyecciones aunque traiga un scope.
 
-            http.perform(post(protegida).header("Authorization","Bearer solo-reservar").contentType("application/json").content("{}"))
+            http.perform(post(protegida).header("Authorization","Bearer ajeno").contentType("application/json").content("{}"))
 
                     .andExpect(status().isForbidden());
 

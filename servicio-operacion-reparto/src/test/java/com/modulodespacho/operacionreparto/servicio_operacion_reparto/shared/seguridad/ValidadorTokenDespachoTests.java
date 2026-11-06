@@ -16,7 +16,7 @@ class ValidadorTokenDespachoTests {
         return Jwt.withTokenValue("prueba").header("alg", "RS256").subject(
                     "acceso".equals(tipo) ? "11111111-1111-1111-1111-111111111111" : "modulo-despacho")
                 .claim("tipo", tipo).audience(audiencia)
-                .claim("roles", List.of()).claim("scope", "gestion:catalogos:leer").claim("jti", "id-prueba")
+                .claim("roles", List.of()).claim("scope", "").claim("jti", "id-prueba")
                 .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
     }
 
@@ -63,11 +63,14 @@ class ValidadorTokenDespachoTests {
     }
 
     @Test
-    void rechazaScopeDeServicioConFormaDistintaDeTexto() {
+    void elServicioNoDependeDelClaimScope() {
         var base = token("servicio", List.of("api-despacho"));
-        Jwt invalido = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
-                .claims(c -> { c.putAll(base.getClaims()); c.put("scope", List.of("gestion:catalogos:leer")); }).build();
-        assertThat(validador.validate(invalido).hasErrors()).isTrue();
+        Jwt sinScope = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                .claims(c -> { c.putAll(base.getClaims()); c.remove("scope"); }).build();
+        assertThat(validador.validate(sinScope).hasErrors()).isFalse();
+        Jwt scopeVacio = Jwt.withTokenValue("prueba").headers(h -> h.putAll(base.getHeaders()))
+                .claims(c -> { c.putAll(base.getClaims()); c.put("scope", ""); }).build();
+        assertThat(validador.validate(scopeVacio).hasErrors()).isFalse();
     }
 
     @Test

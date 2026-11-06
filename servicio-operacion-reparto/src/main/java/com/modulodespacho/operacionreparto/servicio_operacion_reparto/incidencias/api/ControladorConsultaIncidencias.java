@@ -33,8 +33,7 @@ public class ControladorConsultaIncidencias {
     }
 
     @PostMapping("/internal/v1/operacion/consulta-incidencias")
-    @PreAuthorize("authentication.token.claims['tipo'] == 'servicio' and authentication.name == 'modulo-despacho'"
-            + " and hasAuthority('SCOPE_operacion:incidencias:leer')")
+    @PreAuthorize("authentication.token.claims['tipo'] == 'servicio' and authentication.name == 'modulo-despacho'")
     public DatosIncidenciasOperativas consultar(@RequestBody(required = false) Map<String, Object> cuerpo) {
         if (cuerpo == null || !cuerpo.keySet().equals(Set.of("idsRepartidor", "idsJornada"))) {
             throw new IllegalArgumentException("cuerpo");
