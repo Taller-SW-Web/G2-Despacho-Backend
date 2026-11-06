@@ -119,22 +119,12 @@ public class ConfiguracionSeguridad {
                                 "/swagger-ui.html").permitAll();
                     }
                     reglas
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/transferencias")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(
-                                    permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")
-                                    && permiteServicio(autenticacion.get(), "operacion:capacidad:liberar")))
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(permiteServicio(autenticacion.get(), "operacion:capacidad:reservar")))
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/reservas/*/liberacion")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(permiteServicio(autenticacion.get(), "operacion:capacidad:liberar")))
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/proyecciones/despachos/*")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(permiteServicio(autenticacion.get(), "operacion:proyecciones:escribir")))
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/operacion/consulta-incidencias")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(
-                                    esTokenDeTipo(autenticacion.get(), "servicio")
-                                    && "modulo-despacho".equals(autenticacion.get().getName())
-                                    && autenticacion.get().getAuthorities().stream().anyMatch(permiso ->
-                                            permiso.getAuthority().equals("SCOPE_operacion:incidencias:leer"))))
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/transferencias",
+                                "/internal/v1/capacidad/reservas",
+                                "/internal/v1/capacidad/reservas/*/liberacion",
+                                "/internal/v1/proyecciones/despachos/*",
+                                "/internal/v1/operacion/consulta-incidencias")
+                            .access((autenticacion, contexto) -> new AuthorizationDecision(servicioInterno(autenticacion.get())))
                         // El vínculo activo se exige antes del controlador; la propiedad de cada recurso sigue siendo obligatoria.
                         .requestMatchers("/api/v1/repartidor/**").access((autenticacion, contexto) -> {
                             ValidadorPerfilRepartidor perfil = perfiles.getIfAvailable();
@@ -174,9 +164,9 @@ public class ConfiguracionSeguridad {
         return convertidor;
     }
 
-    private boolean permiteServicio(Authentication identidad, String scope) {
-        return esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName())
-                && identidad.getAuthorities().stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope));
+    /** Rutas /internal: solo el cliente técnico del propio módulo; la autorización no depende de scopes. */
+    private boolean servicioInterno(Authentication identidad) {
+        return esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName());
     }
     private boolean esTokenDeTipo(Authentication identidad, String tipo) {
         return identidad instanceof JwtAuthenticationToken jwt && identidad.isAuthenticated()
