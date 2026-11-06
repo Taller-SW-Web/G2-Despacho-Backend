@@ -29,6 +29,18 @@ class ValidadorTokenDespachoTests {
     }
 
     @Test
+    void aceptaClienteInternoConAudienciasEmitidasPorG7SinApiDespacho() {
+        Jwt interno = Jwt.withTokenValue("prueba").header("alg", "RS256").subject("modulo-despacho")
+                .claim("tipo", "servicio").audience(List.of("api-productos", "api-seguridad", "api-ventas"))
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
+        assertThat(validador.validate(interno).hasErrors()).isFalse();
+        Jwt otroCliente = Jwt.withTokenValue("prueba").header("alg", "RS256").subject("modulo-ventas")
+                .claim("tipo", "servicio").audience(List.of("api-productos", "api-seguridad", "api-ventas"))
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
+        assertThat(validador.validate(otroCliente).hasErrors()).isTrue();
+    }
+
+    @Test
     void aceptaAccesoHumanoSinAudienciaYRechazaRefresco() {
         assertThat(validador.validate(token("acceso", List.of())).hasErrors()).isFalse();
         assertThat(validador.validate(token("refresco", List.of("api-despacho"))).hasErrors()).isTrue();
