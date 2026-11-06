@@ -269,6 +269,28 @@ El perfil `render` de ambos servicios deja Flyway desactivado por defecto, pero 
 
 Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-operacion-reparto/src/test/resources/flota/compatibilidad`. Sus pruebas los cargan como recursos. No son migraciones automáticas de una base nueva ni deben volver a aplicarse a ciegas al entorno publicado. Los datos F-04 usados por una prueba están en `src/test/resources/flota/datos-demo-f04.sql` del mismo servicio.
 
+### Consultas periódicas de salud desde el PC
+
+[herramientas/mantener_backends_activos.py](./herramientas/mantener_backends_activos.py) consulta directamente `/actuator/health` del Gateway, Gestión y Operación cada cinco minutos. Requiere Python 3.9 o posterior, sin paquetes adicionales, cuentas ni `.env`. Desde la raíz del backend:
+
+```powershell
+python herramientas/mantener_backends_activos.py
+```
+
+Mantener la terminal abierta; `Ctrl+C` detiene el script. El PC debe tener conexión y permanecer encendido, sin suspensión. Las peticiones son secuenciales, con una espera máxima predeterminada de 75 segundos para permitir arranques lentos; no se superponen. Un `429` u otra respuesta con `Retry-After` retrasa la siguiente consulta de ese servicio. No se guardan tokens ni cuerpos de respuestas, y una página HTML de arranque no se informa como salud `UP`.
+
+Para cambiar el intervalo, comprobar una sola ronda o sustituir las URLs públicas:
+
+```powershell
+python herramientas/mantener_backends_activos.py --intervalo 300 --timeout 75
+python herramientas/mantener_backends_activos.py --una-vez
+python herramientas/mantener_backends_activos.py --url https://HOST-REAL/actuator/health
+```
+
+`--url` se puede repetir y sustituye los tres destinos predeterminados. Confirmar las URLs con el responsable del despliegue si cambian. `--una-vez` termina con código `0` cuando todos responden `200` y `status=UP`, o `1` si alguno falla. El intervalo mínimo es 60 segundos. Para verificar el consultor sin llamar a Render: `python -B -m unittest discover -s pruebas -p test_mantener_backends_activos.py -v`.
+
+Estas consultas reducen la inactividad de los servicios; no garantizan disponibilidad frente a reinicios, límites del plan o fallos de red. En el plan gratuito, las 750 horas mensuales se comparten por workspace: mantener servicios encendidos también consume ese cupo. Referencia: [límites de Render](https://render.com/docs/free). Tampoco corrigen errores SQL, migraciones pendientes ni permisos de negocio. No se instala una tarea del sistema ni se inicia un proceso permanente automáticamente.
+
 ## Pruebas y contratos
 
 La implementación backend de ES-F04-03 y sus límites se describen en [verificación de recepción en centro](servicio-gestion-despachos/docs/ES-F04-03-verificacion.md). Esa especificación reutiliza V1/V2. ES-F04-04 añade V3 para conservar la respuesta de reprogramación junto con su historial y evento; no modifica Operación ni su base. Las verificaciones usan bases desechables. Los datos históricos sin referencias completas requieren reconciliación verificable; los comandos los rechazan sin adivinar reservas. La trazabilidad vigente de reprogramación se mantiene en [su evidencia SDD](../G2-Despacho-Specs/especificaciones/ES-F04-04-ReprogramarDespachoFallido/evidence.md).
