@@ -75,7 +75,7 @@ public final class EmisorSeguridadLocalPruebas {
             comprobar(enviar(cliente, rutaToken, credencialesIncorrectas).statusCode() == 401,
                     "Rechazar credenciales incorrectas");
 
-            for (String perfil : new String[]{"gestor", "repartidor", "sin-rol"}) {
+            for (String perfil : new String[]{"gestor", "repartidor", "repartidor-kevin", "sin-rol"}) {
                 var usuario = enviar(cliente, origen + "/pruebas/token-usuario", formulario(Map.of("perfil", perfil)));
                 comprobar(usuario.statusCode() == 200, "Perfil de prueba " + perfil);
                 String claimsUsuario = decodificar(extraer(usuario.body(), "accessToken").split("\\.")[1]);
@@ -101,6 +101,24 @@ public final class EmisorSeguridadLocalPruebas {
             comprobar(enviar(cliente, rutaLogin, formulario(Map.of("usuario", "desconocido", "clave", "Ruta2026!")))
                     .statusCode() == 401, "Rechazar un usuario inexistente sin revelar cuál dato falló");
             comprobar(obtener(cliente, rutaLogin).statusCode() == 405, "El login solo acepta POST");
+            for (var cuenta : Map.of("gerardo@despacho.pe", "22222222-2222-4222-8222-222222222222",
+                    "kevin@despacho.pe", "44444444-4444-4444-8444-444444444444").entrySet()) {
+                var sesion = enviar(cliente, rutaLogin,
+                        formulario(Map.of("usuario", cuenta.getKey(), "clave", "Ruta2026!")));
+                comprobar(sesion.statusCode() == 200, "Login de " + cuenta.getKey());
+                String[] jwt = extraer(sesion.body(), "accessToken").split("\\.");
+                String identidad = decodificar(jwt[1]);
+                comprobar(extraer(identidad, "sub").equals(cuenta.getValue())
+                        && identidad.contains("\"tipo\":\"acceso\"") && identidad.contains("\"roles\":[]"),
+                        "Cada cuenta debe emitir su identidad de repartidor sin roles globales");
+                comprobar(firmaValida(publica, jwt[0] + "." + jwt[1], jwt[2]), "Firma de " + cuenta.getKey());
+                comprobar(enviar(cliente, rutaLogin, formulario(Map.of("usuario", cuenta.getKey(), "clave", "otra")))
+                        .statusCode() == 401, "Rechazar contraseña incorrecta de " + cuenta.getKey());
+            }
+            var perfilKevin = enviar(cliente, origen + "/pruebas/token-usuario",
+                    formulario(Map.of("perfil", "repartidor-kevin")));
+            comprobar(extraer(decodificar(extraer(perfilKevin.body(), "accessToken").split("\\.")[1]), "sub")
+                    .equals("44444444-4444-4444-8444-444444444444"), "El perfil directo de Kevin conserva su identidad");
 
             comprobar(obtener(cliente, rutaToken).statusCode() == 405, "Respetar el método de emisión");
             comprobar(enviar(cliente, rutaToken, "campo=" + "a".repeat(4096)).statusCode() == 413,
