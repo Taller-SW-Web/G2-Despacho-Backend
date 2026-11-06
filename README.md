@@ -131,13 +131,13 @@ El mismo token se puede introducir en `Authorize` de Swagger. Rutas iniciales pa
 
 ## Seguridad temporal
 
-Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Implementa el login propuesto a Seguridad (contrato externo §8.6) con cuentas ficticias para probar la app del repartidor. No utilizar el emisor temporal para un despliegue público.
+Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS256, permisos y controles de negocio; no tiene cuentas reales. Reproduce el acceso humano documentado por G7 (contrato externo §8.6) con cuentas ficticias para probar ambas apps. No utilizar el emisor temporal para un despliegue público.
 
 | Usuario de prueba (`POST /api/v1/auth/login`) | Clave | Perfil emitido |
 |---|---|---|
 | `gerardo@despacho.pe` (alias anteriores: `repartidor.prueba`, `mrojas@despacho.pe`) | `Ruta2026!` | `repartidor` |
 | `kevin@despacho.pe` | `Ruta2026!` | `repartidor-kevin` |
-| `gestor.prueba` | `Ruta2026!` | `gestor` |
+| `gestor@despacho.pe` (alias: `gestor.prueba`) | `Ruta2026!` | `gestor`, con desafío MFA al iniciar sesión |
 
 | Perfil de prueba | Identificador | Uso |
 |---|---|---|
@@ -147,6 +147,14 @@ Es una herramienta de G2, no Seguridad real de G7. Mantiene validación JWT RS25
 | `sin-rol` | `33333333-3333-4333-8333-333333333333` | Comprobaciones de denegación de permisos. |
 
 Los tokens de usuario duran 15 minutos. Las claves RSA se generan en memoria al arrancar; al reiniciar Seguridad, obtener tokens nuevos y reiniciar los consumidores si conservan las claves en caché. El emisor interno es `http://seguridad-local:8090/api/v1/auth`.
+
+El acceso de ambas apps usa ahora el intercambio JSON de G7: login, solicitud/verificación OTP, renovación rotativa y logout; `/me` consulta el perfil con Bearer. Las rutas y formatos se mantienen en [el contrato externo §8.6](../G2-Despacho-Specs/integraciones/api-contract.md#86-acceso-humano-de-ambas-aplicaciones). El Gateway enruta únicamente esas operaciones humanas a `SEGURIDAD_URL` tanto en el perfil base como en `render`; no publica el emisor de tokens técnicos ni el buzón de pruebas.
+
+En Compose, el gestor recibe un desafío de cinco minutos. Cada solicitud genera un código de seis dígitos para su buzón simulado, con tres intentos y un máximo de tres envíos por usuario cada quince minutos. El proxy de desarrollo del frontend permite consultar el buzón con `POST /pruebas/codigo-otp` y `challengeToken`; no es una API real de G7. Reenviar sustituye el código sin extender el desafío. Las identidades de repartidor acceden sin MFA obligatorio. El emisor conserva en memoria desafíos, sesiones y familias de refrescos; reiniciar invalida ese estado.
+
+Logout es idempotente, no exige un JWT vigente y bloquea la renovación. Reutilizar un refresco ya rotado revoca su familia. Los JWT ya emitidos pueden seguir siendo aceptados por los servicios que validan firma y vigencia localmente hasta su vencimiento; no se ha añadido revocación distribuida.
+
+La primera fase se preparó sin ejecutar pruebas por indicación del usuario. En la verificación posterior autorizada aprobaron las comprobaciones del emisor local y `clean verify` del Gateway con 30 pruebas, además del acceso en navegador usando el Compose que el usuario ya había iniciado. La ruta humana se registra desde `RutasAccesoSeguridad`, común a los perfiles; si Seguridad no está configurada en modo demo, no se registra un destino vacío. El kit G7 recibido se identifica como revisión local no publicada: falta contrastar servidor, cuentas, activación, OTP y CORS antes de acreditar integración real.
 
 Para un token de servicio de cotización:
 
