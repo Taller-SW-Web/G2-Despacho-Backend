@@ -26,7 +26,7 @@ public class ConfiguracionRecepcion {
     @Bean LiberadorCapacidad liberadorCapacidad(Environment entorno, Clock reloj) {
         var token = new ProveedorTokenServicio(cliente(entorno.getRequiredProperty("despacho.seguridad.url")),
                 entorno.getProperty("despacho.operacion.cliente-id", "modulo-despacho"),
-                entorno.getProperty("despacho.operacion.cliente-secreto", ""), "operacion:capacidad:liberar",
+                entorno.getProperty("despacho.operacion.cliente-secreto", ""), "",
                 () -> entorno.getProperty("despacho.operacion.token-servicio", ""), reloj);
         return new LiberadorCapacidadHttp(cliente(entorno.getRequiredProperty("despacho.operacion.url")), token,
                 entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
