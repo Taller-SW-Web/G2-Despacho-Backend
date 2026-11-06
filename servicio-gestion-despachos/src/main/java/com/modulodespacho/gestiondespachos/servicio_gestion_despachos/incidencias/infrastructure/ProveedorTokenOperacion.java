@@ -13,7 +13,6 @@ import org.springframework.web.client.RestClientException;
 /** Obtiene y renueva el JWT técnico conforme a Seguridad §8.2; nunca usa el JWT humano. */
 public final class ProveedorTokenOperacion implements Supplier<String> {
 
-    public static final String SCOPE = "operacion:incidencias:leer";
     private final RestClient seguridad;
     private final String idCliente;
     private final Supplier<String> secretoCliente;
@@ -45,15 +44,13 @@ public final class ProveedorTokenOperacion implements Supplier<String> {
         formulario.add("grant_type", "client_credentials");
         formulario.add("client_id", idCliente);
         formulario.add("client_secret", secreto);
-        formulario.add("scope", SCOPE);
         try {
             Respuesta respuesta = seguridad.post().uri("/api/v1/auth/token")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED).body(formulario)
                     .retrieve().body(Respuesta.class);
             if (respuesta != null && "Bearer".equalsIgnoreCase(respuesta.tokenType())
                     && respuesta.accessToken() != null && respuesta.accessToken().matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
-                    && respuesta.expiresIn() != null && respuesta.expiresIn() > 0
-                    && respuesta.scopes() != null && respuesta.scopes().contains(SCOPE)) {
+                    && respuesta.expiresIn() != null && respuesta.expiresIn() > 0) {
                 renovarEn = ahora.plusSeconds(Math.max(1, respuesta.expiresIn() - Math.min(30, respuesta.expiresIn() / 2)));
                 token = respuesta.accessToken();
             }
