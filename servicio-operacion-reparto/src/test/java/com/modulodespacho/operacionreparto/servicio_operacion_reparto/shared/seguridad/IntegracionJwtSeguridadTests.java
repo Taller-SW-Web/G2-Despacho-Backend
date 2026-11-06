@@ -90,7 +90,10 @@ class IntegracionJwtSeguridadTests {
         var servicio = Map.<String, Object>of("tipo", "servicio", "sub", "modulo-despacho",
                 "aud", List.of("api-despacho"));
         assertThat(decodificador.decode(firmar(servicio, null, clave)).getSubject()).isEqualTo("modulo-despacho");
-        var ajeno = new java.util.HashMap<>(servicio); ajeno.put("aud", List.of("api-ventas"));
+        var internoG7 = new java.util.HashMap<>(servicio);
+        internoG7.put("aud", List.of("api-productos", "api-seguridad", "api-ventas"));
+        assertThat(decodificador.decode(firmar(internoG7, null, clave)).getSubject()).isEqualTo("modulo-despacho");
+        var ajeno = new java.util.HashMap<>(servicio); ajeno.put("sub", "modulo-ventas"); ajeno.put("aud", List.of("api-ventas"));
         String tokenAjeno = firmar(ajeno, null, clave);
         assertThatThrownBy(() -> decodificador.decode(tokenAjeno)).isInstanceOf(JwtException.class);
         String refresco = firmar(Map.of("tipo", "refresco"), null, clave);
