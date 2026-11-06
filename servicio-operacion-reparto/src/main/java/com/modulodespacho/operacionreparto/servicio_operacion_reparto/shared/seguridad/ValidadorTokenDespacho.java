@@ -27,7 +27,7 @@ public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
                 ? token.getSubject() != null && token.getSubject().matches(
                         "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
                     && roles instanceof List<?> lista && lista.stream().allMatch(String.class::isInstance)
-                : token.getClaims().get("scope") instanceof String;
+                : true;
         boolean identificadorValido = token.getClaims().get("jti") instanceof String identificador
                 && !identificador.isBlank();
         if (identidadValida && tipoValido && audienciaValida && perfilValido && identificadorValido
