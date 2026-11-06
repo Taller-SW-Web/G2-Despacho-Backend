@@ -33,7 +33,7 @@ class AutorizadorCargaSupabaseTests {
                 .andExpect(header("apikey", "clave-de-servicio"))
                 .andExpect(header("Authorization", "Bearer clave-de-servicio"))
                 .andRespond(withSuccess("""
-                        {"url":"/object/upload/sign/evidencias/evidencias/%s/%s?token=firma"}
+                        {"url":"/object/upload/sign/evidencias/evidencias/%s/%s?token=firma","token":"firma"}
                         """.formatted(DESPACHO, EVIDENCIA), MediaType.APPLICATION_JSON));
 
         AutorizadorCargaSupabase autorizador = new AutorizadorCargaSupabase(builder,

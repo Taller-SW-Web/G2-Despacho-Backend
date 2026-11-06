@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.*;
 import java.util.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
@@ -81,5 +82,6 @@ public class FirmadorSupabase implements FirmadorEvidencia {
         try { return "404".equals(json.readTree(error.getResponseBodyAsString()).path("statusCode").asString()); }
         catch (RuntimeException ignorado) { return false; }
     }
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record RespuestaFirma(String signedURL) {}
 }
