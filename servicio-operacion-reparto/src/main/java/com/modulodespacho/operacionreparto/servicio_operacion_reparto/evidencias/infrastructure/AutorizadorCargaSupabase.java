@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Profile;
@@ -55,6 +56,8 @@ public class AutorizadorCargaSupabase implements AutorizadorCargaStorage {
         }
     }
 
+    /** Supabase también devuelve el token suelto; solo se usa la URL firmada. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record RespuestaStorage(String url) {}
 
     private URI validarOrigen(String valor) {
