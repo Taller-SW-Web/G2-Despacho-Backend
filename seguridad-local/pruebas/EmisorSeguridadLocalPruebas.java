@@ -125,8 +125,73 @@ public final class EmisorSeguridadLocalPruebas {
                     "Limitar el tamaño del formulario");
             comprobar(enviar(cliente, rutaToken, "client_id=uno&client_id=otro").statusCode() == 400,
                     "Rechazar parámetros ambiguos");
+            comprobarSesionHumana(cliente, origen);
             System.out.println("Pruebas del emisor local completadas");
         }
+    }
+
+    /** Doble local del contrato G7, incluyendo uso único y revocación por familia. */
+    private static void comprobarSesionHumana(HttpClient cliente, String origen) throws Exception {
+        String base = origen + "/api/v1/auth";
+        var login = enviarJson(cliente, base + "/login", Map.of("correo", "gestor@despacho.pe", "contrasena", "Ruta2026!"));
+        comprobar(login.statusCode() == 200 && login.body().contains("\"mfaRequerido\":true")
+                && !login.body().contains("accessToken"), "El gestor no recibe sesión antes del OTP");
+        String desafio = extraer(login.body(), "challengeToken");
+        comprobar(enviarJson(cliente, base + "/otp/verificar", Map.of("challengeToken", desafio, "codigo", "123456"))
+                .statusCode() == 410, "No se puede verificar sin haber solicitado el código");
+        var envio = enviarJson(cliente, base + "/otp/solicitar", Map.of("challengeToken", desafio));
+        comprobar(envio.statusCode() == 202 && !envio.body().contains("\"codigo\""), "La respuesta OTP conserva la forma de G7");
+        String codigo = extraer(enviarJson(cliente, origen + "/pruebas/codigo-otp", Map.of("challengeToken", desafio)).body(), "codigo");
+        String incorrecto = codigo.equals("000000") ? "000001" : "000000";
+        for (int intento = 1; intento <= 3; intento++) {
+            var fallo = enviarJson(cliente, base + "/otp/verificar", Map.of("challengeToken", desafio, "codigo", incorrecto));
+            comprobar(fallo.statusCode() == 401 && numero(fallo.body(), "intentosRestantes") == 3 - intento,
+                    "El OTP conserva el contador de intentos");
+        }
+        comprobar(enviarJson(cliente, base + "/otp/verificar", Map.of("challengeToken", desafio, "codigo", codigo))
+                .body().contains("OTP_INTENTOS_AGOTADOS"), "El código correcto tampoco entra tras agotar intentos");
+        comprobar(enviarJson(cliente, base + "/otp/solicitar", Map.of("challengeToken", desafio)).statusCode() == 202,
+                "Se puede solicitar un nuevo código sin extender el desafío");
+        String nuevoCodigo = extraer(enviarJson(cliente, origen + "/pruebas/codigo-otp", Map.of("challengeToken", desafio)).body(), "codigo");
+        comprobar(!nuevoCodigo.equals(codigo), "Reenviar reemplaza el código del desafío");
+        var verificada = enviarJson(cliente, base + "/otp/verificar", Map.of("challengeToken", desafio, "codigo", nuevoCodigo));
+        comprobar(verificada.statusCode() == 200 && verificada.body().contains("GESTOR_DESPACHO"), "OTP correcto entrega el gestor");
+        comprobar(enviarJson(cliente, base + "/otp/verificar", Map.of("challengeToken", desafio, "codigo", nuevoCodigo))
+                .body().contains("TOKEN_INVALIDO"), "El desafío ya usado no se puede canjear otra vez");
+        var otroLogin = enviarJson(cliente, base + "/login", Map.of("correo", "gestor@despacho.pe", "contrasena", "Ruta2026!"));
+        String otroDesafio = extraer(otroLogin.body(), "challengeToken");
+        comprobar(enviarJson(cliente, base + "/otp/solicitar", Map.of("challengeToken", otroDesafio)).statusCode() == 202,
+                "Tercera solicitud por usuario");
+        var limitado = enviarJson(cliente, base + "/otp/solicitar", Map.of("challengeToken", otroDesafio));
+        comprobar(limitado.statusCode() == 429 && limitado.headers().firstValue("Retry-After").isPresent(), "Cuarta solicitud limitada por usuario");
+
+        String refresco = extraer(verificada.body(), "refreshToken");
+        var renovada = enviarJson(cliente, base + "/refresh", Map.of("refreshToken", refresco));
+        comprobar(renovada.statusCode() == 200 && !extraer(renovada.body(), "refreshToken").equals(refresco), "El refresco rota");
+        var independiente = enviarJson(cliente, base + "/login", Map.of("correo", "gerardo@despacho.pe", "contrasena", "Ruta2026!"));
+        comprobar(independiente.statusCode() == 200 && !independiente.body().contains("mfaRequerido"), "Repartidor entra sin rol global ni MFA obligatorio");
+        comprobar(enviarJson(cliente, base + "/refresh", Map.of("refreshToken", refresco)).statusCode() == 401, "Reusar un refresco revoca la familia");
+        comprobar(enviarJson(cliente, base + "/refresh", Map.of("refreshToken", extraer(renovada.body(), "refreshToken")))
+                .statusCode() == 401, "El descendiente de la familia también queda revocado");
+        var otraSesion = enviarJson(cliente, base + "/refresh", Map.of("refreshToken", extraer(independiente.body(), "refreshToken")));
+        comprobar(otraSesion.statusCode() == 200, "Las sesiones independientes se conservan");
+        String acceso = extraer(otraSesion.body(), "accessToken"), ultimo = extraer(otraSesion.body(), "refreshToken");
+        var perfil = cliente.send(HttpRequest.newBuilder(URI.create(base + "/me")).header("Authorization", "Bearer " + acceso)
+                .GET().build(), HttpResponse.BodyHandlers.ofString());
+        comprobar(perfil.statusCode() == 200 && perfil.body().contains("gerardo@despacho.pe"), "Perfil de la sesión humana");
+        comprobar(enviarJson(cliente, base + "/logout", Map.of("refreshToken", ultimo)).statusCode() == 204, "Logout sin JWT de acceso");
+        comprobar(enviarJson(cliente, base + "/logout", Map.of("refreshToken", ultimo)).statusCode() == 204, "Logout idempotente");
+        comprobar(enviarJson(cliente, base + "/refresh", Map.of("refreshToken", ultimo)).statusCode() == 401, "Logout impide renovar");
+        comprobar(enviarJson(cliente, base + "/login", Map.of("correo", "gerardo@despacho.pe", "contrasena", "otra"))
+                .statusCode() == 401, "Credenciales JSON incorrectas");
+    }
+
+    private static HttpResponse<String> enviarJson(HttpClient cliente, String ruta, Map<String, String> campos) throws Exception {
+        String cuerpo = campos.entrySet().stream().map(entrada -> "\"" + entrada.getKey() + "\":\"" + entrada.getValue() + "\"")
+                .collect(Collectors.joining(",", "{", "}"));
+        return cliente.send(HttpRequest.newBuilder(URI.create(ruta)).timeout(Duration.ofSeconds(5))
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(cuerpo)).build(),
+                HttpResponse.BodyHandlers.ofString());
     }
 
     private static void comprobarActivacionExplicita() throws Exception {
