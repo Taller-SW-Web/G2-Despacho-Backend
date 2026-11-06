@@ -37,6 +37,12 @@ Cada aplicación conserva su código, pruebas, recursos, `pom.xml`, Maven Wrappe
 
 Las APIs de negocio se consumen mediante el Gateway, bajo `/api/v1`. Las rutas internas entre microservicios no se publican por el Gateway. Los puertos se exponen únicamente en `127.0.0.1`.
 
+Gestión implementa el seguimiento público por pedido de RT-04 para los canales externos. Consulta estado e hitos en su propia base y omite datos personales y operaciones internas. Su ruta, respuesta y permisos se definen únicamente en el [contrato externo de seguimiento](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md#6-rt-04-seguimiento-para-marketplace-y-chatbot). Las pruebas `ControladorSeguimientoPedidoTests` y `SeguimientoPedidoHttpTests` comprueban permisos, proyección pública, historial y reprogramaciones; la segunda utiliza PostgreSQL desechable con Testcontainers.
+
+Para consultar ejemplos manuales en el Compose local, [pruebas/cargar_seguimientos_local.sql](pruebas/cargar_seguimientos_local.sql) agrega ocho pedidos identificados con `PED-SEG-`: los siete estados y una reprogramación. Solo carga datos ficticios de lectura, sin modificar pedidos existentes, crear eventos ni acreditar el recorrido operativo de Ventas, asignación o entrega. Se ejecuta únicamente en el contenedor PostgreSQL local contra `despacho_gestion`; se puede repetir sin duplicar pedidos ni hitos. Estos ejemplos tienen `es_simulado=false` para comprobar la consulta pública, que excluye los simuladores de F-02.
+
+Verificación local de RT-04 del 06/11/2026: `clean verify` de Gestión aprobó 243 pruebas, incluidas las 11 nuevas de seguimiento, con PostgreSQL desechable. Por el Gateway del Compose se comprobaron los ocho ejemplos con `200`, los rechazos `401`/`403`, el `404` de pedidos inexistentes y simulados y la repetición del cargador sin duplicados. Esto no acredita el recorrido entre los servidores reales de G2, G5, G6 y G7.
+
 En local y con el perfil `render`, la consulta de ruta y el guardado de secuencia de `/api/v1/jornadas/{id}/...` se dirigen a Gestión antes que la ruta genérica de jornadas de Operación. La reasignación pertenece también a Gestión. El Gateway conserva `If-Match`, `Idempotency-Key` y ETag; no habilita por ello las llamadas técnicas públicas ni omite JWT. La UI limita el reordenamiento a rutas continuas mientras se aclara el tratamiento de huecos históricos. Los mecanismos internos de identidad y la integración G6 siguen pendientes de acuerdo y no cambian con este incremento.
 
 ## Arranque local
