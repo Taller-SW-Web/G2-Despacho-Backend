@@ -18,7 +18,11 @@ public class RutasAccesoSeguridad {
         if (!origen.isBlank()) {
             rutas.route("seguridad-acceso", ruta -> ruta.path("/api/v1/auth/login",
                     "/api/v1/auth/otp/solicitar", "/api/v1/auth/otp/verificar", "/api/v1/auth/refresh",
-                    "/api/v1/auth/logout", "/api/v1/auth/me").uri(origen));
+                    "/api/v1/auth/logout", "/api/v1/auth/me")
+                    // Seguridad puede publicar el mismo CORS que ya añadió el Gateway.
+                    .filters(filtros -> filtros.dedupeResponseHeader(
+                            "Access-Control-Allow-Origin Access-Control-Allow-Credentials", "RETAIN_UNIQUE"))
+                    .uri(origen));
         }
         return rutas.build();
     }
