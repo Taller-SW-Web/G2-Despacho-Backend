@@ -22,7 +22,7 @@ public class ConfiguracionCampo {
                 : new ProveedorTokenServicio(cliente(entorno.getRequiredProperty("despacho.seguridad.url"), Duration.ofSeconds(3)),
                         entorno.getProperty("despacho.gestion.cliente-id", "modulo-despacho"),
                         entorno.getProperty("despacho.gestion.cliente-secreto", ""),
-                        entorno.getProperty("despacho.gestion.scopes", "gestion:despachos:transicionar gestion:catalogos:leer"),
+                        "",
                         () -> entorno.getProperty("despacho.gestion.token-servicio", ""), reloj);
         // ES-F03-04 RN-09: la transición responde en menos de 2 s; el plazo acotado evita sostener la solicitud.
         return new GestionHttp(cliente(entorno.getRequiredProperty("despacho.gestion.url"), Duration.ofMillis(1500)), credencial, demo, json);

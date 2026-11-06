@@ -8,6 +8,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
@@ -44,6 +45,19 @@ class ProveedorTokenServicioTests {
             servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token")).andRespond(withSuccess(respuesta, MediaType.APPLICATION_JSON));
         var proveedor = new ProveedorTokenServicio(cliente.build(), "modulo-despacho", "secreto-prueba", "ventas:pedidos:estado", () -> "", Clock.systemUTC());
         for (int intento = 0; intento < 3; intento++) assertThat(proveedor.get()).isEmpty();
+        servidor.verify();
+    }
+
+    @Test void sinScopesConfiguradosNoLosSolicitaNiLosExigeEnLaRespuesta() {
+        var cliente = RestClient.builder().baseUrl("http://seguridad-prueba");
+        var servidor = MockRestServiceServer.bindTo(cliente).build();
+        servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token"))
+                .andExpect(content().string(containsString("grant_type=client_credentials")))
+                .andExpect(content().string(not(containsString("scope="))))
+                .andRespond(withSuccess("{\"accessToken\":\"cabecera.cuerpo.firma\",\"tokenType\":\"Bearer\",\"expiresIn\":100}",
+                        MediaType.APPLICATION_JSON));
+        var proveedor = new ProveedorTokenServicio(cliente.build(), "modulo-despacho", "secreto-prueba", "", () -> "", Clock.systemUTC());
+        assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.firma");
         servidor.verify();
     }
 }

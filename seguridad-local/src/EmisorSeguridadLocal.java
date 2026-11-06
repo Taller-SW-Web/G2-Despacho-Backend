@@ -35,9 +35,8 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
             "modulo-marketplace", List.of("cotizaciones:calcular", "seguimientos:leer"),
             "modulo-chatbot", List.of("cotizaciones:calcular", "seguimientos:leer"),
             "modulo-ventas", List.of("despachos:crear", "despachos:cancelar", "seguimientos:leer"),
-            "modulo-despacho", List.of("operacion:incidencias:leer", "operacion:capacidad:reservar",
-                    "operacion:capacidad:liberar", "operacion:proyecciones:escribir",
-                    "gestion:despachos:transicionar", "gestion:catalogos:leer"));
+            // Las rutas internas de Despacho no usan scopes: modulo-despacho se identifica solo por su token de servicio.
+            "modulo-despacho", List.of());
     private static final Map<String, Perfil> PERFILES = Map.of(
             "gestor", new Perfil("11111111-1111-4111-8111-111111111111", List.of("GESTOR_DESPACHO")),
             "repartidor", new Perfil("22222222-2222-4222-8222-222222222222", List.of()),

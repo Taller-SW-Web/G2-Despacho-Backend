@@ -32,7 +32,6 @@ services:
       SEGURIDAD_URL: http://seguridad-local:8090
       OPERACION_REPARTO_URL: http://operacion:8082
       OPERACION_CLIENT_SECRET: despacho-local-no-produccion
-      OPERACION_CAPACIDAD_SCOPES: operacion:incidencias:leer operacion:capacidad:reservar operacion:capacidad:liberar operacion:proyecciones:escribir
       PORT: '8081'
     depends_on:
       postgres: {condition: service_healthy}

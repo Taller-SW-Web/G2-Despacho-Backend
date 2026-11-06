@@ -152,21 +152,21 @@ class TransicionesHttpTests {
         assertThat(contar("intentos_entrega")).isZero();
     }
 
-    @Test void soloElClienteTecnicoDelModuloConSuScopeAccedeALasRutasInternas() throws Exception {
+    @Test void soloElClienteTecnicoDelModuloAccedeALasRutasInternasSinScopes() throws Exception {
         http.perform(post("/internal/v1/despachos/" + despacho + "/transiciones").header("Authorization", "Bearer " + humano())
                 .header("Idempotency-Key", UUID.randomUUID()).contentType("application/json")
                 .content(JSON.writeValueAsString(cuerpo("EN_CAMINO", null, null, null)))).andExpect(status().isForbidden());
         http.perform(post("/internal/v1/despachos/" + despacho + "/transiciones").header("Authorization", "Bearer " + servicio("modulo-ventas", "gestion:despachos:transicionar"))
                 .header("Idempotency-Key", UUID.randomUUID()).contentType("application/json")
                 .content(JSON.writeValueAsString(cuerpo("EN_CAMINO", null, null, null)))).andExpect(status().isForbidden());
-        http.perform(get("/internal/v1/catalogos/motivos-fallo").header("Authorization", "Bearer " + servicio("modulo-despacho", "gestion:catalogos:leer")))
+        http.perform(get("/internal/v1/catalogos/motivos-fallo").header("Authorization", "Bearer " + servicio("modulo-despacho", null)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.motivos[?(@.codigo=='NO_INTENTADO')].seleccionableEnCampo").value(false));
         assertThat(texto("SELECT estado FROM despachos")).isEqualTo("ASIGNADO");
     }
 
     private ResultActions transicionar(String clave, Map<String, Object> cuerpo) throws Exception {
         return http.perform(post("/internal/v1/despachos/" + despacho + "/transiciones")
-                .header("Authorization", "Bearer " + servicio("modulo-despacho", "gestion:despachos:transicionar"))
+                .header("Authorization", "Bearer " + servicio("modulo-despacho", null))
                 .header("Idempotency-Key", clave).contentType("application/json").content(JSON.writeValueAsString(cuerpo)));
     }
     private static Map<String, Object> cuerpo(String destino, String evidencia, String motivo, String comentario) {
