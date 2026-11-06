@@ -97,6 +97,32 @@ class IntegracionJwtSeguridadTests {
         assertThatThrownBy(() -> decodificador.decode(refresco)).isInstanceOf(JwtException.class);
     }
 
+    @Test
+    void internoAceptaTokenRealConAudienciasDeG7YConservaFirmaEmisorYVigencia() throws Exception {
+        var servicio = Map.<String, Object>of("tipo", "servicio", "sub", "modulo-despacho",
+                "aud", List.of("api-productos", "api-seguridad", "api-ventas"));
+        var solicitud = new org.springframework.mock.web.MockHttpServletRequest("POST", "/internal/v1/capacidad/reservas");
+        var gestor = DecodificadorJwtPorAmbito.resolver(decodificador,
+                new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter()).resolve(solicitud);
+        String token = firmar(servicio, null, clave);
+        assertThat(gestor.authenticate(new org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken(token))
+                .getName()).isEqualTo("modulo-despacho");
+        assertThatThrownBy(() -> decodificador.decode(token)).isInstanceOf(JwtException.class);
+        var cambios = new java.util.HashMap<>(servicio);
+        cambios.put("iss", "https://emisor-ajeno.example");
+        String emisorAjeno = firmar(cambios, null, clave);
+        cambios = new java.util.HashMap<>(servicio);
+        cambios.put("exp", Date.from(Instant.now().minusSeconds(60)));
+        String vencido = firmar(cambios, null, clave);
+        RSAKey otra = new RSAKeyGenerator(2048).keyID("g7-prueba").generate();
+        String firmaAjena = firmar(servicio, null, otra);
+        for (String invalido : List.of(emisorAjeno, vencido, firmaAjena)) {
+            assertThatThrownBy(() -> gestor.authenticate(
+                    new org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken(invalido)))
+                    .isInstanceOf(org.springframework.security.oauth2.core.OAuth2AuthenticationException.class);
+        }
+    }
+
     private String firmar(Map<String, Object> cambios, String omitir, RSAKey firma) throws Exception {
         var claims = new java.util.HashMap<String, Object>();
         claims.put("iss", origen + "/api/v1/auth");

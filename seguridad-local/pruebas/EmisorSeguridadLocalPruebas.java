@@ -79,6 +79,9 @@ public final class EmisorSeguridadLocalPruebas {
                     && claimsTecnico.contains("\"tipo\":\"servicio\"")
                     && !claimsTecnico.contains("operacion:") && !claimsTecnico.contains("gestion:"),
                     "El token tecnico no lleva scopes internos");
+            comprobar(!claimsTecnico.contains("api-despacho") && claimsTecnico.contains("api-productos")
+                    && claimsTecnico.contains("api-seguridad") && claimsTecnico.contains("api-ventas"),
+                    "El token tecnico reproduce las audiencias existentes de G7 sin inventar una audiencia interna");
             String scopeInterno = formulario(Map.of("grant_type", "client_credentials",
                     "client_id", "modulo-despacho", "client_secret", "despacho-local-no-produccion",
                     "scope", "operacion:capacidad:reservar"));

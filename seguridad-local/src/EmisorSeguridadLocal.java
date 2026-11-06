@@ -201,7 +201,9 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
                     "El cliente local no tiene esos scopes de prueba");
         }
         Map<String, Object> claims = claims(cliente, "servicio", 3600);
-        claims.put("aud", List.of("api-despacho"));
+        // Reproduce el token técnico actual de G7: no concede una audiencia interna a G2.
+        claims.put("aud", "modulo-despacho".equals(cliente)
+                ? List.of("api-productos", "api-seguridad", "api-ventas") : List.of("api-despacho"));
         claims.put("scope", String.join(" ", solicitados));
         responder(intercambio, 200, Map.of(
                 "accessToken", firmar(claims), "tokenType", "Bearer", "expiresIn", 3600,

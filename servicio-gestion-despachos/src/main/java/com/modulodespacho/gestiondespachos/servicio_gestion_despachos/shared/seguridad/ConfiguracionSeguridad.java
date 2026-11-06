@@ -80,20 +80,22 @@ public class ConfiguracionSeguridad {
                     .jwsAlgorithm(algoritmoFirma).restOperations(
                             new org.springframework.web.client.RestTemplate(peticiones)).build();
             resultado.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                    JwtValidators.createDefaultWithIssuer(emisor), new ValidadorTokenDespacho(audiencia)));
+                    JwtValidators.createDefaultWithIssuer(emisor), new ValidadorTokenDespacho(audiencia, false)));
             return resultado;
         });
-        return token -> {
+        JwtDecoder firmaEIdentidad = token -> {
             try {
                 return diferido.decode(token);
             } catch (JwtException | JwtDecoderInitializationException error) {
                 throw new BadJwtException("No fue posible validar el token", error);
             }
         };
+        return new DecodificadorJwtPorAmbito(firmaEIdentidad, new ValidadorTokenDespacho(audiencia));
     }
 
     @Bean
     SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+            ObjectProvider<JwtDecoder> decodificadores,
             ObjectProvider<FiltroLimiteCotizaciones> filtroLimite,
             @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada,
             @Value("${despacho.demo.sin-autenticacion:false}") boolean modoDemo,
@@ -136,7 +138,8 @@ public class ConfiguracionSeguridad {
                         .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
         if (!modoDemo) {
             http.oauth2ResourceServer(oauth -> oauth
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidorAutenticacion()))
+                        .authenticationManagerResolver(DecodificadorJwtPorAmbito.resolver(
+                                decodificadores.getObject(), convertidorAutenticacion()))
                         .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
         }
         return http.build();

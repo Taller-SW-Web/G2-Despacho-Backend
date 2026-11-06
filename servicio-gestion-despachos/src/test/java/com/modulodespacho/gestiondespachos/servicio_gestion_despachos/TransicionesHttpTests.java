@@ -164,6 +164,18 @@ class TransicionesHttpTests {
         assertThat(texto("SELECT estado FROM despachos")).isEqualTo("ASIGNADO");
     }
 
+    @Test void internoSinAudienciaDespachoAutorizaSoloAlClientePropioYNoAbreLaApiPublica() throws Exception {
+        String token = jwt("servicio", "modulo-despacho", "seguimientos:leer", List.of(), null);
+        http.perform(post("/internal/v1/despachos/" + despacho + "/transiciones")
+                .header("Authorization", "Bearer " + token).header("Idempotency-Key", UUID.randomUUID())
+                .contentType("application/json").content(JSON.writeValueAsString(cuerpo("EN_CAMINO", null, null, null))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("EN_CAMINO"));
+        http.perform(get("/api/v1/seguimientos/pedidos/PED-F03").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("DESP_ERROR_TOKEN_INVALIDO"));
+        http.perform(get("/internal/v1/catalogos/motivos-fallo").header("Authorization", "Bearer "
+                + jwt("servicio", "modulo-ventas", null, List.of(), null))).andExpect(status().isForbidden());
+    }
+
     private ResultActions transicionar(String clave, Map<String, Object> cuerpo) throws Exception {
         return http.perform(post("/internal/v1/despachos/" + despacho + "/transiciones")
                 .header("Authorization", "Bearer " + servicio("modulo-despacho", null))
