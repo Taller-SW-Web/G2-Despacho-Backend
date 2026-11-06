@@ -18,6 +18,7 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 
 ### Cambiado
 
+- Rutas internas sin scopes: Gestión y Operación ya no exigen `gestion:despachos:transicionar`, `gestion:catalogos:leer`, `operacion:capacidad:reservar`, `operacion:capacidad:liberar`, `operacion:proyecciones:escribir` ni `operacion:incidencias:leer`. Se conserva la verificación del token de servicio de `modulo-despacho` (firma, emisor, vencimiento y audiencia) y los scopes externos. Se dejan de solicitar al obtener el token y se eliminan `OPERACION_CAPACIDAD_SCOPES` y `GESTION_SCOPES`.
 - Entorno local unificado en `compose.yaml`, con los tres backends, Seguridad temporal y dos bases PostgreSQL locales.
 - Historia local de Gestión reconstruida con V1 original y V2 acumulada; configuración de pruebas adaptada a PostGIS.
 - Recursos de compatibilidad y datos utilizados por pruebas de Operación reubicados dentro del servicio.
