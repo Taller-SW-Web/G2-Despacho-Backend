@@ -104,7 +104,7 @@ def preparar_caso(compose, api, gestor):
         {"idRepartidor": perfil, "idJornada": jornada})
     estado, _, credencial = solicitar("http://127.0.0.1:18090/api/v1/auth/token", formulario={
         "grant_type": "client_credentials", "client_id": "modulo-despacho",
-        "client_secret": "despacho-local-no-produccion", "scope": "gestion:despachos:transicionar"})
+        "client_secret": "despacho-local-no-produccion"})
     exigir(estado == 200, "No se pudo preparar la identidad técnica temporal")
     cuerpo = {"estadoDestino": "FALLIDO", "idRepartidor": perfil, "idJornada": jornada,
         "motivo": "NO_INTENTADO", "comentario": "Caso sintético de contrato F04",

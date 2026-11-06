@@ -59,7 +59,7 @@ def verificar_anulacion_fallido(api, gestor, ventas, repartidor, jornada, zona):
     identificador = despacho["idDespacho"]
     solicitar(api + "/despachos/" + identificador + "/asignacion", {"idRepartidor": repartidor, "idJornada": jornada}, gestor)
     interno = solicitar("http://127.0.0.1:18090/api/v1/auth/token", formulario={"grant_type": "client_credentials",
-        "client_id": "modulo-despacho", "client_secret": "despacho-local-no-produccion", "scope": "gestion:despachos:transicionar"})["accessToken"]
+        "client_id": "modulo-despacho", "client_secret": "despacho-local-no-produccion"})["accessToken"]
     peticion = {"estadoDestino": "FALLIDO", "idRepartidor": repartidor, "idJornada": jornada,
         "motivo": "NO_INTENTADO", "comentario": "Preparación sintética para anulación", "ejecutor": repartidor, "origen": "MANUAL"}
     # No publicar la API interna mediante Gateway ni imprimir credenciales en los registros.
