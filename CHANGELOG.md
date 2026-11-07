@@ -9,6 +9,7 @@ El equipo revisa el corte de entrega aproximadamente cada dos semanas. El númer
 ### Añadido
 
 - ES-F04-03 en Gestión: recepción en centro atómica, respuesta original durable, control de concurrencia y liberación recuperable de la reserva original mediante HTTP; pruebas de validación, seguridad, rollback, recuperación y contrato de Operación.
+- Pipeline CI/CD: construcción de las imágenes Docker en cada ejecución, publicación en GHCR desde `main`, compuerta única `CI backend verde`, despliegue en Render por deploy hooks solo desde `main` y verificación posterior de salud (ver README, "Pipeline CI/CD").
 - CI para PR y cambios en `develop` y `main`: compilación y pruebas existentes de Gateway, Gestión y Operación, incluidas las integraciones con bases temporales; pruebas propias de Seguridad temporal.
 - Instrucciones del backend enlazadas con las especificaciones y contratos del equipo.
 - F-03, comandos del repartidor en Operación: inicio de traslado, entrega y fallo con evidencia verificada en el bucket, y catálogo de motivos de campo. Cada comando es idempotente por `Idempotency-Key` del usuario (migración V6 `comandos_repartidor`) y se coordina con Gestión fuera de las transacciones locales.
