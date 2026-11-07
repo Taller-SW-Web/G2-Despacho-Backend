@@ -399,16 +399,43 @@ La preparación de identidad F-05/F-06 se registra en [Specs](../despacho-docs/d
 
 Para verificar criptografía sin cuentas ni bases externas, desde `servicio-operacion-reparto` ejecutar `./mvnw.cmd "-Dtest=ValidadorTokenDespachoTests,ValidadorPerfilRepartidorTests,IntegracionJwtSeguridadTests,GestorJornadasTests" test`. El servidor JWKS de esas pruebas usa loopback y claves efímeras; no acredita autenticación contra G7. El registro/vínculo manual no comprueba activación global; cuentas reales y eventos/reconciliación permanecen pendientes. La suite completa de `clean verify` requiere Docker y PostgreSQL desechable.
 
-[CI backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
+[CI/CD backend](.github/workflows/ci.yaml) se ejecuta en los PR dirigidos a `develop` o `main`, en los cambios integrados a esas ramas y bajo ejecución manual desde Actions. Usa Java 21 y comprueba los tres servicios por separado con Maven Wrapper y `clean verify`. Las pruebas existentes de integración crean PostgreSQL/PostGIS temporal mediante Testcontainers; el workflow no carga `.env`, no utiliza Supabase y no inicia el Compose de desarrollo. Los informes de Maven se conservan siete días en los artefactos de cada ejecución.
 
-Una cuarta comprobación compila y ejecuta las pruebas propias de `seguridad-local`, que levantan su emisor aislado con puerto efímero. El workflow no despliega servicios, no publica releases y no crea tags.
+Una cuarta comprobación compila y ejecuta las pruebas propias de `seguridad-local`, que levantan su emisor aislado con puerto efímero. El workflow no publica releases y no crea tags.
 
-Para exigir el resultado antes de integrar, configurar la protección de `develop` y `main` en GitHub y seleccionar estas cuatro comprobaciones cuando hayan aparecido en una ejecución:
+### Pipeline CI/CD
 
-- `Pruebas (api-gateway)`
-- `Pruebas (servicio-gestion-despachos)`
-- `Pruebas (servicio-operacion-reparto)`
-- `Pruebas (seguridad-local)`
+```
+PR / push a develop o main
+  1. Compilar y probar   verificador F-02 · Pruebas (api-gateway | gestión | operación) · seguridad-local
+  2. Construir imágenes  Imagen Docker (api-gateway | gestión | operación | seguridad-local)
+  3. Compuerta           CI backend verde
+  4. Desplegar           solo push o ejecución manual en main  ->  Render (Operación, Gestión, Gateway)
+  5. Verificar           /actuator/health de los tres servicios (herramientas/mantener_backends_activos.py)
+```
+
+- **Compilar y probar:** `clean verify` por servicio, con PostgreSQL/PostGIS temporal (Testcontainers).
+- **Construir imágenes:** cada Dockerfile se construye con `docker build` en cada ejecución, de modo que un Dockerfile roto falla antes de integrar. En `main` las imágenes de Gateway, Gestión y Operación se publican en GHCR (`ghcr.io/<organización>/<repositorio>/<servicio>`) con las etiquetas del SHA del commit y `latest`. `seguridad-local` se construye pero nunca se publica ni se despliega: es un emisor de pruebas que no debe usarse en un despliegue público.
+- **Compuerta:** el job `CI backend verde` falla si cualquier etapa anterior no terminó en `success`. El despliegue depende únicamente de él.
+- **Desplegar:** en `main`, con el entorno `produccion` de GitHub, se llama a los deploy hooks de Render con el SHA del commit (`&ref=<SHA>`), primero Operación y Gestión y al final el Gateway. Solo hay un despliegue a la vez (`concurrency`) y nunca se cancela uno en curso.
+- **Verificar:** tras una espera inicial, se reutiliza `herramientas/mantener_backends_activos.py --una-vez` hasta que los tres servicios respondan `200` y `status=UP`, con reintentos de hasta unos 15 minutos. Esto acredita que los servicios están disponibles tras el despliegue; no identifica la versión (el endpoint de salud no la expone).
+
+#### Despliegue continuo: configuración necesaria
+
+El despliegue no funciona hasta configurar esto en GitHub y Render (Settings > Secrets and variables > Actions). Mientras falten los secretos, el job `Desplegar en Render y verificar` falla en `main` con un mensaje que indica cuál falta.
+
+| Secreto | Valor |
+|---|---|
+| `RENDER_DEPLOY_HOOK_OPERACION` | Deploy hook de `taller-servicio-operacion-reparto` (Render > servicio > Settings > Deploy Hook) |
+| `RENDER_DEPLOY_HOOK_GESTION` | Deploy hook de `taller-servicio-gestion-despachos` |
+| `RENDER_DEPLOY_HOOK_GATEWAY` | Deploy hook de `taller-api-gateway` |
+
+1. En Render, en cada servicio, poner **Auto-Deploy en `Off`** (o `After CI Checks Pass` si se prefiere que Render espere al CI). Si queda en `On`, cada push despliega sin esperar a las pruebas y el job duplica el despliegue.
+2. Crear en GitHub el entorno `produccion` (Settings > Environments). Opcional: añadir *Required reviewers* para exigir aprobación manual antes de desplegar.
+3. Las URLs verificadas son las predeterminadas de `herramientas/mantener_backends_activos.py`; si cambian en Render, actualizar esa herramienta.
+4. Para redesplegar sin un commit nuevo: Actions > CI/CD backend > *Run workflow* sobre `main`. Las ejecuciones manuales sobre otras ramas solo compilan y prueban.
+
+Para exigir el resultado antes de integrar, configurar la protección de `develop` y `main` en GitHub y seleccionar la compuerta `CI backend verde` cuando haya aparecido en una ejecución. Resume las pruebas de los tres servicios, de `seguridad-local`, del verificador F-02 y la construcción de las imágenes, y no depende de los nombres de la matriz. Si se prefiere exigirlas por separado, también existen `Pruebas (api-gateway)`, `Pruebas (servicio-gestion-despachos)`, `Pruebas (servicio-operacion-reparto)` y `Pruebas (seguridad-local)`.
 
 La protección de ramas se configura en GitHub; añadir el workflow por sí solo no impide un merge. Se propone exigir PR, una aprobación de otro compañero, comprobaciones aprobadas y conversaciones resueltas, sin force push ni eliminación de las ramas protegidas.
 
