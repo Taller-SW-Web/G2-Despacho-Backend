@@ -16,7 +16,8 @@ public class AutorizarLecturaEvidencia {
         if (!gestor && !lector.tienePerfilActivo(idUsuario)) throw denegado();
         var referencia = lector.consultar(idEvidencia).orElseThrow(() -> new ErrorEvidencia(404,
                 "DESP_ERROR_EVIDENCIA_NO_ENCONTRADA", "La evidencia no existe"));
-        if (!gestor && !lector.esPropietario(idUsuario, referencia.idDespacho())) throw denegado();
+        if (!gestor && !(lector.esDeRecojo(idEvidencia) ? lector.esPropietarioRecojo(idUsuario, idEvidencia)
+                : lector.esPropietario(idUsuario, referencia.idDespacho()))) throw denegado();
         if (!"ASOCIADA".equals(referencia.estado())) throw new ErrorEvidencia(409,
                 "DESP_ERROR_EVIDENCIA_NO_ASOCIADA", "La evidencia todavía no está asociada al despacho");
         int vigencia = lector.vigenciaSegundos();

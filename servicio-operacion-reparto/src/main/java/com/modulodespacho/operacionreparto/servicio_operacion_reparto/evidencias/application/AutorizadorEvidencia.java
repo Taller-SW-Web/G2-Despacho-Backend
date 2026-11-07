@@ -34,27 +34,38 @@ public class AutorizadorEvidencia {
 
         String contentType = solicitud.contentType().trim().toLowerCase(Locale.ROOT);
         politica.validar(contentType, solicitud.tamanioBytes());
-        if (!evidencias.perteneceADespachadorEnRuta(solicitud.idDespacho(), usuario)) {
+        boolean recojo = solicitud.idRecojo() != null;
+        if (recojo ? !evidencias.perteneceARecojoEnRuta(solicitud.idRecojo(), usuario)
+                : !evidencias.perteneceADespachadorEnRuta(solicitud.idDespacho(), usuario)) {
             throw new DespachoNoDisponible();
         }
 
         UUID idEvidencia = UUID.randomUUID();
-        String rutaObjeto = "evidencias/" + solicitud.idDespacho() + "/" + idEvidencia;
-        AutorizadorCargaStorage.AutorizacionStorage autorizacion =
-                storage.autorizar(solicitud.idDespacho(), idEvidencia);
-        if (!evidencias.registrarAutorizada(idEvidencia, solicitud.idDespacho(), rutaObjeto, solicitud.tipo(),
-                contentType, Math.toIntExact(solicitud.tamanioBytes()), usuarioAutenticado, usuario,
-                autorizacion.venceEn())) {
+        UUID recurso = recojo ? solicitud.idRecojo() : solicitud.idDespacho();
+        String rutaObjeto = "evidencias/" + recurso + "/" + idEvidencia;
+        AutorizadorCargaStorage.AutorizacionStorage autorizacion = storage.autorizar(recurso, idEvidencia);
+        int tamanio = Math.toIntExact(solicitud.tamanioBytes());
+        boolean registrada = recojo
+                ? evidencias.registrarAutorizadaRecojo(idEvidencia, solicitud.idRecojo(), rutaObjeto, solicitud.tipo(),
+                        contentType, tamanio, usuarioAutenticado, usuario, autorizacion.venceEn())
+                : evidencias.registrarAutorizada(idEvidencia, solicitud.idDespacho(), rutaObjeto, solicitud.tipo(),
+                        contentType, tamanio, usuarioAutenticado, usuario, autorizacion.venceEn());
+        if (!registrada) {
             throw new DespachoNoDisponible();
         }
         return new Autorizacion(idEvidencia, autorizacion.urlCarga(), autorizacion.venceEn());
     }
 
-    public record Solicitud(UUID idDespacho, TipoEvidencia tipo, String contentType, long tamanioBytes) {
+    public record Solicitud(UUID idDespacho, UUID idRecojo, TipoEvidencia tipo, String contentType, long tamanioBytes) {
         public Solicitud {
-            if (idDespacho == null || tipo == null || contentType == null || contentType.isBlank()) {
+            // Cada foto pertenece a un despacho o a un recojo, con el tipo que le corresponde.
+            if ((idDespacho == null) == (idRecojo == null) || tipo == null || contentType == null || contentType.isBlank()
+                    || tipo.deRecojo() != (idRecojo != null)) {
                 throw new SolicitudEvidenciaInvalida("Completa los datos requeridos para autorizar la evidencia.");
             }
+        }
+        public Solicitud(UUID idDespacho, TipoEvidencia tipo, String contentType, long tamanioBytes) {
+            this(idDespacho, null, tipo, contentType, tamanioBytes);
         }
     }
 

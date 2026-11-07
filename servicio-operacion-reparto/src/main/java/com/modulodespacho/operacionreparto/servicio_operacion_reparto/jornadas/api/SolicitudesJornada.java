@@ -10,18 +10,19 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.d
 
 public final class SolicitudesJornada {
     private SolicitudesJornada() {}
-    public record Abrir(@NotNull UUID idRepartidor,@NotNull UUID idFurgoneta,@NotNull UUID idZona,@NotNull LocalDate fecha) {
-        public DatosJornada.Apertura datos() { return new DatosJornada.Apertura(idRepartidor,idFurgoneta,idZona,fecha); }
+    public record Abrir(@NotNull UUID idRepartidor,@NotNull UUID idFurgoneta,@NotNull UUID idZona,@NotNull LocalDate fecha,
+            @Pattern(regexp="ENTREGAS|RECOJOS") String tipoOperacion) {
+        public DatosJornada.Apertura datos() { return new DatosJornada.Apertura(idRepartidor,idFurgoneta,idZona,fecha,tipoOperacion == null ? DatosJornada.ENTREGAS : tipoOperacion); }
     }
     public record Carga(@NotNull @DecimalMin(value="0",inclusive=false) @Digits(integer=7,fraction=3) BigDecimal pesoKg,
             @NotNull @DecimalMin(value="0",inclusive=false) @Digits(integer=6,fraction=4) BigDecimal volumenM3,
             @NotNull @Min(1) @Max(32767) Integer paquetes) {
         public DatosJornada.Capacidad datos() { return new DatosJornada.Capacidad(pesoKg,volumenM3,paquetes); }
     }
-    public record Reservar(@NotNull UUID idDespacho,@NotNull UUID idRepartidor,@NotNull UUID idJornada,@NotNull @Valid Carga requerido) {
-        public DatosJornada.SolicitudReserva datos() { return new DatosJornada.SolicitudReserva(idDespacho,idRepartidor,idJornada,requerido.datos()); }
+    public record Reservar(@NotNull UUID idDespacho,@NotNull UUID idRepartidor,@NotNull UUID idJornada,@NotNull @Valid Carga requerido,UUID idRecojo) {
+        public DatosJornada.SolicitudReserva datos() { return new DatosJornada.SolicitudReserva(idDespacho,idRepartidor,idJornada,requerido.datos(),idRecojo); }
     }
-    public record Liberar(@NotNull UUID idDespacho,@NotNull @Pattern(regexp="ENTREGA|CANCELACION|RECEPCION_EN_CENTRO|REASIGNACION|COMPENSACION") String motivo) {}
+    public record Liberar(@NotNull UUID idDespacho,@NotNull @Pattern(regexp="ENTREGA|CANCELACION|RECEPCION_EN_CENTRO|REASIGNACION|COMPENSACION|RECOJO_NO_REALIZADO") String motivo) {}
     public record Transferir(@NotNull UUID idReservaOrigen,@NotNull UUID idDespacho,@NotNull UUID idNuevoRepartidor,@NotNull UUID idNuevaJornada) {
         public DatosJornada.SolicitudTransferencia datos() { return new DatosJornada.SolicitudTransferencia(idReservaOrigen,idDespacho,idNuevoRepartidor,idNuevaJornada); }
     }
@@ -42,6 +43,22 @@ public final class SolicitudesJornada {
             @Min(1) Integer maximoIntentos,@Size(max=40) String motivoFallo,@Valid Hitos hitos) {
         public DatosJornada.Proyeccion datos() { return new DatosJornada.Proyeccion(idDespacho,idPedido,codigoRastreoInterno,estado,
                 idJornada,idReserva,secuenciaRuta,destinatario.datos(),destino.datos(),fechaProgramada,numeroIntentos,version,actualizadoEn,maximoIntentos,
+                motivoFallo,hitos == null ? null : hitos.datos()); }
+    }
+    public record LineaRecojo(@NotBlank @Size(max=100) String sku,@Min(1) int cantidad) {
+        DatosJornada.LineaRecojo datos() { return new DatosJornada.LineaRecojo(sku,cantidad); }
+    }
+    public record HitosRecojo(Instant asignadoEn,Instant enCaminoEn,Instant recogidoEn,Instant fallidoEn) {
+        DatosJornada.HitosRecojo datos() { return new DatosJornada.HitosRecojo(asignadoEn,enCaminoEn,recogidoEn,fallidoEn); }
+    }
+    public record ProyectarRecojo(@NotNull UUID idRecojo,@NotNull UUID idDespacho,@NotBlank @Size(max=20) String codigoRastreoInterno,
+            @NotNull @Pattern(regexp="ASIGNADO|EN_CAMINO|RECOGIDO|FALLIDO|RECIBIDO_EN_CENTRO|CERRADO_SIN_RECOJO|CANCELADO|PENDIENTE_ASIGNACION") String estado,
+            @NotNull UUID idJornada,@NotNull UUID idReserva,@Min(1) @Max(32767) Integer secuenciaRuta,
+            @NotNull @Valid Destinatario destinatario,@NotNull @Valid Destino destino,@NotEmpty java.util.List<@NotNull @Valid LineaRecojo> lineas,
+            @NotNull LocalDate fechaProgramada,@Min(0) int numeroIntentos,@NotNull @Min(0) Long version,@NotNull Instant actualizadoEn,
+            @Size(max=40) String motivoFallo,@Valid HitosRecojo hitos) {
+        public DatosJornada.ProyeccionRecojo datos() { return new DatosJornada.ProyeccionRecojo(idRecojo,idDespacho,codigoRastreoInterno,estado,idJornada,idReserva,
+                secuenciaRuta,destinatario.datos(),destino.datos(),lineas.stream().map(LineaRecojo::datos).toList(),fechaProgramada,numeroIntentos,version,actualizadoEn,
                 motivoFallo,hitos == null ? null : hitos.datos()); }
     }
     public record Hitos(Instant asignadoEn,Instant enCaminoEn,Instant entregadoEn,Instant fallidoEn) {

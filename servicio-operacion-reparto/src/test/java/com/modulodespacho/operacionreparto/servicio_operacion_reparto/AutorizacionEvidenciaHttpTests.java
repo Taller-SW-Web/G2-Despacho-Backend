@@ -48,7 +48,7 @@ class AutorizacionEvidenciaHttpTests {
     @BeforeEach
     void preparar() {
         sql.sql("""
-                TRUNCATE evidencias, proyecciones_despacho, reservas_capacidad,
+                TRUNCATE evidencias, proyecciones_recojo,proyecciones_despacho, reservas_capacidad,
                     asignaciones_diarias, repartidores, furgonetas CASCADE
                 """).update();
         sql.sql("""

@@ -15,6 +15,7 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.d
 /** Cliente de Gestión §6.1 y §4; solo los códigos acordados se propagan, nunca el texto remoto. */
 public class GestionHttp implements PuertoGestion {
     private static final Set<String> CONFLICTOS = Set.of("DESP_ERROR_ESTADO_INCOMPATIBLE", "DESP_ERROR_DESPACHO_REASIGNADO");
+    private static final Set<String> CONFLICTOS_RECOJO = Set.of("DESP_ERROR_ESTADO_INCOMPATIBLE", "DESP_ERROR_RECOJO_REASIGNADO");
     private final RestClient cliente;
     private final Supplier<String> token;
     private final boolean sinAutenticacion;
@@ -38,6 +39,29 @@ public class GestionHttp implements PuertoGestion {
             if (estado == 409 && CONFLICTOS.contains(codigo)) throw new ErrorJornada(409, codigo,
                     "El despacho fue actualizado y ya no admite esta acción. Actualiza tu ruta.");
             if (estado == 404) throw new ErrorJornada(404, "DESP_ERROR_DESPACHO_NO_ENCONTRADO", "El despacho no existe.");
+            if (estado == 400 && "DESP_ERROR_MOTIVO_INVALIDO".equals(codigo))
+                throw new ErrorJornada(400, codigo, "El motivo no se puede registrar en campo.");
+            if (estado == 400) throw new ErrorJornada(400, "DESP_ERROR_CAMPOS_INVALIDOS", "Revisa los datos de la operación.");
+            throw noDisponible();
+        } catch (ErrorJornada error) { throw error; }
+        catch (RuntimeException error) { throw noDisponible(); }
+    }
+
+    @Override
+    public RespuestaTransicionRecojo transicionarRecojo(UUID idRecojo, UUID clave, SolicitudTransicionRecojo solicitud) {
+        try {
+            RespuestaTransicionRecojo respuesta = cliente.post().uri("/internal/v1/recojos/{id}/transiciones", idRecojo)
+                    .headers(cabeceras -> { autorizar(cabeceras); cabeceras.set("Idempotency-Key", clave.toString()); })
+                    .contentType(MediaType.APPLICATION_JSON).body(solicitud).retrieve().body(RespuestaTransicionRecojo.class);
+            if (respuesta == null || !idRecojo.toString().equals(respuesta.idRecojo())
+                    || !solicitud.estadoDestino().equals(respuesta.estado()) || respuesta.registradoEn() == null) throw noDisponible();
+            return respuesta;
+        } catch (RestClientResponseException error) {
+            int estado = error.getStatusCode().value();
+            String codigo = codigo(error);
+            if (estado == 409 && CONFLICTOS_RECOJO.contains(codigo)) throw new ErrorJornada(409, codigo,
+                    "El recojo fue actualizado y ya no admite esta acción. Actualiza tu ruta.");
+            if (estado == 404) throw new ErrorJornada(404, "DESP_ERROR_RECOJO_NO_ENCONTRADO", "El recojo no existe.");
             if (estado == 400 && "DESP_ERROR_MOTIVO_INVALIDO".equals(codigo))
                 throw new ErrorJornada(400, codigo, "El motivo no se puede registrar en campo.");
             if (estado == 400) throw new ErrorJornada(400, "DESP_ERROR_CAMPOS_INVALIDOS", "Revisa los datos de la operación.");

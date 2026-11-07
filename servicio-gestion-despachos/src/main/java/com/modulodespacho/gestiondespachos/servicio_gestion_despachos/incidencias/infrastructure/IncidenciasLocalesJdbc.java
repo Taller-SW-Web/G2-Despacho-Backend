@@ -54,11 +54,11 @@ public class IncidenciasLocalesJdbc implements LectorIncidenciasLocales, Catalog
     @Override
     public List<MotivoFallo> consultarTodos() {
         return cliente.sql("""
-                SELECT codigo, etiqueta, seleccionable_en_campo, consume_intento, activo
+                SELECT codigo, etiqueta, seleccionable_en_campo, consume_intento, activo, ambito
                 FROM motivos_fallo ORDER BY codigo
                 """).query((fila, indice) -> new MotivoFallo(fila.getString("codigo"), fila.getString("etiqueta"),
                         fila.getBoolean("seleccionable_en_campo"), fila.getBoolean("consume_intento"),
-                        fila.getBoolean("activo"))).list();
+                        fila.getBoolean("activo"), fila.getString("ambito"))).list();
     }
 
     @Override

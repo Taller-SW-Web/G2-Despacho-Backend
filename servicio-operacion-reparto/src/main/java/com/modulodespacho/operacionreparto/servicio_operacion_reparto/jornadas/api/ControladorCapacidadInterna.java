@@ -27,6 +27,8 @@ public class ControladorCapacidadInterna {
     public Liberacion liberar(@PathVariable UUID id,@Valid @RequestBody SolicitudesJornada.Liberar solicitud,@AuthenticationPrincipal Jwt token) {
         return gestor.liberar(id,solicitud.idDespacho(),solicitud.motivo(),token.getSubject());
     }
+    @PostMapping("/internal/v1/proyecciones/recojos/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void proyectarRecojo(@PathVariable UUID id,@Valid @RequestBody SolicitudesJornada.ProyectarRecojo solicitud,@AuthenticationPrincipal Jwt token) { gestor.proyectarRecojo(id,solicitud.datos(),token.getSubject()); }
     @PostMapping("/internal/v1/proyecciones/despachos/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void proyectar(@PathVariable UUID id,@Valid @RequestBody SolicitudesJornada.Proyectar solicitud,@AuthenticationPrincipal Jwt token) { gestor.proyectar(id,solicitud.datos(),token.getSubject()); }
 }

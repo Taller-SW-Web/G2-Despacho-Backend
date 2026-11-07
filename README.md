@@ -275,7 +275,7 @@ El perfil `render` de ambos servicios deja Flyway desactivado por defecto, pero 
 
 Las llamadas internas entre Gestión y Operación usan el token de servicio de `modulo-despacho`. G7 deriva la audiencia de los scopes concedidos y, sin scopes internos, no incluye `api-despacho`; por eso los validadores de ambos servicios aceptan ese cliente propio con las audiencias que G7 emita. El resto de clientes técnicos sigue necesitando `api-despacho`. Es una excepción temporal: retirarla cuando G7 emita esa audiencia para `modulo-despacho`. En Render, Gestión necesita `OPERACION_CLIENT_SECRET`; sin él, asignar responde `503 DESP_ERROR_OPERACION_NO_DISPONIBLE`.
 
-Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-operacion-reparto/src/test/resources/flota/compatibilidad`. Sus pruebas los cargan como recursos. No son migraciones automáticas de una base nueva ni deben volver a aplicarse a ciegas al entorno publicado. Los datos F-04 usados por una prueba están en `src/test/resources/flota/datos-demo-f04.sql` del mismo servicio.
+Los scripts heredados F-03/F-05/F-06 de Operación se conservaron en `servicio-operacion-reparto/src/test/resources/flota/compatibilidad`. Sus pruebas los cargan como recursos. No son migraciones automáticas de una base nueva ni deben volver a aplicarse a ciegas al entorno publicado. Los recojos requieren `F03__recojos_heredado.sql` una sola vez en esa base de Operación, y V11 en Gestión, ambos de forma revisada. Los datos F-04 usados por una prueba están en `src/test/resources/flota/datos-demo-f04.sql` del mismo servicio.
 
 ### Consultas periódicas de salud desde el PC
 

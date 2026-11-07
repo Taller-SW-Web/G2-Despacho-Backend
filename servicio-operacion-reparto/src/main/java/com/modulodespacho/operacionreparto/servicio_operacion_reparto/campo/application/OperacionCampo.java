@@ -73,6 +73,40 @@ public class OperacionCampo {
         });
     }
 
+    public DetalleRecojo iniciarTrasladoRecojo(UUID usuario, UUID idRecojo, UUID clave) {
+        return comando(usuario, clave, "INICIO_RECOJO", Map.of("idRecojo", idRecojo), DetalleRecojo.class, nuevo -> {
+            RecojoEnRuta r = jornadas.recojoEnRuta(usuario, idRecojo);
+            if (nuevo) exigirEstadoRecojo(r, "ASIGNADO");
+            aplicarRecojo(r, gestion.transicionarRecojo(idRecojo, clave, solicitudRecojo(r, "EN_CAMINO", null, null, null, usuario)));
+            return jornadas.consultarRecojoPropio(usuario, idRecojo);
+        });
+    }
+
+    public DetalleRecojo registrarRecogido(UUID usuario, UUID idRecojo, UUID clave, UUID idEvidencia, String comentario) {
+        String nota = comentario == null || comentario.isBlank() ? null : comentario.strip();
+        return comando(usuario, clave, "RECOJO", Map.of("idRecojo", idRecojo, "idEvidencia", idEvidencia, "comentario", nota == null ? "" : nota),
+                DetalleRecojo.class, nuevo -> {
+            RecojoEnRuta r = jornadas.recojoEnRuta(usuario, idRecojo);
+            if (nuevo) { exigirEstadoRecojo(r, "EN_CAMINO"); comprobarCarga(almacen.evidenciaRecojo(idEvidencia, idRecojo, "RECOJO", usuario.toString()), idEvidencia); }
+            aplicarRecojo(r, gestion.transicionarRecojo(idRecojo, clave, solicitudRecojo(r, "RECOGIDO", idEvidencia, null, nota, usuario)));
+            almacen.asociar(idEvidencia);
+            return jornadas.consultarRecojoPropio(usuario, idRecojo);
+        });
+    }
+
+    public DetalleRecojo registrarFalloRecojo(UUID usuario, UUID idRecojo, UUID clave, String motivo, UUID idEvidencia, String comentario) {
+        String nota = comentario == null || comentario.isBlank() ? null : comentario.strip();
+        return comando(usuario, clave, "FALLO_RECOJO", Map.of("idRecojo", idRecojo, "motivo", motivo, "idEvidencia", idEvidencia,
+                "comentario", nota == null ? "" : nota), DetalleRecojo.class, nuevo -> {
+            if ("NO_INTENTADO".equals(motivo)) throw new ErrorJornada(400, "DESP_ERROR_MOTIVO_INVALIDO", "El motivo no se puede registrar en campo.");
+            RecojoEnRuta r = jornadas.recojoEnRuta(usuario, idRecojo);
+            if (nuevo) { exigirEstadoRecojo(r, "EN_CAMINO"); comprobarCarga(almacen.evidenciaRecojo(idEvidencia, idRecojo, "FALLO_RECOJO", usuario.toString()), idEvidencia); }
+            aplicarRecojo(r, gestion.transicionarRecojo(idRecojo, clave, solicitudRecojo(r, "FALLIDO", idEvidencia, motivo, nota, usuario)));
+            almacen.asociar(idEvidencia);
+            return jornadas.consultarRecojoPropio(usuario, idRecojo);
+        });
+    }
+
     /** ES-F03-07: los pendientes pasan a FALLIDO/NO_INTENTADO antes de cerrar; cada uno con su propia clave derivada. */
     public Jornada cerrarJornada(UUID usuario, UUID idJornada, UUID clave) {
         return comando(usuario, clave, "CIERRE_JORNADA", Map.of("idJornada", idJornada), Jornada.class, nuevo -> {
@@ -81,12 +115,19 @@ public class OperacionCampo {
                 aplicar(d, gestion.transicionar(d.despacho().idDespacho(), derivada,
                         solicitud(d, "FALLIDO", null, null, "NO_INTENTADO", null, usuario)));
             }
+            for (RecojoEnRuta r : jornadas.recojosPendientesPropios(usuario, idJornada)) {
+                UUID derivada = UUID.nameUUIDFromBytes((clave + ":" + r.recojo().idRecojo()).getBytes(StandardCharsets.UTF_8));
+                aplicarRecojo(r, gestion.transicionarRecojo(r.recojo().idRecojo(), derivada,
+                        solicitudRecojo(r, "FALLIDO", null, "NO_INTENTADO", null, usuario)));
+            }
             return jornadas.cerrarPropia(usuario, idJornada);
         });
     }
 
-    public List<Motivo> motivosDeCampo() {
-        return gestion.motivos().stream().filter(m -> m.activo() && m.seleccionableEnCampo()).toList();
+    public List<Motivo> motivosDeCampo() { return motivosDeCampo("ENTREGA"); }
+
+    public List<Motivo> motivosDeCampo(String ambito) {
+        return gestion.motivos().stream().filter(m -> m.activo() && m.seleccionableEnCampo() && m.aplicaA(ambito)).toList();
     }
 
     private <T> T comando(UUID usuario, UUID clave, String operacion, Map<String, Object> contenido, Class<T> tipo,
@@ -111,8 +152,17 @@ public class OperacionCampo {
                 respuesta.version(), respuesta.registradoEn(), respuesta.motivoFallo(), respuesta.hitos()), "GESTION_DESPACHOS");
     }
 
+    private void aplicarRecojo(RecojoEnRuta r, RespuestaTransicionRecojo respuesta) {
+        ProyeccionRecojo actual = r.recojo();
+        jornadas.proyectarRecojo(actual.idRecojo(), actual.conTransicion(respuesta.estado(), respuesta.numeroIntentos(),
+                respuesta.version(), respuesta.registradoEn(), respuesta.motivoFallo(), respuesta.hitos()), "GESTION_DESPACHOS");
+    }
+
     private void verificarEvidencia(UUID idEvidencia, UUID idDespacho, String tipo, UUID usuario) {
-        EvidenciaPendiente evidencia = almacen.evidencia(idEvidencia, idDespacho, tipo, usuario.toString());
+        comprobarCarga(almacen.evidencia(idEvidencia, idDespacho, tipo, usuario.toString()), idEvidencia);
+    }
+
+    private void comprobarCarga(EvidenciaPendiente evidencia, UUID idEvidencia) {
         VerificadorCargaStorage.ObjetoCargado objeto;
         try {
             objeto = storage.verificar(evidencia.rutaObjeto()).orElseThrow(() -> new ErrorJornada(409,
@@ -132,6 +182,14 @@ public class OperacionCampo {
     private static void exigirEstado(DespachoEnRuta d, String esperado) {
         if (!esperado.equals(d.despacho().estado())) throw new ErrorJornada(409, "DESP_ERROR_ESTADO_INCOMPATIBLE",
                 "El despacho fue actualizado y ya no admite esta acción. Actualiza tu ruta.");
+    }
+    private static void exigirEstadoRecojo(RecojoEnRuta r, String esperado) {
+        if (!esperado.equals(r.recojo().estado())) throw new ErrorJornada(409, "DESP_ERROR_ESTADO_INCOMPATIBLE",
+                "El recojo fue actualizado y ya no admite esta acción. Actualiza tu ruta.");
+    }
+    private static SolicitudTransicionRecojo solicitudRecojo(RecojoEnRuta r, String destino, UUID evidencia, String motivo, String comentario, UUID usuario) {
+        return new SolicitudTransicionRecojo(destino, r.idRepartidor().toString(), r.idJornada().toString(),
+                evidencia == null ? null : evidencia.toString(), motivo, comentario, usuario.toString(), "MANUAL");
     }
     private static SolicitudTransicion solicitud(DespachoEnRuta d, String destino, UUID evidencia, String receptor,
             String motivo, String comentario, UUID usuario) {

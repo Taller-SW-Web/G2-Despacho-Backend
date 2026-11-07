@@ -26,7 +26,7 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
           r.estado_registro, r.estado_vinculacion, j.id AS jornada_id, j.furgoneta_id, f.placa,
           f.estado AS estado_vehiculo, f.capacidad_max_kg AS maestro_peso, f.capacidad_max_m3 AS maestro_volumen,
           f.max_paquetes AS maestro_paquetes, j.zona_id_externa, j.fecha_jornada, j.estado AS estado_jornada,
-          j.cerrada_en, j.capacidad_max_kg, j.capacidad_max_m3, j.max_paquetes,
+          j.cerrada_en, j.capacidad_max_kg, j.capacidad_max_m3, j.max_paquetes, j.tipo_operacion,
           COALESCE(carga.peso,0) AS peso, COALESCE(carga.volumen,0) AS volumen, COALESCE(carga.paquetes,0) AS paquetes,
           COALESCE(proyeccion.en_camino,false) AS en_camino,
           (COALESCE(proyeccion.pendientes,false) OR COALESCE(carga.sin_confirmar,false)) AS pendientes
@@ -36,13 +36,16 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
         LEFT JOIN LATERAL (
           SELECT sum(r.peso_kg) AS peso, sum(r.volumen_m3) AS volumen, sum(r.cantidad_paquetes) AS paquetes,
             bool_or(NOT EXISTS(SELECT 1 FROM proyecciones_despacho p WHERE p.reserva_capacidad_id=r.id
-              AND p.estado IN ('FALLIDO','ENTREGADO','CANCELADO','DEVUELTO_A_ORIGEN','PENDIENTE_ASIGNACION'))) AS sin_confirmar
+              AND p.estado IN ('FALLIDO','ENTREGADO','CANCELADO','DEVUELTO_A_ORIGEN','PENDIENTE_ASIGNACION'))
+              AND NOT EXISTS(SELECT 1 FROM proyecciones_recojo p WHERE p.reserva_capacidad_id=r.id
+              AND p.estado IN ('RECOGIDO','FALLIDO','RECIBIDO_EN_CENTRO','CERRADO_SIN_RECOJO','CANCELADO','PENDIENTE_ASIGNACION'))) AS sin_confirmar
           FROM reservas_capacidad r WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA'
         ) carga ON true
         LEFT JOIN LATERAL (
           SELECT bool_or(estado='EN_CAMINO') AS en_camino,
             bool_or(estado IN ('ASIGNADO','EN_CAMINO')) AS pendientes
-          FROM proyecciones_despacho WHERE asignacion_diaria_id=j.id
+          FROM (SELECT estado FROM proyecciones_despacho WHERE asignacion_diaria_id=j.id
+                UNION ALL SELECT estado FROM proyecciones_recojo WHERE asignacion_diaria_id=j.id) en_ruta
         ) proyeccion ON true
         """;
 
@@ -84,7 +87,7 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                 new Capacidad(fila.getBigDecimal("maestro_peso"),fila.getBigDecimal("maestro_volumen"),fila.getInt("maestro_paquetes"))),
                 new JornadaBase(id,perfil.id(),vehiculo,fila.getString("placa"),fila.getObject("zona_id_externa",UUID.class),
                 fila.getObject("fecha_jornada",LocalDate.class),fila.getString("estado_jornada"),cierre == null ? null : cierre.toInstant(),
-                limites,ocupacion,fila.getBoolean("en_camino"),fila.getBoolean("pendientes")));
+                limites,ocupacion,fila.getBoolean("en_camino"),fila.getBoolean("pendientes"),fila.getString("tipo_operacion")));
     }
     @Override public Perfil obtenerPerfil(UUID id) {
         return sql.sql("SELECT id,nombres || ' ' || apellidos AS nombre,estado_registro,estado_vinculacion FROM perfiles_flota WHERE id=:id FOR SHARE")
@@ -107,18 +110,20 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
             SELECT EXISTS(SELECT 1 FROM asignaciones_diarias j
               WHERE (j.repartidor_id=:repartidor OR j.furgoneta_id=:furgoneta) AND
                 (j.estado='ACTIVA' OR EXISTS(SELECT 1 FROM reservas_capacidad r WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA')
-                 OR EXISTS(SELECT 1 FROM proyecciones_despacho p WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO'))))
+                 OR EXISTS(SELECT 1 FROM proyecciones_despacho p WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO'))
+                 OR EXISTS(SELECT 1 FROM proyecciones_recojo p WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO'))))
             """).param("repartidor",repartidor).param("furgoneta",furgoneta).query(Boolean.class).single();
     }
     @Override public UUID crear(Apertura datos, Capacidad capacidad, UUID actor, Instant ahora) {
         UUID id = UUID.randomUUID();
         sql.sql("""
             INSERT INTO asignaciones_diarias (id,repartidor_id,furgoneta_id,zona_id_externa,fecha_jornada,
-              capacidad_max_kg,capacidad_max_m3,max_paquetes,estado,abierta_en,abierta_por)
-            VALUES (:id,:repartidor,:furgoneta,:zona,:fecha,:peso,:volumen,:paquetes,'ACTIVA',:ahora,:actor)
+              capacidad_max_kg,capacidad_max_m3,max_paquetes,estado,abierta_en,abierta_por,tipo_operacion)
+            VALUES (:id,:repartidor,:furgoneta,:zona,:fecha,:peso,:volumen,:paquetes,'ACTIVA',:ahora,:actor,:tipo)
             """).param("id",id).param("repartidor",datos.idRepartidor()).param("furgoneta",datos.idFurgoneta()).param("zona",datos.idZona())
                 .param("fecha",datos.fecha()).param("peso",capacidad.pesoKg()).param("volumen",capacidad.volumenM3())
-                .param("paquetes",capacidad.paquetes()).param("ahora",java.sql.Timestamp.from(ahora)).param("actor",actor).update();
+                .param("paquetes",capacidad.paquetes()).param("ahora",java.sql.Timestamp.from(ahora)).param("actor",actor)
+                .param("tipo",datos.tipoOperacion()).update();
         return id;
     }
     @Override public void cerrar(UUID id,String tipo,Instant ahora) {
@@ -175,7 +180,7 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
         return new Reserva(fila.getObject("id",UUID.class),fila.getObject("clave_asignacion",UUID.class),fila.getObject("despacho_id_externo",UUID.class),
                 fila.getObject("asignacion_diaria_id",UUID.class),fila.getObject("repartidor_id",UUID.class),
                 new Capacidad(fila.getBigDecimal("peso_kg"),fila.getBigDecimal("volumen_m3"),fila.getInt("cantidad_paquetes")),
-                fila.getString("estado"),fila.getString("motivo_liberacion"),liberacion == null ? null : liberacion.toInstant(),fila.getString("respuesta_confirmacion"));
+                fila.getString("estado"),fila.getString("motivo_liberacion"),liberacion == null ? null : liberacion.toInstant(),fila.getString("respuesta_confirmacion"),fila.getObject("recojo_id_externo",UUID.class));
     }
     @Override public Optional<Reserva> buscarReservaPorClave(UUID clave) { return sql.sql(RESERVA+"WHERE clave_asignacion=:clave").param("clave",clave).query(this::mapearReserva).optional(); }
     @Override public Reserva obtenerReserva(UUID id) { return sql.sql(RESERVA+"WHERE r.id=:id").param("id",id).query(this::mapearReserva).optional()
@@ -184,11 +189,11 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
     @Override public void guardarReserva(UUID id, UUID clave, SolicitudReserva datos, String respuesta, String actor, Instant ahora) {
         sql.sql("""
             INSERT INTO reservas_capacidad (id,clave_asignacion,despacho_id_externo,asignacion_diaria_id,peso_kg,volumen_m3,
-              cantidad_paquetes,estado,respuesta_confirmacion,registrada_por,creado_en)
-            VALUES (:id,:clave,:despacho,:jornada,:peso,:volumen,:paquetes,'ACTIVA',CAST(:respuesta AS jsonb),:actor,:ahora)
+              cantidad_paquetes,estado,respuesta_confirmacion,registrada_por,creado_en,recojo_id_externo)
+            VALUES (:id,:clave,:despacho,:jornada,:peso,:volumen,:paquetes,'ACTIVA',CAST(:respuesta AS jsonb),:actor,:ahora,:recojo)
             """).param("id",id).param("clave",clave).param("despacho",datos.idDespacho()).param("jornada",datos.idJornada())
                 .param("peso",datos.requerido().pesoKg()).param("volumen",datos.requerido().volumenM3()).param("paquetes",datos.requerido().paquetes())
-                .param("respuesta",respuesta).param("actor",actor).param("ahora",java.sql.Timestamp.from(ahora)).update();
+                .param("respuesta",respuesta).param("actor",actor).param("ahora",java.sql.Timestamp.from(ahora)).param("recojo",datos.idRecojo()).update();
     }
     @Override public void liberar(UUID id,String motivo,String actor,Instant ahora) {
         sql.sql("UPDATE reservas_capacidad SET estado='LIBERADA',motivo_liberacion=:motivo,liberado_en=:ahora,liberada_por=:actor,version=version+1 WHERE id=:id AND estado='ACTIVA'")
@@ -205,6 +210,38 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
     @Override public void guardarTransferencia(UUID clave, String solicitud, String respuesta, String actor) {
         sql.sql("INSERT INTO transferencias_capacidad(clave,solicitud,respuesta,ejecutor_id) VALUES (:clave,:solicitud,CAST(:respuesta AS jsonb),:actor)")
                 .param("clave",clave).param("solicitud",solicitud).param("respuesta",respuesta).param("actor",actor).update();
+    }
+    @Override public List<RecojoResumen> listarRecojos(UUID id) {
+        return sql.sql("SELECT recojo_id_externo,estado,secuencia_ruta FROM proyecciones_recojo WHERE asignacion_diaria_id=:id ORDER BY secuencia_ruta NULLS LAST,recojo_id_externo")
+                .param("id",id).query((fila,indice) -> new RecojoResumen(fila.getObject("recojo_id_externo",UUID.class),fila.getString("estado"),fila.getObject("secuencia_ruta",Integer.class))).list();
+    }
+    @Override public List<ProyeccionRecojo> listarProyeccionesRecojo(UUID jornada) {
+        return sql.sql("""
+                SELECT payload_proyeccion::text FROM proyecciones_recojo WHERE asignacion_diaria_id=:jornada AND estado <> 'CANCELADO'
+                ORDER BY secuencia_ruta NULLS LAST,recojo_id_externo
+                """).param("jornada",jornada).query((fila,indice) -> json.readValue(fila.getString(1),ProyeccionRecojo.class)).list();
+    }
+    @Override public Optional<ProyeccionRecojo> buscarProyeccionRecojo(UUID jornada, UUID recojo) {
+        return sql.sql("""
+                SELECT payload_proyeccion::text FROM proyecciones_recojo
+                WHERE asignacion_diaria_id=:jornada AND recojo_id_externo=:recojo AND estado <> 'CANCELADO'
+                """).param("jornada",jornada).param("recojo",recojo).query((fila,indice) -> json.readValue(fila.getString(1),ProyeccionRecojo.class)).optional();
+    }
+    @Override public Optional<Long> buscarVersionRecojo(UUID recojo) {
+        return sql.sql("SELECT version FROM proyecciones_recojo WHERE recojo_id_externo=:id").param("id",recojo).query(Long.class).optional();
+    }
+    @Override public void guardarProyeccionRecojo(ProyeccionRecojo d,String actor) {
+        sql.sql("""
+            INSERT INTO proyecciones_recojo (recojo_id_externo,despacho_id_externo,asignacion_diaria_id,reserva_capacidad_id,
+              secuencia_ruta,estado,version,payload_proyeccion,actualizado_en,actualizado_por)
+            VALUES (:id,:despacho,:jornada,:reserva,:secuencia,:estado,:version,CAST(:payload AS jsonb),:ahora,:actor)
+            ON CONFLICT (recojo_id_externo) DO UPDATE SET asignacion_diaria_id=EXCLUDED.asignacion_diaria_id,
+              reserva_capacidad_id=EXCLUDED.reserva_capacidad_id,secuencia_ruta=EXCLUDED.secuencia_ruta,estado=EXCLUDED.estado,
+              version=EXCLUDED.version,payload_proyeccion=EXCLUDED.payload_proyeccion,actualizado_en=EXCLUDED.actualizado_en,
+              actualizado_por=EXCLUDED.actualizado_por
+            """).param("id",d.idRecojo()).param("despacho",d.idDespacho()).param("jornada",d.idJornada()).param("reserva",d.idReserva())
+                .param("secuencia",d.secuenciaRuta()).param("estado",d.estado()).param("version",d.version())
+                .param("payload",json.writeValueAsString(d)).param("ahora",java.sql.Timestamp.from(d.actualizadoEn())).param("actor",actor).update();
     }
     @Override public void guardarProyeccion(Proyeccion d,String actor) {
         // El bloqueo común hace atómica esta decisión también cuando el esquema heredado expone una vista escribible.

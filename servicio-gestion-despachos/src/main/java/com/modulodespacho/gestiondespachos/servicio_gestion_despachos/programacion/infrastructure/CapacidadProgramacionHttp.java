@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.springframework.web.client.RestClient;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoCapacidad;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.recojos.application.PuertoCapacidadRecojo;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoTransferencia;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.PuertoLiberacionCancelacion;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosCancelacion;
@@ -12,7 +13,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programaci
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import static com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosProgramacion.*;
 
-public final class CapacidadProgramacionHttp implements PuertoCapacidad, PuertoTransferencia, PuertoLiberacionCancelacion {
+public final class CapacidadProgramacionHttp implements PuertoCapacidad, PuertoTransferencia, PuertoLiberacionCancelacion, PuertoCapacidadRecojo {
     private final RestClient cliente;
     private final Supplier<String> token;
     private final boolean sinAutenticacion;
@@ -21,11 +22,20 @@ public final class CapacidadProgramacionHttp implements PuertoCapacidad, PuertoT
         this.cliente = cliente; this.token = token; this.sinAutenticacion = sinAutenticacion;
     }
     @Override public ReservaConfirmada reservar(IntencionAsignacion intencion) {
+        return reservar(intencion.id().toString(), Map.of("idDespacho", intencion.idDespacho().toString(), "idRepartidor", intencion.idRepartidor(),
+                "idJornada", intencion.idJornada(), "requerido", intencion.carga()));
+    }
+    @Override public String reservarRecojo(java.util.UUID clave, java.util.UUID idRecojo, java.util.UUID idDespacho, String idRepartidor, String idJornada,
+            java.math.BigDecimal pesoKg, java.math.BigDecimal volumenM3, int paquetes) {
+        return reservar(clave.toString(), Map.of("idDespacho", idDespacho.toString(), "idRecojo", idRecojo.toString(), "idRepartidor", idRepartidor,
+                "idJornada", idJornada, "requerido", new Carga(pesoKg, volumenM3, paquetes))).idReserva();
+    }
+    @Override public void compensarRecojo(String idReserva, String idDespacho) { compensar(idReserva, idDespacho); }
+    private ReservaConfirmada reservar(String clave, Map<String, Object> cuerpoReserva) {
         try {
             var respuestaJson = cliente.post().uri("/internal/v1/capacidad/reservas")
-                    .headers(cabeceras -> { autorizar(cabeceras); cabeceras.set("Idempotency-Key", intencion.id().toString()); })
-                    .body(Map.of("idDespacho", intencion.idDespacho().toString(), "idRepartidor", intencion.idRepartidor(),
-                            "idJornada", intencion.idJornada(), "requerido", intencion.carga()))
+                    .headers(cabeceras -> { autorizar(cabeceras); cabeceras.set("Idempotency-Key", clave); })
+                    .body(cuerpoReserva)
                     .retrieve().onStatus(estado -> estado.value() != 200, (solicitud, resultado) -> {
                         int estado = resultado.getStatusCode().value();
                         if (estado == 422) {
@@ -45,6 +55,8 @@ public final class CapacidadProgramacionHttp implements PuertoCapacidad, PuertoT
                         if (estado == 409) {
                             var cuerpo = tools.jackson.databind.json.JsonMapper.builder().build().readTree(resultado.getBody());
                             // Solo el código acordado determina reserva previa; no se propaga texto remoto.
+                            if (cuerpo != null && "DESP_ERROR_TIPO_JORNADA_INCOMPATIBLE".equals(cuerpo.path("code").asText()))
+                                throw ErrorDeNegocio.de(409, "DESP_ERROR_TIPO_JORNADA_INCOMPATIBLE", "La jornada no admite este tipo de trabajo");
                             boolean anterior = cuerpo != null && "DESP_ERROR_RESERVA_ANTERIOR_ACTIVA".equals(cuerpo.path("code").asText());
                             throw ErrorDeNegocio.de(409, anterior ? "DESP_ERROR_RESERVA_ANTERIOR_ACTIVA" : "DESP_ERROR_REPARTIDOR_NO_HABILITADO",
                                     anterior ? "La reserva anterior aún está activa" : "El repartidor no está habilitado para la asignación");

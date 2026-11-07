@@ -33,7 +33,7 @@ class AccesoPerfilRepartidorHttpTests {
 
     @BeforeEach
     void preparar() {
-        sql.sql("TRUNCATE auditoria_configuracion, proyecciones_despacho, reservas_capacidad, asignaciones_diarias, repartidores, furgonetas").update();
+        sql.sql("TRUNCATE auditoria_configuracion, proyecciones_recojo,proyecciones_despacho, reservas_capacidad, asignaciones_diarias, repartidores, furgonetas").update();
         when(decodificador.decode("gestor")).thenReturn(token("acceso", GestionFlotaHttpTests.ACTOR, List.of("GESTOR_DESPACHO")));
         when(decodificador.decode("campo")).thenReturn(token("acceso", GestionFlotaHttpTests.ACTOR, List.of()));
         when(decodificador.decode("servicio")).thenReturn(token("servicio", GestionFlotaHttpTests.ACTOR, List.of("GESTOR_DESPACHO")));

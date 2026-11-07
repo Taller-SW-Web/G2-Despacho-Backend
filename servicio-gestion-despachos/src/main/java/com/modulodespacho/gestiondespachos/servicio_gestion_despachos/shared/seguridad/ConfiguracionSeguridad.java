@@ -122,12 +122,13 @@ public class ConfiguracionSeguridad {
                     reglas
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/motivos-fallo").hasRole("GESTOR_DESPACHO")
                         .requestMatchers(HttpMethod.POST, "/internal/v1/despachos/*/transiciones").access(operacionInterna())
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/recojos/*/transiciones").access(operacionInterna())
                         .requestMatchers(HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo").access(operacionInterna())
                         .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones").access(servicioConScope("cotizaciones:calcular"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
                         .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))
                         .requestMatchers(HttpMethod.GET, "/api/v1/seguimientos/pedidos/*").access(servicioConScope("seguimientos:leer"))
-                        .requestMatchers("/api/v1/zonas/**", "/api/v1/distritos/**", "/api/v1/despachos/**",
+                        .requestMatchers("/api/v1/zonas/**", "/api/v1/distritos/**", "/api/v1/despachos/**", "/api/v1/recojos/**",
                                 "/api/v1/jornadas/*/ruta", "/api/v1/jornadas/*/secuencia")
                         .hasRole("GESTOR_DESPACHO")
                         .anyRequest().denyAll();

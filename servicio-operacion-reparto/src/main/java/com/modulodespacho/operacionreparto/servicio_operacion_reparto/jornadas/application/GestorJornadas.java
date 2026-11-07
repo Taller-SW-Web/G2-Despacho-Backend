@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.*;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.ErrorJornada;
+import static com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.ENTREGAS;
+import static com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.RECOJOS;
 
 @Service
 @Profile("!integracion-local")
@@ -30,6 +32,8 @@ public class GestorJornadas {
         Perfil perfil = repositorio.obtenerPerfil(datos.idRepartidor());
         if (!perfil.habilitado()) throw ErrorJornada.noApto("El repartidor debe estar activo y vinculado.");
         Vehiculo vehiculo = repositorio.obtenerVehiculo(datos.idFurgoneta());
+        if (!Set.of(ENTREGAS,RECOJOS).contains(datos.tipoOperacion()))
+            throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El tipo de jornada debe ser ENTREGAS o RECOJOS.");
         if (!"DISPONIBLE".equals(vehiculo.estado()) || repositorio.tieneRecursoOcupado(perfil.id(), vehiculo.id()))
             throw ErrorJornada.conflicto("Existe otra jornada activa o carga pendiente de los recursos.");
         UUID id = repositorio.crear(datos, vehiculo.limites(), actor, reloj.instant());
@@ -61,17 +65,23 @@ public class GestorJornadas {
     }
     private static long contar(List<FilaBase> filas,String estado) { return filas.stream().filter(fila -> estado.equals(fila.estadoOperativo())).count(); }
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public List<Candidato> consultarDisponibles(LocalDate fecha, UUID zona) {
+    public List<Candidato> consultarDisponibles(LocalDate fecha, UUID zona) { return consultarDisponibles(fecha,zona,null); }
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<Candidato> consultarDisponibles(LocalDate fecha, UUID zona, String tipoOperacion) {
+        // Sin el parámetro solo se ofrecen jornadas de entregas: los clientes actuales nunca ven una de recojos.
+        String tipo = tipoOperacion == null ? ENTREGAS : tipoOperacion;
+        if (!Set.of(ENTREGAS,RECOJOS).contains(tipo)) throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El tipo de jornada debe ser ENTREGAS o RECOJOS.");
         LocalDate dia = fecha == null ? obtenerFechaActual() : fecha;
         return repositorio.consultarMonitoreo(dia).stream().filter(fila -> fila.disponible(dia))
-                .filter(fila -> zona == null || zona.equals(fila.jornada().zona())).map(fila -> {
+                .filter(fila -> zona == null || zona.equals(fila.jornada().zona()))
+                .filter(fila -> tipo.equals(fila.jornada().tipoOperacion())).map(fila -> {
                     Jornada j = fila.jornada().vista();
                     return new Candidato(fila.perfil().id(),j.idJornada(),fila.perfil().nombre(),j.idZona(),j.idFurgoneta(),j.placa(),
-                            fila.estadoOperativo(),j.limites(),j.ocupacion(),j.capacidadRemanente(),j.porcentajeOcupacion());
+                            fila.estadoOperativo(),j.limites(),j.ocupacion(),j.capacidadRemanente(),j.porcentajeOcupacion(),j.tipoOperacion());
                 }).toList();
     }
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public Detalle consultarDetalle(UUID id) { return Detalle.de(repositorio.obtenerJornada(id).vista(),repositorio.listarDespachos(id)); }
+    public Detalle consultarDetalle(UUID id) { return Detalle.de(repositorio.obtenerJornada(id).vista(),repositorio.listarDespachos(id),repositorio.listarRecojos(id)); }
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Contexto consultarContexto(UUID usuario) {
         Perfil perfil = perfilPropio(usuario);
@@ -85,9 +95,11 @@ public class GestorJornadas {
         LocalDate hoy = obtenerFechaActual();
         JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),hoy)
                 .filter(JornadaBase::activa).orElse(null);
-        if (jornada == null) return new RutaRepartidor(null,hoy,"FUERA_DE_TURNO",List.of());
+        if (jornada == null) return new RutaRepartidor(null,hoy,"FUERA_DE_TURNO",List.of(),null,List.of());
+        if (RECOJOS.equals(jornada.tipoOperacion())) return new RutaRepartidor(jornada.id(),jornada.fecha(),jornada.estadoOperativo(),List.of(),RECOJOS,
+                repositorio.listarProyeccionesRecojo(jornada.id()).stream().map(GestorJornadas::recojoRuta).toList());
         return new RutaRepartidor(jornada.id(),jornada.fecha(),jornada.estadoOperativo(),
-                repositorio.listarProyecciones(jornada.id()).stream().map(GestorJornadas::despachoRuta).toList());
+                repositorio.listarProyecciones(jornada.id()).stream().map(GestorJornadas::despachoRuta).toList(),ENTREGAS,List.of());
     }
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public DetalleDespacho consultarDespachoPropio(UUID usuario, UUID idDespacho) {
@@ -104,7 +116,8 @@ public class GestorJornadas {
         Perfil perfil = perfilPropio(usuario);
         LocalDate hoy = obtenerFechaActual();
         JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),hoy).orElse(null);
-        if (jornada == null) return new ResumenJornada(null,hoy,null,null,0,0,0,0,0,List.of());
+        if (jornada == null) return new ResumenJornada(null,hoy,null,null,0,0,0,0,0,List.of(),null,0,0,List.of());
+        if (RECOJOS.equals(jornada.tipoOperacion())) return resumenRecojos(jornada);
         var despachos = repositorio.listarProyecciones(jornada.id());
         // Contrato ampliado: los fallidos, con o sin intento, regresan físicamente al centro.
         var devolver = despachos.stream().filter(d -> "FALLIDO".equals(d.estado()) || "NO_INTENTADO".equals(d.estado()))
@@ -115,7 +128,55 @@ public class GestorJornadas {
                 despachos.stream().filter(d -> "ENTREGADO".equals(d.estado())).count(),
                 despachos.stream().filter(Proyeccion::fallidoConIntento).count(),
                 despachos.stream().filter(Proyeccion::noIntentado).count(),
-                despachos.stream().filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado())).count(),devolver);
+                despachos.stream().filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado())).count(),devolver,
+                ENTREGAS,0,0,List.of());
+    }
+    /** ES-F03-09 UI-05: solo los recojos RECOGIDO siguen a bordo; uno no realizado no trajo producto. */
+    private ResumenJornada resumenRecojos(JornadaBase jornada) {
+        var recojos = repositorio.listarProyeccionesRecojo(jornada.id());
+        var porEntregar = recojos.stream().filter(r -> "RECOGIDO".equals(r.estado()))
+                .map(r -> new ProductoPorEntregar(r.idRecojo(),r.codigoRastreoInterno(),r.lineas())).toList();
+        return new ResumenJornada(jornada.id(),jornada.fecha(),jornada.estado(),jornada.cerradaEn(),recojos.size(),0,0,
+                recojos.stream().filter(ProyeccionRecojo::noIntentado).count(),
+                recojos.stream().filter(r -> "ASIGNADO".equals(r.estado()) || "EN_CAMINO".equals(r.estado())).count(),List.of(),
+                RECOJOS,recojos.stream().filter(r -> Set.of("RECOGIDO","RECIBIDO_EN_CENTRO").contains(r.estado())).count(),
+                recojos.stream().filter(ProyeccionRecojo::noRealizado).count(),porEntregar);
+    }
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public DetalleRecojo consultarRecojoPropio(UUID usuario, UUID idRecojo) {
+        Perfil perfil = perfilPropio(usuario);
+        JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),obtenerFechaActual()).filter(JornadaBase::activa)
+                .orElseThrow(GestorJornadas::recojoNoEncontrado);
+        return recojoDetalle(jornada.id(),repositorio.buscarProyeccionRecojo(jornada.id(),idRecojo).orElseThrow(GestorJornadas::recojoNoEncontrado));
+    }
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public RecojoEnRuta recojoEnRuta(UUID usuario, UUID idRecojo) {
+        Perfil perfil = perfilPropio(usuario);
+        JornadaBase jornada = repositorio.buscarJornadaDelDia(perfil.id(),obtenerFechaActual()).filter(JornadaBase::activa)
+                .orElseThrow(() -> new ErrorJornada(409,"DESP_ERROR_FUERA_DE_TURNO","No tienes una jornada activa."));
+        return new RecojoEnRuta(perfil.id(),jornada.id(),repositorio.buscarProyeccionRecojo(jornada.id(),idRecojo).orElseThrow(GestorJornadas::recojoNoEncontrado));
+    }
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<RecojoEnRuta> recojosPendientesPropios(UUID usuario, UUID idJornada) {
+        Perfil perfil = perfilPropio(usuario);
+        JornadaBase jornada = repositorio.obtenerJornada(idJornada);
+        if (!jornada.repartidor().equals(perfil.id())) throw new ErrorJornada(403,"DESP_ERROR_SCOPE_INSUFICIENTE","La jornada no pertenece a tu perfil.");
+        if (!jornada.activa() || !RECOJOS.equals(jornada.tipoOperacion())) return List.of();
+        return repositorio.listarProyeccionesRecojo(jornada.id()).stream()
+                .filter(r -> "ASIGNADO".equals(r.estado()) || "EN_CAMINO".equals(r.estado()))
+                .map(r -> new RecojoEnRuta(perfil.id(),jornada.id(),r)).toList();
+    }
+    private static ErrorJornada recojoNoEncontrado() { return new ErrorJornada(404,"DESP_ERROR_RECOJO_NO_ENCONTRADO","El recojo no existe."); }
+    private static RecojoRuta recojoRuta(ProyeccionRecojo r) {
+        boolean visibles = datosPersonalesVisibles(r.estado());
+        return new RecojoRuta(r.idRecojo(),r.idDespacho(),r.codigoRastreoInterno(),r.estado(),r.secuenciaRuta(),r.fechaProgramada(),r.numeroIntentos(),
+                visibles ? r.destinatario().nombre() : null,visibles ? r.destino().direccion() : null,visibles ? r.destino().distrito() : null,
+                r.lineas(),r.motivoFallo(),r.hitos());
+    }
+    private static DetalleRecojo recojoDetalle(UUID jornada,ProyeccionRecojo r) {
+        boolean visibles = datosPersonalesVisibles(r.estado());
+        return new DetalleRecojo(jornada,r.idRecojo(),r.idDespacho(),r.codigoRastreoInterno(),r.estado(),r.secuenciaRuta(),r.fechaProgramada(),r.numeroIntentos(),
+                visibles ? r.destinatario() : null,visibles ? r.destino() : null,r.lineas(),r.motivoFallo(),r.hitos());
     }
     /** Lectura previa a un comando de campo; los datos se vuelven a validar en Gestión bajo su bloqueo. */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -179,7 +240,8 @@ public class GestorJornadas {
         var previa = repositorio.buscarReservaPorClave(clave);
         if (previa.isPresent()) {
             Reserva r = previa.get();
-            if (!r.despacho().equals(datos.idDespacho()) || !r.jornada().equals(datos.idJornada()) || !r.repartidor().equals(datos.idRepartidor()) || !r.carga().mismaCarga(datos.requerido()))
+            if (!r.despacho().equals(datos.idDespacho()) || !r.jornada().equals(datos.idJornada()) || !r.repartidor().equals(datos.idRepartidor()) || !r.carga().mismaCarga(datos.requerido())
+                    || !java.util.Objects.equals(r.recojo(),datos.idRecojo()))
                 throw new ErrorJornada(409,"DESP_ERROR_CLAVE_REUTILIZADA","La clave corresponde a otro contenido.");
             if (r.respuesta() == null) throw ErrorJornada.noDisponible();
             return json.readValue(r.respuesta(),ConfirmacionReserva.class);
@@ -190,6 +252,7 @@ public class GestorJornadas {
         if (!j.activa() || !j.fecha().equals(obtenerFechaActual()) || !j.repartidor().equals(perfil.id()) || !perfil.habilitado()
                 || !"DISPONIBLE".equals(repositorio.obtenerVehiculo(j.furgoneta()).estado()))
             throw new ErrorJornada(409,"DESP_ERROR_REPARTIDOR_NO_HABILITADO","La jornada no está habilitada para reservar.");
+        if (!datos.tipoRequerido().equals(j.tipoOperacion())) throw tipoIncompatible();
         Capacidad remanente = j.limites().menos(j.ocupacion());
         if (!datos.requerido().positiva() || !remanente.admite(datos.requerido())) {
             var campos = new java.util.ArrayList<String>();
@@ -228,17 +291,32 @@ public class GestorJornadas {
         if (!destino.activa() || "SATURADO".equals(destino.estadoOperativo()) || !destino.fecha().equals(obtenerFechaActual()) || !destino.repartidor().equals(perfil.id())
                 || !perfil.habilitado() || !"DISPONIBLE".equals(repositorio.obtenerVehiculo(destino.furgoneta()).estado()))
             throw new ErrorJornada(409,"DESP_ERROR_REPARTIDOR_NO_HABILITADO","La jornada destino no está habilitada.");
+        if (!(origen.recojo() == null ? ENTREGAS : RECOJOS).equals(destino.tipoOperacion())) throw tipoIncompatible();
         Capacidad remanente = destino.limites().menos(destino.ocupacion());
         if (!remanente.admite(origen.carga())) throw new ErrorJornada(422,"DESP_ERROR_CAPACIDAD_EXCEDIDA","La carga supera la capacidad remanente del destino.");
         // Misma transacción y bloqueo que reservar/liberar/proyectar: fallo de INSERT revierte la liberación.
         repositorio.liberar(origen.id(),"REASIGNACION",actor,reloj.instant());
         UUID nueva = UUID.randomUUID();
         var confirmacion = new ConfirmacionReserva(nueva,"CONFIRMADA",remanente.menos(origen.carga()));
-        repositorio.guardarReserva(nueva,UUID.randomUUID(),new SolicitudReserva(datos.idDespacho(),datos.idNuevoRepartidor(),datos.idNuevaJornada(),origen.carga()),
+        repositorio.guardarReserva(nueva,UUID.randomUUID(),new SolicitudReserva(datos.idDespacho(),datos.idNuevoRepartidor(),datos.idNuevaJornada(),origen.carga(),origen.recojo()),
                 json.writeValueAsString(confirmacion),actor,reloj.instant());
         var resultado = new Transferencia(origen.id(),datos.idDespacho(),nueva,datos.idNuevaJornada(),"TRANSFERIDA",confirmacion.capacidadRemanente(),reloj.instant());
         repositorio.guardarTransferencia(clave,solicitud,json.writeValueAsString(resultado),actor);
         return resultado;
+    }
+    private static ErrorJornada tipoIncompatible() {
+        return new ErrorJornada(409,"DESP_ERROR_TIPO_JORNADA_INCOMPATIBLE","La jornada no admite este tipo de trabajo.");
+    }
+    public void proyectarRecojo(UUID id, ProyeccionRecojo datos, String actor) {
+        if (!id.equals(datos.idRecojo())) throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El identificador del recojo no coincide.");
+        repositorio.bloquearOperacion();
+        if (repositorio.buscarVersionRecojo(id).filter(version -> version >= datos.version()).isPresent()) return;
+        Reserva reserva = repositorio.obtenerReserva(datos.idReserva());
+        if (!id.equals(reserva.recojo()) || !reserva.jornada().equals(datos.idJornada()))
+            throw new ErrorJornada(409,"DESP_ERROR_PROYECCION_INCOMPATIBLE","La reserva y jornada no corresponden al recojo.");
+        if (Set.of("ASIGNADO","EN_CAMINO").contains(datos.estado()) && (!"ACTIVA".equals(reserva.estado()) || !repositorio.obtenerJornada(datos.idJornada()).activa()))
+            throw new ErrorJornada(409,"DESP_ERROR_PROYECCION_INCOMPATIBLE","La jornada o reserva ya no admite carga.");
+        repositorio.guardarProyeccionRecojo(datos,actor);
     }
     public void proyectar(UUID id, Proyeccion datos, String actor) {
         if (!id.equals(datos.idDespacho())) throw new ErrorJornada(400,"DESP_ERROR_CAMPOS_INVALIDOS","El identificador de la ruta no coincide.");

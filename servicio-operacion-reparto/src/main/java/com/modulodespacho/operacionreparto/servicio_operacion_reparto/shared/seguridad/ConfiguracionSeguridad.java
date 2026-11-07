@@ -123,6 +123,7 @@ public class ConfiguracionSeguridad {
                                 "/internal/v1/capacidad/reservas",
                                 "/internal/v1/capacidad/reservas/*/liberacion",
                                 "/internal/v1/proyecciones/despachos/*",
+                                "/internal/v1/proyecciones/recojos/*",
                                 "/internal/v1/operacion/consulta-incidencias")
                             .access((autenticacion, contexto) -> new AuthorizationDecision(servicioInterno(autenticacion.get())))
                         // El vínculo activo se exige antes del controlador; la propiedad de cada recurso sigue siendo obligatoria.

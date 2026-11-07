@@ -59,6 +59,18 @@ public class AlmacenCampoJdbc implements AlmacenCampo {
                         "La fotografía no corresponde a este despacho o ya fue utilizada."));
     }
     @Override
+    @Transactional(readOnly = true)
+    public EvidenciaPendiente evidenciaRecojo(UUID idEvidencia, UUID idRecojo, String tipo, String usuario) {
+        return sql.sql("""
+                SELECT id, ruta_objeto, tipo_mime FROM evidencias
+                WHERE id = :id AND recojo_id_externo = :recojo AND tipo = :tipo AND cargado_por = :usuario
+                  AND estado IN ('AUTORIZADA', 'CARGADA')
+                """).param("id", idEvidencia).param("recojo", idRecojo).param("tipo", tipo).param("usuario", usuario)
+                .query((fila, indice) -> new EvidenciaPendiente(fila.getObject(1, UUID.class), fila.getString(2), fila.getString(3)))
+                .optional().orElseThrow(() -> new ErrorJornada(400, "DESP_ERROR_EVIDENCIA_INVALIDA",
+                        "La fotografía no corresponde a este recojo o ya fue utilizada."));
+    }
+    @Override
     @Transactional
     public void marcarCargada(UUID idEvidencia) {
         sql.sql("UPDATE evidencias SET estado = 'CARGADA', cargado_en = coalesce(cargado_en, now()) WHERE id = :id AND estado = 'AUTORIZADA'")

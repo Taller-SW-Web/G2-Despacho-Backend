@@ -52,6 +52,7 @@ public final class EntregaEventosProgramacion {
             boolean liberacion = "OPERACION_LIBERACION".equals(evento.destino());
             String ruta = haciaVentas ? "/api/v1/integraciones/despachos/eventos"
                     : liberacion ? "/internal/v1/capacidad/reservas/" + datos.path("idReserva").asText() + "/liberacion"
+                    : datos.hasNonNull("idRecojo") ? "/internal/v1/proyecciones/recojos/" + datos.path("idRecojo").asText()
                     : "/internal/v1/proyecciones/despachos/" + datos.path("idDespacho").asText();
             String cuerpo = liberacion ? json.writeValueAsString(java.util.Map.of("motivo", datos.path("motivo").asText(),
                     "idDespacho", datos.path("idDespacho").asText())) : evento.payload();

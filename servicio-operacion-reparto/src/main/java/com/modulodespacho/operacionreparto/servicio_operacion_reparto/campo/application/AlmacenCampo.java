@@ -10,6 +10,7 @@ public interface AlmacenCampo {
     /** Un rechazo definitivo libera la clave: repetirla vuelve a validar y obtiene el mismo rechazo. */
     void descartar(UUID usuario, UUID clave);
     EvidenciaPendiente evidencia(UUID idEvidencia, UUID idDespacho, String tipo, String usuario);
+    EvidenciaPendiente evidenciaRecojo(UUID idEvidencia, UUID idRecojo, String tipo, String usuario);
     void marcarCargada(UUID idEvidencia);
     void asociar(UUID idEvidencia);
 }

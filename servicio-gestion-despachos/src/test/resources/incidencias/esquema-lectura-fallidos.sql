@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS motivos_fallo (
     etiqueta text NOT NULL,
     seleccionable_en_campo boolean NOT NULL,
     consume_intento boolean NOT NULL,
-    activo boolean NOT NULL
+    activo boolean NOT NULL,
+    ambito text NOT NULL DEFAULT 'ENTREGA'
 );
 
 CREATE TABLE IF NOT EXISTS despachos (

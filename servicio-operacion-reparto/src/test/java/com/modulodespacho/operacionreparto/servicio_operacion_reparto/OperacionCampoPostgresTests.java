@@ -49,7 +49,7 @@ class OperacionCampoPostgresTests {
     UUID jornada;
 
     @BeforeEach void preparar() throws Exception {
-        sql.sql("TRUNCATE comandos_repartidor,evidencias,auditoria_configuracion,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
+        sql.sql("TRUNCATE comandos_repartidor,evidencias,auditoria_configuracion,proyecciones_recojo,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
         when(decodificador.decode("repartidor")).thenReturn(token("acceso", actor.toString(), "", List.of()));
         when(decodificador.decode("gestor")).thenReturn(token("acceso", actor.toString(), "", List.of("GESTOR_DESPACHO")));
         when(decodificador.decode("capacidad")).thenReturn(token("servicio", "modulo-despacho",

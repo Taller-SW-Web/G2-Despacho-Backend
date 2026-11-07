@@ -7,5 +7,6 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.doma
 /** Gestión es la fuente del estado canónico y del catálogo de motivos; nunca se consultan sus tablas. */
 public interface PuertoGestion {
     RespuestaTransicion transicionar(UUID idDespacho, UUID clave, SolicitudTransicion solicitud);
+    RespuestaTransicionRecojo transicionarRecojo(UUID idRecojo, UUID clave, SolicitudTransicionRecojo solicitud);
     List<Motivo> motivos();
 }

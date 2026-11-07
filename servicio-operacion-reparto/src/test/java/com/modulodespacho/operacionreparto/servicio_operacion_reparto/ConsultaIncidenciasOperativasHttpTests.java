@@ -34,7 +34,7 @@ class ConsultaIncidenciasOperativasHttpTests {
 
     @BeforeEach
     void preparar() {
-        sql.sql("TRUNCATE proyecciones_despacho, reservas_capacidad, asignaciones_diarias, repartidores, furgonetas").update();
+        sql.sql("TRUNCATE proyecciones_recojo,proyecciones_despacho, reservas_capacidad, asignaciones_diarias, repartidores, furgonetas").update();
         sql.sql("""
                 INSERT INTO repartidores (id, nombres, apellidos, dni, telefono, correo, numero_brevete,
                     turno_habitual, estado_registro, estado_vinculacion, id_usuario_seguridad, creado_por, actualizado_por)

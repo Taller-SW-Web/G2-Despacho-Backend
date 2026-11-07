@@ -2,5 +2,9 @@ package com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencia
 
 public enum TipoEvidencia {
     ENTREGA,
-    FALLO
+    FALLO,
+    RECOJO,
+    FALLO_RECOJO;
+
+    public boolean deRecojo() { return this == RECOJO || this == FALLO_RECOJO; }
 }

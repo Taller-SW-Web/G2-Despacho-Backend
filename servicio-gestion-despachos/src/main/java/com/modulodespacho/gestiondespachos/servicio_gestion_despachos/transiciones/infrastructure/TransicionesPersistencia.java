@@ -126,7 +126,8 @@ public class TransicionesPersistencia implements AlmacenTransiciones {
     }
 
     private boolean validarMotivo(String motivo, boolean noIntentado) {
-        var fila = sql.sql("SELECT seleccionable_en_campo, consume_intento, activo FROM motivos_fallo WHERE codigo = :codigo")
+        // Un motivo propio del recojo no aplica a una entrega (ES-F03-09 RN-06).
+        var fila = sql.sql("SELECT seleccionable_en_campo AND ambito <> 'RECOJO', consume_intento, activo FROM motivos_fallo WHERE codigo = :codigo")
                 .param("codigo", motivo).query((r, i) -> new boolean[] {r.getBoolean(1), r.getBoolean(2), r.getBoolean(3)}).optional()
                 .orElseThrow(() -> ErrorDeNegocio.de(400, "DESP_ERROR_MOTIVO_INVALIDO", "El motivo no existe en el catálogo"));
         // NO_INTENTADO solo llega desde el cierre de jornada; los demás deben poder elegirse en campo.

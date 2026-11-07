@@ -44,8 +44,9 @@ public class ControladorJornadas {
             @RequestParam(defaultValue="50") @Min(1) @Max(100) int tamanoPagina,@RequestParam(required=false) String estadoOperativo,
             @RequestParam(required=false) UUID idZona) { return gestor.consultarMonitoreo(fecha,pagina,tamanoPagina,estadoOperativo,idZona); }
     @GetMapping("/api/v1/repartidores/disponibles")
-    public Map<String,Object> disponibles(@RequestParam(required=false) LocalDate fecha,@RequestParam(required=false) UUID idZona) {
-        return Map.of("repartidores",gestor.consultarDisponibles(fecha,idZona));
+    public Map<String,Object> disponibles(@RequestParam(required=false) LocalDate fecha,@RequestParam(required=false) UUID idZona,
+            @RequestParam(required=false) String tipoOperacion) {
+        return Map.of("repartidores",tipoOperacion == null ? gestor.consultarDisponibles(fecha,idZona) : gestor.consultarDisponibles(fecha,idZona,tipoOperacion));
     }
     static UUID actor(Jwt token) {
         try { return UUID.fromString(token.getSubject()); }

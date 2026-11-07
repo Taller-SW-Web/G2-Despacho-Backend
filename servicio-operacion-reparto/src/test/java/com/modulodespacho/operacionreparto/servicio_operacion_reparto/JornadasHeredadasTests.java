@@ -40,6 +40,7 @@ class JornadasHeredadasTests {
             sentencia.execute(new ClassPathResource("flota/compatibilidad/F06__jornadas_capacidad_heredada.sql").getContentAsString(StandardCharsets.UTF_8));
             sentencia.execute(new ClassPathResource("flota/compatibilidad/F03__maximo_intentos_heredado.sql").getContentAsString(StandardCharsets.UTF_8));
             sentencia.execute(new ClassPathResource("flota/compatibilidad/F03__maximo_intentos_heredado.sql").getContentAsString(StandardCharsets.UTF_8));
+            sentencia.execute(new ClassPathResource("flota/compatibilidad/F03__recojos_heredado.sql").getContentAsString(StandardCharsets.UTF_8));
         }
     }
     @Test void conectaCatalogosJornadasReservasYProyeccionesSinRenombrarTablasOriginales() {

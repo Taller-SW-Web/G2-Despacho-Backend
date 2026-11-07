@@ -31,6 +31,22 @@ public class EvidenciasJdbc implements LectorEvidencias {
                 """).param("despacho", idDespacho).param("usuario", idUsuario).query(Boolean.class).single();
     }
     @Override
+    public boolean esDeRecojo(String idEvidencia) {
+        return sql.sql("SELECT EXISTS(SELECT 1 FROM evidencias WHERE id::text = :id AND recojo_id_externo IS NOT NULL)")
+                .param("id", idEvidencia).query(Boolean.class).single();
+    }
+    @Override
+    public boolean esPropietarioRecojo(String idUsuario, String idEvidencia) {
+        return sql.sql("""
+                SELECT EXISTS(SELECT 1 FROM evidencias e
+                  JOIN proyecciones_recojo p ON p.recojo_id_externo = e.recojo_id_externo
+                  JOIN asignaciones_diarias j ON j.id = p.asignacion_diaria_id
+                  JOIN perfiles_flota r ON r.id = j.repartidor_id
+                  WHERE e.id::text = :evidencia AND r.id_usuario_seguridad::text = :usuario
+                    AND r.estado_registro = 'ACTIVO' AND r.estado_vinculacion = 'VINCULADO')
+                """).param("evidencia", idEvidencia).param("usuario", idUsuario).query(Boolean.class).single();
+    }
+    @Override
     public Optional<Referencia> consultar(String idEvidencia) {
         return sql.sql("SELECT id, despacho_id_externo, ruta_objeto, estado FROM evidencias WHERE id::text = :id")
                 .param("id", idEvidencia).query((fila, indice) -> new Referencia(fila.getString("id"),

@@ -15,7 +15,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.OperacionCampo;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.domain.ModelosCampo.Motivo;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.application.GestorJornadas;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.DetalleDespacho;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.DetalleRecojo;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.ErrorJornada;
 
 /** Operación §3: el filtro exige el perfil de campo y cada comando resuelve la propiedad por sub. */
@@ -24,7 +26,8 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.d
 @RequestMapping("/api/v1/repartidor")
 public class ControladorOperacionCampo {
     private final OperacionCampo campo;
-    public ControladorOperacionCampo(OperacionCampo campo) { this.campo = campo; }
+    private final GestorJornadas jornadas;
+    public ControladorOperacionCampo(OperacionCampo campo, GestorJornadas jornadas) { this.campo = campo; this.jornadas = jornadas; }
 
     @PostMapping("/despachos/{idDespacho}/inicio-traslado")
     public ResponseEntity<DetalleDespacho> iniciarTraslado(@PathVariable UUID idDespacho, @RequestHeader("Idempotency-Key") UUID clave,
@@ -44,10 +47,32 @@ public class ControladorOperacionCampo {
                 solicitud.idEvidencia(), solicitud.comentario()));
     }
     @GetMapping("/motivos-fallo")
-    public ResponseEntity<Map<String, List<Motivo>>> motivos() {
-        return sinCache(Map.of("motivos", campo.motivosDeCampo()));
+    public ResponseEntity<Map<String, List<Motivo>>> motivos(@RequestParam(defaultValue = "ENTREGA") String ambito) {
+        if (!List.of("ENTREGA", "RECOJO").contains(ambito)) throw new ErrorJornada(400, "DESP_ERROR_CAMPOS_INVALIDOS", "El ámbito debe ser ENTREGA o RECOJO.");
+        return sinCache(Map.of("motivos", campo.motivosDeCampo(ambito)));
+    }
+    @GetMapping("/recojos/{idRecojo}")
+    public ResponseEntity<DetalleRecojo> recojo(@PathVariable UUID idRecojo, @AuthenticationPrincipal Jwt token) {
+        return sinCache(jornadas.consultarRecojoPropio(usuario(token), idRecojo));
+    }
+    @PostMapping("/recojos/{idRecojo}/inicio-traslado")
+    public ResponseEntity<DetalleRecojo> iniciarTrasladoRecojo(@PathVariable UUID idRecojo, @RequestHeader("Idempotency-Key") UUID clave,
+            @AuthenticationPrincipal Jwt token, @RequestBody(required = false) String cuerpo) {
+        if (cuerpo != null && !cuerpo.isBlank()) throw new ErrorJornada(400, "DESP_ERROR_CAMPOS_INVALIDOS", "El inicio de traslado no recibe cuerpo.");
+        return sinCache(campo.iniciarTrasladoRecojo(usuario(token), idRecojo, claveValida(clave)));
+    }
+    @PostMapping("/recojos/{idRecojo}/recogido")
+    public ResponseEntity<DetalleRecojo> recogido(@PathVariable UUID idRecojo, @RequestHeader("Idempotency-Key") UUID clave,
+            @Valid @RequestBody Recogido solicitud, @AuthenticationPrincipal Jwt token) {
+        return sinCache(campo.registrarRecogido(usuario(token), idRecojo, claveValida(clave), solicitud.idEvidencia(), solicitud.comentario()));
+    }
+    @PostMapping("/recojos/{idRecojo}/fallo")
+    public ResponseEntity<DetalleRecojo> falloRecojo(@PathVariable UUID idRecojo, @RequestHeader("Idempotency-Key") UUID clave,
+            @Valid @RequestBody Fallo solicitud, @AuthenticationPrincipal Jwt token) {
+        return sinCache(campo.registrarFalloRecojo(usuario(token), idRecojo, claveValida(clave), solicitud.motivo(), solicitud.idEvidencia(), solicitud.comentario()));
     }
 
+    public record Recogido(@NotNull UUID idEvidencia, @Size(max = 200) String comentario) {}
     public record Entrega(@NotNull UUID idEvidencia, @Size(max = 120) String recibidoPor) {}
     public record Fallo(@NotBlank @Size(max = 40) String motivo, @NotNull UUID idEvidencia, @Size(max = 200) String comentario) {}
 

@@ -45,7 +45,7 @@ class JornadasPostgresTests {
     @BeforeEach void preparar() {
         sql.sql("DROP TRIGGER IF EXISTS prueba_fallo_transferencia ON reservas_capacidad").update();
         sql.sql("TRUNCATE transferencias_capacidad").update();
-        sql.sql("TRUNCATE auditoria_configuracion,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
+        sql.sql("TRUNCATE auditoria_configuracion,proyecciones_recojo,proyecciones_despacho,reservas_capacidad,asignaciones_diarias,repartidores,furgonetas").update();
         when(decodificador.decode("gestor")).thenReturn(token("acceso",actor.toString(),""));
         when(decodificador.decode("capacidad")).thenReturn(token("servicio","modulo-despacho",""));
         sql.sql("""

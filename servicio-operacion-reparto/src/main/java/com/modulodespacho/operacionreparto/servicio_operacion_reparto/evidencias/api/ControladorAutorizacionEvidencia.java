@@ -32,7 +32,7 @@ public class ControladorAutorizacionEvidencia {
     public ResponseEntity<RespuestaAutorizacion> autorizar(@RequestBody @Valid SolicitudAutorizacion solicitud,
             @AuthenticationPrincipal Jwt token) {
         AutorizadorEvidencia.Autorizacion resultado = autorizador.autorizar(
-                new AutorizadorEvidencia.Solicitud(solicitud.idDespacho(), solicitud.tipo(),
+                new AutorizadorEvidencia.Solicitud(solicitud.idDespacho(), solicitud.idRecojo(), solicitud.tipo(),
                         solicitud.contentType(), solicitud.tamanioBytes()),
                 token.getSubject());
         return ResponseEntity.ok()
@@ -41,7 +41,8 @@ public class ControladorAutorizacionEvidencia {
     }
 
     public record SolicitudAutorizacion(
-            @NotNull UUID idDespacho,
+            UUID idDespacho,
+            UUID idRecojo,
             @NotNull TipoEvidencia tipo,
             @NotBlank String contentType,
             @Min(1) long tamanioBytes) {}
