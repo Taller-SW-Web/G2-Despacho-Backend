@@ -2,5 +2,8 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidenci
 
 import java.time.LocalDate;
 
-public record SolicitudReprogramacion(String idIncidencia, int versionDespacho,
-        LocalDate nuevaFechaProgramada, String observacion) {}
+public record SolicitudReprogramacion(
+        String idIncidencia,
+        int versionDespacho,
+        LocalDate nuevaFechaProgramada,
+        String observacion) {}

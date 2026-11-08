@@ -10,19 +10,30 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RutasAccesoSeguridad {
     @Bean
-    RouteLocator rutasAccesoHumano(RouteLocatorBuilder constructor,
-            @Value("${SEGURIDAD_URL:}") String origen) {
+    RouteLocator rutasAccesoHumano(
+            RouteLocatorBuilder constructor, @Value("${SEGURIDAD_URL:}") String origen) {
         var rutas = constructor.routes();
         // La demo sin autenticación puede arrancar sin proveedor de identidad configurado.
         // El modo normal sigue exigiendo SEGURIDAD_URL en ConfiguracionSeguridad.
         if (!origen.isBlank()) {
-            rutas.route("seguridad-acceso", ruta -> ruta.path("/api/v1/auth/login",
-                    "/api/v1/auth/otp/solicitar", "/api/v1/auth/otp/verificar", "/api/v1/auth/refresh",
-                    "/api/v1/auth/logout", "/api/v1/auth/me")
-                    // Seguridad puede publicar el mismo CORS que ya añadió el Gateway.
-                    .filters(filtros -> filtros.dedupeResponseHeader(
-                            "Access-Control-Allow-Origin Access-Control-Allow-Credentials", "RETAIN_UNIQUE"))
-                    .uri(origen));
+            rutas.route(
+                    "seguridad-acceso",
+                    ruta ->
+                            ruta.path(
+                                            "/api/v1/auth/login",
+                                            "/api/v1/auth/otp/solicitar",
+                                            "/api/v1/auth/otp/verificar",
+                                            "/api/v1/auth/refresh",
+                                            "/api/v1/auth/logout",
+                                            "/api/v1/auth/me")
+                                    // Seguridad puede publicar el mismo CORS que ya añadió el
+                                    // Gateway.
+                                    .filters(
+                                            filtros ->
+                                                    filtros.dedupeResponseHeader(
+                                                            "Access-Control-Allow-Origin Access-Control-Allow-Credentials",
+                                                            "RETAIN_UNIQUE"))
+                                    .uri(origen));
         }
         return rutas.build();
     }

@@ -1,13 +1,19 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.seguimientos.application;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.domain.EstadoDespacho;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.domain.EstadoDespacho;
 
 /** Proyección pública: no contiene datos personales, evidencias ni detalles operativos. */
-public record SeguimientoPedido(String idPedido, EstadoDespacho estado, String estadoEtiqueta,
-        LocalDate fechaProgramada, String distrito, List<Hito> hitos, Instant actualizadoEn) {
+public record SeguimientoPedido(
+        String idPedido,
+        EstadoDespacho estado,
+        String estadoEtiqueta,
+        LocalDate fechaProgramada,
+        String distrito,
+        List<Hito> hitos,
+        Instant actualizadoEn) {
 
     public SeguimientoPedido {
         hitos = List.copyOf(hitos);

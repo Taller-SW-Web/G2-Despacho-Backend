@@ -2,5 +2,4 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.app
 
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.EstadoZona;
 
-public record SolicitudEstado(EstadoZona estado, Long versionZona) {
-}
+public record SolicitudEstado(EstadoZona estado, Long versionZona) {}

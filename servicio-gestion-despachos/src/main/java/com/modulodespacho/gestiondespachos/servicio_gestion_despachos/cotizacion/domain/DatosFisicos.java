@@ -4,13 +4,21 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /** Datos físicos vigentes de un producto, provistos por Productos y Ofertas. */
-public record DatosFisicos(BigDecimal pesoKg, BigDecimal largoCm, BigDecimal anchoCm, BigDecimal altoCm,
-        String estado, Instant actualizadoEn) {
+public record DatosFisicos(
+        BigDecimal pesoKg,
+        BigDecimal largoCm,
+        BigDecimal anchoCm,
+        BigDecimal altoCm,
+        String estado,
+        Instant actualizadoEn) {
 
     private static final BigDecimal CENTIMETROS_POR_METRO = new BigDecimal("100");
 
     public boolean completo() {
-        return esPositivo(pesoKg) && esPositivo(largoCm) && esPositivo(anchoCm) && esPositivo(altoCm);
+        return esPositivo(pesoKg)
+                && esPositivo(largoCm)
+                && esPositivo(anchoCm)
+                && esPositivo(altoCm);
     }
 
     /** Volumen unitario en metros cúbicos. */

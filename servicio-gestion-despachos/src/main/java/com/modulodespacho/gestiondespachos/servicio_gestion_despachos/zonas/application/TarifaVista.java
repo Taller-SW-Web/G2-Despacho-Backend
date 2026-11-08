@@ -10,5 +10,4 @@ public record TarifaVista(
         BigDecimal factorVolumetrico,
         String moneda,
         Integer plazoEstimadoDiasHabiles,
-        Instant actualizadoEn) {
-}
+        Instant actualizadoEn) {}

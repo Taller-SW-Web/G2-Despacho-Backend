@@ -4,5 +4,6 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programaci
 
 public interface CoberturaProgramacion {
     ZonaDisponible resolver(String distrito, String codigoPostal);
+
     ZonaDisponible paraSimulacion(String idZona);
 }

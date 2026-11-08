@@ -1,5 +1,11 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.RespuestasSeguridad;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.ConfiguracionSeguridad;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +18,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.*;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.ConfiguracionSeguridad;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.RespuestasSeguridad;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = ModoDemoGestionTests.Sonda.class,
+@WebMvcTest(
+        controllers = ModoDemoGestionTests.Sonda.class,
         properties = {"DEMO_SIN_AUTENTICACION=true", "SEGURIDAD_URL="})
 @Import({ConfiguracionSeguridad.class, RespuestasSeguridad.class, ModoDemoGestionTests.Sonda.class})
 class ModoDemoGestionTests {
@@ -28,7 +30,9 @@ class ModoDemoGestionTests {
     @Test
     void inyectaActorDeAuditoriaSinAceptarIdentidadesDelCliente() throws Exception {
         assertThat(contexto.getBeansOfType(JwtDecoder.class)).isEmpty();
-        http.perform(get("/api/v1/despachos/demo-identidad").header("Authorization", "Bearer vencido"))
+        http.perform(
+                        get("/api/v1/despachos/demo-identidad")
+                                .header("Authorization", "Bearer vencido"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sub").value("00000000-0000-4000-8000-000000000001"))
                 .andExpect(jsonPath("$.tipo").value("acceso"));
@@ -36,10 +40,12 @@ class ModoDemoGestionTests {
 
     @Test
     void conservaLosPermisosTecnicosDeCreacionYCotizacion() throws Exception {
-        http.perform(post("/api/v1/despachos")).andExpect(status().isOk())
+        http.perform(post("/api/v1/despachos"))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sub").value("modulo-ventas"))
                 .andExpect(jsonPath("$.tipo").value("servicio"));
-        http.perform(post("/api/v1/cotizaciones")).andExpect(status().isOk())
+        http.perform(post("/api/v1/cotizaciones"))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.scope").value("cotizaciones:calcular"));
     }
 
@@ -50,13 +56,20 @@ class ModoDemoGestionTests {
         public Map<String, String> consultar(@AuthenticationPrincipal Jwt identidad) {
             return datos(identidad);
         }
+
         @PostMapping({"/api/v1/despachos", "/api/v1/cotizaciones"})
         public Map<String, String> crear(@AuthenticationPrincipal Jwt identidad) {
             return datos(identidad);
         }
+
         private Map<String, String> datos(Jwt identidad) {
-            return Map.of("sub", identidad.getSubject(), "tipo", identidad.getClaimAsString("tipo"),
-                    "scope", identidad.getClaimAsString("scope"));
+            return Map.of(
+                    "sub",
+                    identidad.getSubject(),
+                    "tipo",
+                    identidad.getClaimAsString("tipo"),
+                    "scope",
+                    identidad.getClaimAsString("scope"));
         }
     }
 }

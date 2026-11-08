@@ -4,6 +4,11 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.aud
 
 public interface RegistroAuditoria {
 
-    void registrar(String entidad, String entidadId, AccionAuditoria accion,
-            String datosAnterioresJson, String datosNuevosJson, String usuarioId);
+    void registrar(
+            String entidad,
+            String entidadId,
+            AccionAuditoria accion,
+            String datosAnterioresJson,
+            String datosNuevosJson,
+            String usuarioId);
 }

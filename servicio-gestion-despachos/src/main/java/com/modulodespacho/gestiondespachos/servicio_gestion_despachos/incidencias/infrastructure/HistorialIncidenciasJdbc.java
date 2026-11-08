@@ -17,20 +17,42 @@ import tools.jackson.databind.json.JsonMapper;
 public class HistorialIncidenciasJdbc {
     private final JdbcClient sql;
     private final JsonMapper json;
-    public HistorialIncidenciasJdbc(JdbcClient sql, JsonMapper json) { this.sql = sql; this.json = json; }
-    public UUID registrar(String despacho, String operacion, String anterior, String nuevo, String actor,
-            String observacion, Map<String, Object> datos, Instant ahora) {
+
+    public HistorialIncidenciasJdbc(JdbcClient sql, JsonMapper json) {
+        this.sql = sql;
+        this.json = json;
+    }
+
+    public UUID registrar(
+            String despacho,
+            String operacion,
+            String anterior,
+            String nuevo,
+            String actor,
+            String observacion,
+            Map<String, Object> datos,
+            Instant ahora) {
         if (!TransactionSynchronizationManager.isActualTransactionActive())
-            throw new IllegalStateException("El historial debe capturarse en la transacción de la operación");
+            throw new IllegalStateException(
+                    "El historial debe capturarse en la transacción de la operación");
         UUID id = UUID.randomUUID();
-        sql.sql("""
+        sql.sql(
+                        """
                 INSERT INTO historial_estados_despacho (id, despacho_id, tipo_operacion, estado_anterior, estado_nuevo,
                   funcionalidad_origen, ejecutor_tipo, ejecutor_id, origen, observaciones, datos, registrado_en)
                 VALUES (:id, CAST(:despacho AS uuid), :operacion, :anterior, :nuevo,
                   'F-04', 'USUARIO', :actor, 'MANUAL', :observacion, CAST(:datos AS jsonb), :fecha)
-                """).param("id", id).param("despacho", despacho).param("operacion", operacion)
-                .param("anterior", anterior).param("nuevo", nuevo).param("actor", actor).param("observacion", observacion)
-                .param("datos", json.writeValueAsString(datos)).param("fecha", OffsetDateTime.ofInstant(ahora, ZoneOffset.UTC)).update();
+                """)
+                .param("id", id)
+                .param("despacho", despacho)
+                .param("operacion", operacion)
+                .param("anterior", anterior)
+                .param("nuevo", nuevo)
+                .param("actor", actor)
+                .param("observacion", observacion)
+                .param("datos", json.writeValueAsString(datos))
+                .param("fecha", OffsetDateTime.ofInstant(ahora, ZoneOffset.UTC))
+                .update();
         return id;
     }
 }

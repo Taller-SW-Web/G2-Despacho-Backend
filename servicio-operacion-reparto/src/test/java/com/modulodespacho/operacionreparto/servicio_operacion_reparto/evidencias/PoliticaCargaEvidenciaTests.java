@@ -1,16 +1,20 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
+
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.PoliticaCargaEvidencia;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.EvidenciaNoDisponible;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.SolicitudEvidenciaInvalida;
-
-import static org.assertj.core.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class PoliticaCargaEvidenciaTests {
-    private final PoliticaCargaEvidencia politica = new PoliticaCargaEvidencia(
-            "image/jpeg, image/png, image/webp", 2_097_152, "https://proyecto.supabase.co",
-            "secreto-de-prueba", "evidencias");
+    private final PoliticaCargaEvidencia politica =
+            new PoliticaCargaEvidencia(
+                    "image/jpeg, image/png, image/webp",
+                    2_097_152,
+                    "https://proyecto.supabase.co",
+                    "secreto-de-prueba",
+                    "evidencias");
 
     @Test
     void aceptaTipoYTamanoDentroDeLaPoliticaConfigurada() {
@@ -38,10 +42,20 @@ class PoliticaCargaEvidenciaTests {
 
     @Test
     void rechazaConfiguracionFueraDeRestriccionesDelEsquema() {
-        PoliticaCargaEvidencia unsupportedType = new PoliticaCargaEvidencia(
-                "image/gif", 100, "https://proyecto.supabase.co", "test-service-key", "evidencias");
-        PoliticaCargaEvidencia unsupportedLimit = new PoliticaCargaEvidencia(
-                "image/jpeg", 2_097_153, "https://proyecto.supabase.co", "test-service-key", "evidencias");
+        PoliticaCargaEvidencia unsupportedType =
+                new PoliticaCargaEvidencia(
+                        "image/gif",
+                        100,
+                        "https://proyecto.supabase.co",
+                        "test-service-key",
+                        "evidencias");
+        PoliticaCargaEvidencia unsupportedLimit =
+                new PoliticaCargaEvidencia(
+                        "image/jpeg",
+                        2_097_153,
+                        "https://proyecto.supabase.co",
+                        "test-service-key",
+                        "evidencias");
 
         assertThatThrownBy(() -> unsupportedType.validar("image/gif", 100))
                 .isInstanceOf(EvidenciaNoDisponible.class);

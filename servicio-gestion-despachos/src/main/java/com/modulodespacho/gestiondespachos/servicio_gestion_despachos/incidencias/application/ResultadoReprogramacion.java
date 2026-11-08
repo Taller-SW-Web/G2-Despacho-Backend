@@ -3,5 +3,13 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidenci
 import java.time.Instant;
 import java.time.LocalDate;
 
-public record ResultadoReprogramacion(String idDespacho, String idIncidencia, String estado, int versionDespacho,
-        LocalDate fechaProgramada, int numeroIntentos, String observacion, Instant reprogramadoEn, String idEvento) {}
+public record ResultadoReprogramacion(
+        String idDespacho,
+        String idIncidencia,
+        String estado,
+        int versionDespacho,
+        LocalDate fechaProgramada,
+        int numeroIntentos,
+        String observacion,
+        Instant reprogramadoEn,
+        String idEvento) {}

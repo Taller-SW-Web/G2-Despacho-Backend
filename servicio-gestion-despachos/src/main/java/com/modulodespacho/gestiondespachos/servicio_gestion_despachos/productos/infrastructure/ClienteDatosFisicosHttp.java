@@ -1,5 +1,9 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.productos.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ProveedorDatosFisicos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,17 +20,17 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ProveedorDatosFisicos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 
 /** Transporte y validación contractual compartidos; la elegibilidad comercial pertenece a F-01. */
 public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClienteDatosFisicosHttp.class);
-    private static final JsonMapper JSON = JsonMapper.builder()
-            .enable(tools.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).build();
+    private static final JsonMapper JSON =
+            JsonMapper.builder()
+                    .enable(
+                            tools.jackson.databind.DeserializationFeature
+                                    .USE_BIG_DECIMAL_FOR_FLOATS)
+                    .build();
     private static final Set<String> ESTADOS = Set.of("ACTIVO", "INACTIVO", "BORRADOR");
     private final RestClient cliente;
     private final Supplier<String> token;
@@ -40,43 +44,62 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
     public Map<String, DatosFisicos> obtener(Collection<String> skus) {
         List<String> solicitados = new ArrayList<>(new LinkedHashSet<>(skus));
         if (solicitados.size() > 100) {
-            throw ErrorDeNegocio.de(400, CodigosError.LIMITE_SKUS_EXCEDIDO,
+            throw ErrorDeNegocio.de(
+                    400,
+                    CodigosError.LIMITE_SKUS_EXCEDIDO,
                     "Se admiten como máximo 100 SKU únicos por solicitud");
         }
-        if (solicitados.isEmpty() || solicitados.stream().anyMatch(sku -> sku == null || sku.isBlank())) {
-            throw ErrorDeNegocio.de(400, CodigosError.SOLICITUD_INVALIDA, "Debe indicar SKU no vacíos");
+        if (solicitados.isEmpty()
+                || solicitados.stream().anyMatch(sku -> sku == null || sku.isBlank())) {
+            throw ErrorDeNegocio.de(
+                    400, CodigosError.SOLICITUD_INVALIDA, "Debe indicar SKU no vacíos");
         }
         try {
             String credencial = token.get();
             if (credencial == null || credencial.isBlank()) throw noDisponible();
-            return cliente.post().uri("/api/v1/productos/datos-fisicos/consulta")
-                    .headers(cabeceras -> {
-                        cabeceras.setBearerAuth(credencial);
-                        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
-                                instanceof org.springframework.web.context.request.ServletRequestAttributes contexto) {
-                            Object correlacion = contexto.getRequest().getAttribute(
-                                    com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion.ATRIBUTO);
-                            if (correlacion != null) cabeceras.set("X-Correlation-Id", correlacion.toString());
-                        }
-                    })
+            return cliente.post()
+                    .uri("/api/v1/productos/datos-fisicos/consulta")
+                    .headers(
+                            cabeceras -> {
+                                cabeceras.setBearerAuth(credencial);
+                                if (org.springframework.web.context.request.RequestContextHolder
+                                                .getRequestAttributes()
+                                        instanceof
+                                        org.springframework.web.context.request
+                                                        .ServletRequestAttributes
+                                                contexto) {
+                                    Object correlacion =
+                                            contexto.getRequest()
+                                                    .getAttribute(
+                                                            com.modulodespacho.gestiondespachos
+                                                                    .servicio_gestion_despachos
+                                                                    .shared.web.FiltroCorrelacion
+                                                                    .ATRIBUTO);
+                                    if (correlacion != null)
+                                        cabeceras.set("X-Correlation-Id", correlacion.toString());
+                                }
+                            })
                     .body(Map.of("skus", solicitados))
-                    .exchange((peticion, respuesta) -> {
-                        int estado = respuesta.getStatusCode().value();
-                        if (estado >= 500 || estado == 401 || estado == 403) {
-                            LOG.warn("Productos no disponible: HTTP {} en la consulta física", estado);
-                            throw noDisponible();
-                        }
-                        if (estado != 200 && estado != 422) throw invalida();
-                        JsonNode cuerpo;
-                        try {
-                            cuerpo = JSON.readTree(respuesta.getBody());
-                        } catch (RuntimeException error) {
-                            throw invalida();
-                        }
-                        if (cuerpo == null || !cuerpo.isObject()) throw invalida();
-                        if (estado == 422) throw traducirProblema(cuerpo, solicitados);
-                        return validarLote(cuerpo, solicitados);
-                    });
+                    .exchange(
+                            (peticion, respuesta) -> {
+                                int estado = respuesta.getStatusCode().value();
+                                if (estado >= 500 || estado == 401 || estado == 403) {
+                                    LOG.warn(
+                                            "Productos no disponible: HTTP {} en la consulta física",
+                                            estado);
+                                    throw noDisponible();
+                                }
+                                if (estado != 200 && estado != 422) throw invalida();
+                                JsonNode cuerpo;
+                                try {
+                                    cuerpo = JSON.readTree(respuesta.getBody());
+                                } catch (RuntimeException error) {
+                                    throw invalida();
+                                }
+                                if (cuerpo == null || !cuerpo.isObject()) throw invalida();
+                                if (estado == 422) throw traducirProblema(cuerpo, solicitados);
+                                return validarLote(cuerpo, solicitados);
+                            });
         } catch (ErrorDeNegocio error) {
             throw error;
         } catch (RestClientException error) {
@@ -105,9 +128,15 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
                 throw invalida();
             }
             JsonNode dimensiones = producto.path("dimensionesCm");
-            datos.put(sku, new DatosFisicos(positivo(producto.path("pesoKg")),
-                    positivo(dimensiones.path("largo")), positivo(dimensiones.path("ancho")),
-                    positivo(dimensiones.path("alto")), estado, actualizado));
+            datos.put(
+                    sku,
+                    new DatosFisicos(
+                            positivo(producto.path("pesoKg")),
+                            positivo(dimensiones.path("largo")),
+                            positivo(dimensiones.path("ancho")),
+                            positivo(dimensiones.path("alto")),
+                            estado,
+                            actualizado));
         }
         Set<String> ausentes = new LinkedHashSet<>();
         for (JsonNode sku : noEncontrados) {
@@ -117,8 +146,10 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
         }
         if (clasificados.size() != solicitados.size()) throw invalida();
         if (!ausentes.isEmpty()) {
-            throw ErrorDeNegocio.de(422, CodigosError.PRODUCTO_NO_ENCONTRADO,
-                    "Uno o más productos no existen en el catálogo")
+            throw ErrorDeNegocio.de(
+                            422,
+                            CodigosError.PRODUCTO_NO_ENCONTRADO,
+                            "Uno o más productos no existen en el catálogo")
                     .conSkusAfectados(solicitados.stream().filter(ausentes::contains).toList());
         }
         Map<String, DatosFisicos> ordenados = new LinkedHashMap<>();
@@ -127,17 +158,19 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
     }
 
     private ErrorDeNegocio traducirProblema(JsonNode problema, List<String> solicitados) {
-        if (!problema.path("status").isIntegralNumber() || problema.path("status").intValue() != 422) {
+        if (!problema.path("status").isIntegralNumber()
+                || problema.path("status").intValue() != 422) {
             throw invalida();
         }
         String codigo = texto(problema.path("code"));
         // La entrada saliente ya es estructuralmente válida. Bajo D-G2-02, únicamente
         // el rechazo de bases no físicas identifica afectados en SKU_INVALIDO.
-        String publico = switch (codigo) {
-            case "DATOS_FISICOS_INCOMPLETOS" -> CodigosError.DATOS_FISICOS_INCOMPLETOS;
-            case "SKU_INVALIDO" -> CodigosError.PRODUCTO_NO_ELEGIBLE;
-            default -> throw invalida();
-        };
+        String publico =
+                switch (codigo) {
+                    case "DATOS_FISICOS_INCOMPLETOS" -> CodigosError.DATOS_FISICOS_INCOMPLETOS;
+                    case "SKU_INVALIDO" -> CodigosError.PRODUCTO_NO_ELEGIBLE;
+                    default -> throw invalida();
+                };
         JsonNode afectados = problema.path("details").path("skusAfectados");
         if (!afectados.isArray() || afectados.isEmpty() || afectados.size() > 100) throw invalida();
         List<String> identificados = new ArrayList<>();
@@ -148,7 +181,8 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
             identificados.add(sku);
         }
         List<String> ordenSolicitud = solicitados.stream().filter(vistos::contains).toList();
-        if ("SKU_INVALIDO".equals(codigo) && !identificados.equals(ordenSolicitud)) throw invalida();
+        if ("SKU_INVALIDO".equals(codigo) && !identificados.equals(ordenSolicitud))
+            throw invalida();
         return ErrorDeNegocio.de(422, publico, "Productos rechazó los SKU identificados")
                 .conSkusAfectados(identificados);
     }
@@ -168,12 +202,16 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
     }
 
     private static ErrorDeNegocio invalida() {
-        return ErrorDeNegocio.de(502, CodigosError.RESPUESTA_PRODUCTOS_INVALIDA,
+        return ErrorDeNegocio.de(
+                502,
+                CodigosError.RESPUESTA_PRODUCTOS_INVALIDA,
                 "La respuesta de Productos no cumple el contrato de datos físicos");
     }
 
     private static ErrorDeNegocio noDisponible() {
-        return ErrorDeNegocio.de(503, CodigosError.PRODUCTOS_NO_DISPONIBLE,
+        return ErrorDeNegocio.de(
+                503,
+                CodigosError.PRODUCTOS_NO_DISPONIBLE,
                 "No fue posible consultar Productos y Ofertas");
     }
 }

@@ -19,12 +19,14 @@ public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
         String tipo = token.getClaimAsString("tipo");
         boolean identidadValida = token.getSubject() != null && !token.getSubject().isBlank();
         boolean tipoValido = "acceso".equals(tipo) || "servicio".equals(tipo);
-        boolean audienciaValida = !"servicio".equals(tipo)
-                || token.getAudience() != null && token.getAudience().contains(audiencia);
+        boolean audienciaValida =
+                !"servicio".equals(tipo)
+                        || token.getAudience() != null && token.getAudience().contains(audiencia);
         if (identidadValida && tipoValido && audienciaValida && token.getExpiresAt() != null) {
             return OAuth2TokenValidatorResult.success();
         }
         return OAuth2TokenValidatorResult.failure(
-                new OAuth2Error("invalid_token", "El token no cumple el contrato de Despacho", null));
+                new OAuth2Error(
+                        "invalid_token", "El token no cumple el contrato de Despacho", null));
     }
 }

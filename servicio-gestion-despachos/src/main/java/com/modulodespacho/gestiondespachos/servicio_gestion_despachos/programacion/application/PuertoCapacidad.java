@@ -4,5 +4,6 @@ import static com.modulodespacho.gestiondespachos.servicio_gestion_despachos.pro
 
 public interface PuertoCapacidad {
     ReservaConfirmada reservar(IntencionAsignacion intencion);
+
     void compensar(String idReserva, String idDespacho);
 }

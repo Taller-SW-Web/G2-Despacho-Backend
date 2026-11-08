@@ -21,8 +21,12 @@ public final class ProveedorTokenOperacion implements Supplier<String> {
     private String token = "";
     private Instant renovarEn = Instant.MIN;
 
-    public ProveedorTokenOperacion(RestClient seguridad, String idCliente, Supplier<String> secretoCliente,
-            Supplier<String> tokenExterno, Clock reloj) {
+    public ProveedorTokenOperacion(
+            RestClient seguridad,
+            String idCliente,
+            Supplier<String> secretoCliente,
+            Supplier<String> tokenExterno,
+            Clock reloj) {
         this.seguridad = seguridad;
         this.idCliente = idCliente;
         this.secretoCliente = secretoCliente;
@@ -39,19 +43,35 @@ public final class ProveedorTokenOperacion implements Supplier<String> {
         token = "";
         renovarEn = Instant.MIN;
         String secreto = secretoCliente.get();
-        if (idCliente == null || idCliente.isBlank() || secreto == null || secreto.isBlank()) return "";
+        if (idCliente == null || idCliente.isBlank() || secreto == null || secreto.isBlank())
+            return "";
         LinkedMultiValueMap<String, String> formulario = new LinkedMultiValueMap<>();
         formulario.add("grant_type", "client_credentials");
         formulario.add("client_id", idCliente);
         formulario.add("client_secret", secreto);
         try {
-            Respuesta respuesta = seguridad.post().uri("/api/v1/auth/token")
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED).body(formulario)
-                    .retrieve().body(Respuesta.class);
-            if (respuesta != null && "Bearer".equalsIgnoreCase(respuesta.tokenType())
-                    && respuesta.accessToken() != null && respuesta.accessToken().matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
-                    && respuesta.expiresIn() != null && respuesta.expiresIn() > 0) {
-                renovarEn = ahora.plusSeconds(Math.max(1, respuesta.expiresIn() - Math.min(30, respuesta.expiresIn() / 2)));
+            Respuesta respuesta =
+                    seguridad
+                            .post()
+                            .uri("/api/v1/auth/token")
+                            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                            .body(formulario)
+                            .retrieve()
+                            .body(Respuesta.class);
+            if (respuesta != null
+                    && "Bearer".equalsIgnoreCase(respuesta.tokenType())
+                    && respuesta.accessToken() != null
+                    && respuesta
+                            .accessToken()
+                            .matches("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
+                    && respuesta.expiresIn() != null
+                    && respuesta.expiresIn() > 0) {
+                renovarEn =
+                        ahora.plusSeconds(
+                                Math.max(
+                                        1,
+                                        respuesta.expiresIn()
+                                                - Math.min(30, respuesta.expiresIn() / 2)));
                 token = respuesta.accessToken();
             }
         } catch (RestClientException | DateTimeException error) {
@@ -60,5 +80,6 @@ public final class ProveedorTokenOperacion implements Supplier<String> {
         return token;
     }
 
-    public record Respuesta(String accessToken, String tokenType, Long expiresIn, List<String> scopes) {}
+    public record Respuesta(
+            String accessToken, String tokenType, Long expiresIn, List<String> scopes) {}
 }

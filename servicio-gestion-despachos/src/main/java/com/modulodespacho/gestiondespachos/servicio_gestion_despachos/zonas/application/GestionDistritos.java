@@ -18,8 +18,14 @@ public class GestionDistritos {
     @Transactional(readOnly = true)
     public List<DistritoCatalogoVista> catalogo(String nombre) {
         return repositorioDistritos.catalogo(nombre).stream()
-                .map(distrito -> new DistritoCatalogoVista(distrito.getId(), distrito.getNombre(),
-                        distrito.getProvincia(), distrito.getDepartamento(), distrito.getUbigeo()))
+                .map(
+                        distrito ->
+                                new DistritoCatalogoVista(
+                                        distrito.getId(),
+                                        distrito.getNombre(),
+                                        distrito.getProvincia(),
+                                        distrito.getDepartamento(),
+                                        distrito.getUbigeo()))
                 .toList();
     }
 }

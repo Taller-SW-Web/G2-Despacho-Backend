@@ -8,5 +8,4 @@ public record SolicitudTarifa(
         BigDecimal recargoKgAdicional,
         BigDecimal factorVolumetrico,
         String moneda,
-        Integer plazoEstimadoDiasHabiles) {
-}
+        Integer plazoEstimadoDiasHabiles) {}

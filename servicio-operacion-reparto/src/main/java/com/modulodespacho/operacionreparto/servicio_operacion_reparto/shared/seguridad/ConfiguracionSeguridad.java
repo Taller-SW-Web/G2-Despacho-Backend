@@ -1,13 +1,14 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.seguridad;
 
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.errores.RespuestasSeguridad;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
@@ -37,7 +38,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClient;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.errores.RespuestasSeguridad;
 
 @Configuration
 @EnableMethodSecurity
@@ -45,48 +45,75 @@ public class ConfiguracionSeguridad {
 
     @Bean
     @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-            name = "despacho.demo.sin-autenticacion", havingValue = "false", matchIfMissing = true)
+            name = "despacho.demo.sin-autenticacion",
+            havingValue = "false",
+            matchIfMissing = true)
     JwtDecoder decodificadorJwt(
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
-        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
+        Assert.hasText(
+                urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
         URI origen = URI.create(urlSeguridad);
-        Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
-                        && origen.getHost() != null && origen.getRawUserInfo() == null
-                        && origen.getRawQuery() == null && origen.getRawFragment() == null
+        Assert.isTrue(
+                ("http".equalsIgnoreCase(origen.getScheme())
+                                || "https".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null
+                        && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null
+                        && origen.getRawFragment() == null
                         && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
                 "SEGURIDAD_URL debe ser un origen HTTP(S), sin rutas, credenciales ni parámetros");
         SignatureAlgorithm algoritmoFirma = SignatureAlgorithm.from(algoritmo);
         Assert.notNull(algoritmoFirma, "Configure un algoritmo de firma asimétrica válido");
-        JdkClientHttpRequestFactory peticiones = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5)).build());
+        JdkClientHttpRequestFactory peticiones =
+                new JdkClientHttpRequestFactory(
+                        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
         peticiones.setReadTimeout(Duration.ofSeconds(5));
-        RestClient cliente = RestClient.builder().requestFactory(peticiones)
-                .baseUrl(urlSeguridad.replaceAll("/+$", "")).build();
-        JwtDecoder diferido = new SupplierJwtDecoder(() -> {
-            Map<String, Object> configuracion = cliente.get()
-                    .uri("/api/v1/auth/.well-known/openid-configuration").retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
-            Assert.notNull(configuracion, "Seguridad debe publicar su configuración");
-            String emisor = (String) configuracion.get("issuer");
-            String claves = (String) configuracion.get("jwks_uri");
-            Assert.hasText(emisor, "Seguridad debe publicar issuer");
-            Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
-            NimbusJwtDecoder resultado = NimbusJwtDecoder.withJwkSetUri(claves)
-                    .jwsAlgorithm(algoritmoFirma).restOperations(
-                            new org.springframework.web.client.RestTemplate(peticiones)).build();
-            var conversorClaims = MappedJwtClaimSetConverter.withDefaults(Map.of());
-            resultado.setClaimSetConverter(claims -> {
-                // Spring puede completar iat: el contrato de G7 exige que venga en el JWT.
-                if (claims.get("iat") == null) throw new BadJwtException("El token no contiene iat");
-                return conversorClaims.convert(claims);
-            });
-            resultado.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                    new JwtTimestampValidator(Duration.ZERO), new JwtIssuerValidator(emisor),
-                    new ValidadorTokenDespacho(audiencia)));
-            return resultado;
-        });
+        RestClient cliente =
+                RestClient.builder()
+                        .requestFactory(peticiones)
+                        .baseUrl(urlSeguridad.replaceAll("/+$", ""))
+                        .build();
+        JwtDecoder diferido =
+                new SupplierJwtDecoder(
+                        () -> {
+                            Map<String, Object> configuracion =
+                                    cliente.get()
+                                            .uri("/api/v1/auth/.well-known/openid-configuration")
+                                            .retrieve()
+                                            .body(
+                                                    new ParameterizedTypeReference<
+                                                            Map<String, Object>>() {});
+                            Assert.notNull(
+                                    configuracion, "Seguridad debe publicar su configuración");
+                            String emisor = (String) configuracion.get("issuer");
+                            String claves = (String) configuracion.get("jwks_uri");
+                            Assert.hasText(emisor, "Seguridad debe publicar issuer");
+                            Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
+                            NimbusJwtDecoder resultado =
+                                    NimbusJwtDecoder.withJwkSetUri(claves)
+                                            .jwsAlgorithm(algoritmoFirma)
+                                            .restOperations(
+                                                    new org.springframework.web.client.RestTemplate(
+                                                            peticiones))
+                                            .build();
+                            var conversorClaims = MappedJwtClaimSetConverter.withDefaults(Map.of());
+                            resultado.setClaimSetConverter(
+                                    claims -> {
+                                        // Spring puede completar iat: el contrato de G7 exige que
+                                        // venga en el JWT.
+                                        if (claims.get("iat") == null)
+                                            throw new BadJwtException("El token no contiene iat");
+                                        return conversorClaims.convert(claims);
+                                    });
+                            resultado.setJwtValidator(
+                                    new DelegatingOAuth2TokenValidator<>(
+                                            new JwtTimestampValidator(Duration.ZERO),
+                                            new JwtIssuerValidator(emisor),
+                                            new ValidadorTokenDespacho(audiencia)));
+                            return resultado;
+                        });
         return token -> {
             try {
                 return diferido.decode(token);
@@ -97,79 +124,128 @@ public class ConfiguracionSeguridad {
     }
 
     @Bean
-    SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+    SecurityFilterChain seguridad(
+            HttpSecurity http,
+            RespuestasSeguridad respuestas,
             ObjectProvider<ValidadorPerfilRepartidor> perfiles,
             @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada,
             @Value("${despacho.demo.sin-autenticacion:false}") boolean modoDemo,
-            @Value("${despacho.demo.usuario-id:00000000-0000-4000-8000-000000000001}") String usuarioDemo) throws Exception {
+            @Value("${despacho.demo.usuario-id:00000000-0000-4000-8000-000000000001}")
+                    String usuarioDemo)
+            throws Exception {
         if (modoDemo) {
-            http.addFilterBefore(new FiltroIdentidadDemo(usuarioDemo),
-                    org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
+            http.addFilterBefore(
+                    new FiltroIdentidadDemo(usuarioDemo),
+                    org.springframework.security.web.authentication.AnonymousAuthenticationFilter
+                            .class);
         }
         http.csrf(configuracion -> configuracion.disable())
                 .httpBasic(configuracion -> configuracion.disable())
                 .formLogin(configuracion -> configuracion.disable())
                 .logout(configuracion -> configuracion.disable())
                 .requestCache(configuracion -> configuracion.disable())
-                .sessionManagement(configuracion -> configuracion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(reglas -> {
-                    reglas.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
-                    if (documentacionHabilitada) {
-                        reglas.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
-                                "/swagger-ui.html").permitAll();
-                    }
-                    reglas
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/capacidad/transferencias",
-                                "/internal/v1/capacidad/reservas",
-                                "/internal/v1/capacidad/reservas/*/liberacion",
-                                "/internal/v1/proyecciones/despachos/*",
-                                "/internal/v1/operacion/consulta-incidencias")
-                            .access((autenticacion, contexto) -> new AuthorizationDecision(servicioInterno(autenticacion.get())))
-                        // El vínculo activo se exige antes del controlador; la propiedad de cada recurso sigue siendo obligatoria.
-                        .requestMatchers("/api/v1/repartidor/**").access((autenticacion, contexto) -> {
-                            ValidadorPerfilRepartidor perfil = perfiles.getIfAvailable();
-                            return new AuthorizationDecision(perfil != null && perfil.permite(autenticacion.get()));
+                .sessionManagement(
+                        configuracion ->
+                                configuracion.sessionCreationPolicy(
+                                        SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        reglas -> {
+                            reglas.requestMatchers(
+                                            HttpMethod.GET, "/actuator/health", "/actuator/info")
+                                    .permitAll();
+                            if (documentacionHabilitada) {
+                                reglas.requestMatchers(
+                                                HttpMethod.GET,
+                                                "/v3/api-docs/**",
+                                                "/swagger-ui/**",
+                                                "/swagger-ui.html")
+                                        .permitAll();
+                            }
+                            reglas.requestMatchers(
+                                            HttpMethod.POST,
+                                            "/internal/v1/capacidad/transferencias",
+                                            "/internal/v1/capacidad/reservas",
+                                            "/internal/v1/capacidad/reservas/*/liberacion",
+                                            "/internal/v1/proyecciones/despachos/*",
+                                            "/internal/v1/operacion/consulta-incidencias")
+                                    .access(
+                                            (autenticacion, contexto) ->
+                                                    new AuthorizationDecision(
+                                                            servicioInterno(autenticacion.get())))
+                                    // El vínculo activo se exige antes del controlador; la
+                                    // propiedad de cada recurso sigue siendo obligatoria.
+                                    .requestMatchers("/api/v1/repartidor/**")
+                                    .access(
+                                            (autenticacion, contexto) -> {
+                                                ValidadorPerfilRepartidor perfil =
+                                                        perfiles.getIfAvailable();
+                                                return new AuthorizationDecision(
+                                                        perfil != null
+                                                                && perfil.permite(
+                                                                        autenticacion.get()));
+                                            })
+                                    .requestMatchers(
+                                            "/api/v1/catalogos/motivos-fallo",
+                                            "/api/v1/evidencias/**")
+                                    .access(
+                                            (autenticacion, contexto) ->
+                                                    new AuthorizationDecision(
+                                                            esTokenDeTipo(
+                                                                    autenticacion.get(), "acceso")))
+                                    .requestMatchers(
+                                            "/api/v1/repartidores/**",
+                                            "/api/v1/furgonetas/**",
+                                            "/api/v1/jornadas/**",
+                                            "/api/v1/flota/**")
+                                    .hasRole("GESTOR_DESPACHO")
+                                    .anyRequest()
+                                    .denyAll();
                         })
-                        .requestMatchers("/api/v1/catalogos/motivos-fallo",
-                                "/api/v1/evidencias/**").access((autenticacion, contexto) ->
-                                        new AuthorizationDecision(esTokenDeTipo(autenticacion.get(), "acceso")))
-                        .requestMatchers("/api/v1/repartidores/**", "/api/v1/furgonetas/**",
-                                "/api/v1/jornadas/**", "/api/v1/flota/**").hasRole("GESTOR_DESPACHO")
-                        .anyRequest().denyAll();
-                })
-                .exceptionHandling(errores -> errores
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+                .exceptionHandling(
+                        errores ->
+                                errores.authenticationEntryPoint(respuestas)
+                                        .accessDeniedHandler(respuestas));
         if (!modoDemo) {
-            http.oauth2ResourceServer(oauth -> oauth
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidorAutenticacion()))
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+            http.oauth2ResourceServer(
+                    oauth ->
+                            oauth.jwt(
+                                            jwt ->
+                                                    jwt.jwtAuthenticationConverter(
+                                                            convertidorAutenticacion()))
+                                    .authenticationEntryPoint(respuestas)
+                                    .accessDeniedHandler(respuestas));
         }
         return http.build();
     }
 
     private JwtAuthenticationConverter convertidorAutenticacion() {
         JwtAuthenticationConverter convertidor = new JwtAuthenticationConverter();
-        convertidor.setJwtGrantedAuthoritiesConverter(token -> {
-            List<GrantedAuthority> permisos = new ArrayList<>();
-            if ("servicio".equals(token.getClaimAsString("tipo"))) {
-                permisos.addAll(new JwtGrantedAuthoritiesConverter().convert(token));
-            } else if ("acceso".equals(token.getClaimAsString("tipo"))) {
-                List<String> roles = token.getClaimAsStringList("roles");
-                if (roles != null) {
-                    roles.forEach(rol -> permisos.add(new SimpleGrantedAuthority("ROLE_" + rol)));
-                }
-            }
-            return permisos;
-        });
+        convertidor.setJwtGrantedAuthoritiesConverter(
+                token -> {
+                    List<GrantedAuthority> permisos = new ArrayList<>();
+                    if ("servicio".equals(token.getClaimAsString("tipo"))) {
+                        permisos.addAll(new JwtGrantedAuthoritiesConverter().convert(token));
+                    } else if ("acceso".equals(token.getClaimAsString("tipo"))) {
+                        List<String> roles = token.getClaimAsStringList("roles");
+                        if (roles != null) {
+                            roles.forEach(
+                                    rol -> permisos.add(new SimpleGrantedAuthority("ROLE_" + rol)));
+                        }
+                    }
+                    return permisos;
+                });
         return convertidor;
     }
 
     /** Rutas /internal: solo el cliente técnico del propio módulo; la autorización no depende de scopes. */
     private boolean servicioInterno(Authentication identidad) {
-        return esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName());
+        return esTokenDeTipo(identidad, "servicio")
+                && "modulo-despacho".equals(identidad.getName());
     }
+
     private boolean esTokenDeTipo(Authentication identidad, String tipo) {
-        return identidad instanceof JwtAuthenticationToken jwt && identidad.isAuthenticated()
+        return identidad instanceof JwtAuthenticationToken jwt
+                && identidad.isAuthenticated()
                 && tipo.equals(jwt.getToken().getClaimAsString("tipo"));
     }
 }

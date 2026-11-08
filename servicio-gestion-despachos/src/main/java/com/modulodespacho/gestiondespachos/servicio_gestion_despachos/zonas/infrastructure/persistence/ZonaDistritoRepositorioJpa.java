@@ -1,5 +1,6 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaDistrito;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -7,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ZonaDistrito;
 
 public interface ZonaDistritoRepositorioJpa extends JpaRepository<ZonaDistrito, UUID> {
 
@@ -18,7 +18,8 @@ public interface ZonaDistritoRepositorioJpa extends JpaRepository<ZonaDistrito, 
     @Query("SELECT c FROM ZonaDistrito c LEFT JOIN FETCH c.distrito WHERE c.zona.id IN :zonaIds")
     List<ZonaDistrito> buscarPorZonas(@Param("zonaIds") Collection<UUID> zonaIds);
 
-    @Query("""
+    @Query(
+            """
             SELECT DISTINCT c FROM ZonaDistrito c
             JOIN FETCH c.zona z
             LEFT JOIN FETCH c.distrito d
