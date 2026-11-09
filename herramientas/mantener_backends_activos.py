@@ -15,9 +15,13 @@ import urllib.request
 
 
 SERVICIOS = (
-    ("Gateway", "https://taller-api-gateway.onrender.com/actuator/health"),
-    ("Gestión", "https://taller-servicio-gestion-despachos.onrender.com/actuator/health"),
-    ("Operación", "https://taller-servicio-operacion-reparto.onrender.com/actuator/health"),
+    ("Gateway", "https://taller-api-gateway.onrender.com/actuator/health", "UP"),
+    ("Gestión", "https://taller-servicio-gestion-despachos.onrender.com/actuator/health", "UP"),
+    ("Operación", "https://taller-servicio-operacion-reparto.onrender.com/actuator/health", "UP"),
+)
+DEPENDENCIAS_COTIZACION = (
+    ("Seguridad (G7)", "https://g7-auth-service.onrender.com/actuator/health", "UP"),
+    ("Productos (G6)", "https://api-gateway.calmgrass-aec0b33c.chilecentral.azurecontainerapps.io/health", "ok"),
 )
 
 
@@ -51,7 +55,7 @@ def segundos_retry_after(valor):
         return 0
 
 
-def consultar(url, timeout):
+def consultar(url, timeout, salud_esperada="UP"):
     """No envía tokens, no sigue redirecciones ni imprime cuerpos del servidor."""
     inicio = time.monotonic()
     peticion = urllib.request.Request(url, headers={
@@ -75,8 +79,8 @@ def consultar(url, timeout):
                     salud = datos.get("status")
             except (ValueError, UnicodeDecodeError):
                 pass
-        correcto = estado == 200 and salud == "UP"
-        detalle = f"HTTP {estado}; " + ("salud UP" if correcto else "salud no confirmada")
+        correcto = estado == 200 and salud == salud_esperada
+        detalle = f"HTTP {estado}; " + (f"salud {salud_esperada}" if correcto else "salud no confirmada")
         return correcto, detalle, espera, time.monotonic() - inicio
     except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError) as error:
         return False, f"sin respuesta ({type(error).__name__})", 0, time.monotonic() - inicio
@@ -99,24 +103,30 @@ def main(argumentos=None):
     parser.add_argument("--timeout", type=numero_positivo, default=75,
                         help="Espera máxima por petición, incluyendo arranques lentos (por defecto: 75)")
     parser.add_argument("--una-vez", action="store_true", help="Consulta todos una vez y termina")
-    parser.add_argument("--url", action="append", type=validar_url,
-                        help="URL completa de salud; repetir para sustituir los tres destinos predeterminados")
+    destinos = parser.add_mutually_exclusive_group()
+    destinos.add_argument("--url", action="append", type=validar_url,
+                         help="URL completa de salud; repetir para sustituir los tres destinos predeterminados")
+    destinos.add_argument("--con-dependencias", action="store_true",
+                         help="Agrega las consultas de salud de Seguridad (G7) y Productos (G6)")
     opciones = parser.parse_args(argumentos)
     if opciones.intervalo < 60:
         parser.error("El intervalo mínimo es 60 segundos para evitar exceso de solicitudes")
-    servicios = SERVICIOS if not opciones.url else tuple(
-        (urllib.parse.urlsplit(url).netloc, url) for url in dict.fromkeys(opciones.url)
-    )
-    proximas = {url: 0 for _, url in servicios}
+    servicios = SERVICIOS
+    if opciones.url:
+        servicios = tuple((urllib.parse.urlsplit(url).netloc, url, "UP")
+                          for url in dict.fromkeys(opciones.url))
+    elif opciones.con_dependencias:
+        servicios += DEPENDENCIAS_COTIZACION
+    proximas = {url: 0 for _, url, _ in servicios}
     print(f"Consultando {len(servicios)} servicios cada {opciones.intervalo:g} s. Ctrl+C para detener.", flush=True)
     try:
         while True:
             todos_correctos = True
-            for nombre, url in servicios:
+            for nombre, url, salud_esperada in servicios:
                 if time.monotonic() < proximas[url]:
                     continue
                 print(f"Consultando {nombre}...", flush=True)
-                correcto, detalle, espera, duracion = consultar(url, opciones.timeout)
+                correcto, detalle, espera, duracion = consultar(url, opciones.timeout, salud_esperada)
                 # Respeta Retry-After sin bloquear las consultas de los demás servicios.
                 demora = max(opciones.intervalo, espera)
                 proximas[url] = time.monotonic() + demora
