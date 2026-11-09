@@ -7,5 +7,4 @@ public record PaginaZonas(
         int pagina,
         int tamanoPagina,
         long totalElementos,
-        int totalPaginas) {
-}
+        int totalPaginas) {}

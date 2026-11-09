@@ -1,10 +1,10 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.configuracion.domain;
 
-import java.time.Instant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 
 @Entity
 @Table(name = "parametros_configuracion")

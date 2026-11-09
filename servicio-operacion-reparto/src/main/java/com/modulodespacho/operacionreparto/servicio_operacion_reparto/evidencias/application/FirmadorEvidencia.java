@@ -4,5 +4,6 @@ import java.time.Instant;
 
 public interface FirmadorEvidencia {
     AccesoObjeto firmar(String rutaObjeto, int vigenciaSegundos);
+
     record AccesoObjeto(String urlLectura, Instant venceEn) {}
 }

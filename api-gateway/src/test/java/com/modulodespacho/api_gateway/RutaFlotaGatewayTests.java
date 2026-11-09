@@ -1,11 +1,14 @@
 package com.modulodespacho.api_gateway;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
-import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,10 +22,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "SEGURIDAD_URL=http://127.0.0.1:1")
 @ActiveProfiles("render")
 class RutaFlotaGatewayTests {
@@ -30,68 +32,155 @@ class RutaFlotaGatewayTests {
     static final HttpServer OPERACION = crearDestino();
     @LocalServerPort int puerto;
     @MockitoBean ReactiveJwtDecoder decodificador;
+
     @DynamicPropertySource
     static void configurar(DynamicPropertyRegistry propiedades) {
-        propiedades.add("OPERACION_REPARTO_URL", () -> "http://127.0.0.1:" + OPERACION.getAddress().getPort());
+        propiedades.add(
+                "OPERACION_REPARTO_URL",
+                () -> "http://127.0.0.1:" + OPERACION.getAddress().getPort());
     }
+
     @Test
     void enrutaCatalogosConCuerpoYJwtYPermiteSoloLosDosOrigenesPublicados() {
-        when(decodificador.decode("gestor")).thenReturn(Mono.just(Jwt.withTokenValue("gestor")
-                .header("alg","RS256").subject("gestor").claim("tipo","acceso")
-                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build()));
-        WebTestClient cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
-        for (String origen : java.util.List.of("https://despacho-administrativo.vercel.app","https://despacho-repartidor.vercel.app")) {
-            cliente.options().uri("/api/v1/repartidores").header("Origin",origen)
-                    .header("Access-Control-Request-Method","PUT").header("Access-Control-Request-Headers","Authorization,Content-Type")
-                    .exchange().expectStatus().isOk().expectHeader().valueEquals("Access-Control-Allow-Origin",origen);
+        when(decodificador.decode("gestor"))
+                .thenReturn(
+                        Mono.just(
+                                Jwt.withTokenValue("gestor")
+                                        .header("alg", "RS256")
+                                        .subject("gestor")
+                                        .claim("tipo", "acceso")
+                                        .issuedAt(Instant.now())
+                                        .expiresAt(Instant.now().plusSeconds(300))
+                                        .build()));
+        WebTestClient cliente =
+                WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        for (String origen :
+                java.util.List.of(
+                        "https://despacho-administrativo.vercel.app",
+                        "https://despacho-repartidor.vercel.app")) {
+            cliente.options()
+                    .uri("/api/v1/repartidores")
+                    .header("Origin", origen)
+                    .header("Access-Control-Request-Method", "PUT")
+                    .header("Access-Control-Request-Headers", "Authorization,Content-Type")
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectHeader()
+                    .valueEquals("Access-Control-Allow-Origin", origen);
         }
-        cliente.options().uri("/api/v1/repartidores").header("Origin","https://otro.example")
-                .header("Access-Control-Request-Method","GET").exchange().expectStatus().isForbidden();
-        for (HttpMethod metodo : java.util.List.of(HttpMethod.GET,HttpMethod.POST,HttpMethod.PUT,HttpMethod.PATCH)) {
-            String ruta = metodo == HttpMethod.GET ? "/api/v1/repartidores?pagina=2" : "/api/v1/furgonetas/identificador/estado";
-            cliente.method(metodo).uri(ruta).header("Authorization","Bearer gestor")
-                    .header("Content-Type","application/json").bodyValue("{\"estado\":\"DISPONIBLE\"}")
-                    .exchange().expectStatus().isOk();
-            assertThat(RECIBIDO.get()).contains(metodo.name(), "Bearer gestor", "{\"estado\":\"DISPONIBLE\"}");
+        cliente.options()
+                .uri("/api/v1/repartidores")
+                .header("Origin", "https://otro.example")
+                .header("Access-Control-Request-Method", "GET")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        for (HttpMethod metodo :
+                java.util.List.of(
+                        HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH)) {
+            String ruta =
+                    metodo == HttpMethod.GET
+                            ? "/api/v1/repartidores?pagina=2"
+                            : "/api/v1/furgonetas/identificador/estado";
+            cliente.method(metodo)
+                    .uri(ruta)
+                    .header("Authorization", "Bearer gestor")
+                    .header("Content-Type", "application/json")
+                    .bodyValue("{\"estado\":\"DISPONIBLE\"}")
+                    .exchange()
+                    .expectStatus()
+                    .isOk();
+            assertThat(RECIBIDO.get())
+                    .contains(metodo.name(), "Bearer gestor", "{\"estado\":\"DISPONIBLE\"}");
         }
         RECIBIDO.set(null);
         cliente.get().uri("/api/v1/repartidores").exchange().expectStatus().isUnauthorized();
         assertThat(RECIBIDO.get()).isNull();
     }
+
     @Test
     void enrutaJornadasMonitoreoYDisponibilidadSinPublicarLosComandosTecnicos() {
-        when(decodificador.decode("gestor-f06")).thenReturn(Mono.just(Jwt.withTokenValue("gestor-f06")
-                .header("alg","RS256").subject("gestor").claim("tipo","acceso")
-                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build()));
-        WebTestClient cliente=WebTestClient.bindToServer().baseUrl("http://127.0.0.1:"+puerto).build();
-        for(String ruta:java.util.List.of("/api/v1/flota/monitoreo?fecha=2026-10-17&pagina=2",
-                "/api/v1/repartidores/disponibles","/api/v1/jornadas/jornada-prueba","/api/v1/repartidor/jornada")) {
-            cliente.get().uri(ruta).header("Authorization","Bearer gestor-f06").exchange().expectStatus().isOk();
-            assertThat(RECIBIDO.get()).contains("GET "+ruta,"Bearer gestor-f06");
+        when(decodificador.decode("gestor-f06"))
+                .thenReturn(
+                        Mono.just(
+                                Jwt.withTokenValue("gestor-f06")
+                                        .header("alg", "RS256")
+                                        .subject("gestor")
+                                        .claim("tipo", "acceso")
+                                        .issuedAt(Instant.now())
+                                        .expiresAt(Instant.now().plusSeconds(300))
+                                        .build()));
+        WebTestClient cliente =
+                WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        for (String ruta :
+                java.util.List.of(
+                        "/api/v1/flota/monitoreo?fecha=2026-10-17&pagina=2",
+                        "/api/v1/repartidores/disponibles",
+                        "/api/v1/jornadas/jornada-prueba",
+                        "/api/v1/repartidor/jornada")) {
+            cliente.get()
+                    .uri(ruta)
+                    .header("Authorization", "Bearer gestor-f06")
+                    .exchange()
+                    .expectStatus()
+                    .isOk();
+            assertThat(RECIBIDO.get()).contains("GET " + ruta, "Bearer gestor-f06");
         }
-        cliente.post().uri("/api/v1/jornadas").header("Authorization","Bearer gestor-f06")
-                .header("Content-Type","application/json").bodyValue("{\"fecha\":\"2026-10-17\"}").exchange().expectStatus().isOk();
-        assertThat(RECIBIDO.get()).contains("POST /api/v1/jornadas","2026-10-17");
+        cliente.post()
+                .uri("/api/v1/jornadas")
+                .header("Authorization", "Bearer gestor-f06")
+                .header("Content-Type", "application/json")
+                .bodyValue("{\"fecha\":\"2026-10-17\"}")
+                .exchange()
+                .expectStatus()
+                .isOk();
+        assertThat(RECIBIDO.get()).contains("POST /api/v1/jornadas", "2026-10-17");
         RECIBIDO.set(null);
-        cliente.post().uri("/internal/v1/capacidad/reservas").header("Authorization","Bearer gestor-f06")
-                .header("Content-Type","application/json").bodyValue("{}").exchange().expectStatus().isForbidden();
+        cliente.post()
+                .uri("/internal/v1/capacidad/reservas")
+                .header("Authorization", "Bearer gestor-f06")
+                .header("Content-Type", "application/json")
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
         assertThat(RECIBIDO.get()).isNull();
     }
+
     static HttpServer crearDestino() {
         try {
-            HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
-            servidor.createContext("/api/v1", intercambio -> {
-                RECIBIDO.set(intercambio.getRequestMethod() + " " + intercambio.getRequestURI() + " "
-                        + intercambio.getRequestHeaders().getFirst("Authorization") + " "
-                        + new String(intercambio.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-                byte[] respuesta = "{}".getBytes(StandardCharsets.UTF_8);
-                intercambio.getResponseHeaders().set("Content-Type","application/json");
-                intercambio.sendResponseHeaders(200,respuesta.length);
-                try (var salida = intercambio.getResponseBody()) { salida.write(respuesta); }
-                intercambio.close();
-            });
-            servidor.start(); return servidor;
-        } catch (IOException error) { throw new ExceptionInInitializerError(error); }
+            HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            servidor.createContext(
+                    "/api/v1",
+                    intercambio -> {
+                        RECIBIDO.set(
+                                intercambio.getRequestMethod()
+                                        + " "
+                                        + intercambio.getRequestURI()
+                                        + " "
+                                        + intercambio.getRequestHeaders().getFirst("Authorization")
+                                        + " "
+                                        + new String(
+                                                intercambio.getRequestBody().readAllBytes(),
+                                                StandardCharsets.UTF_8));
+                        byte[] respuesta = "{}".getBytes(StandardCharsets.UTF_8);
+                        intercambio.getResponseHeaders().set("Content-Type", "application/json");
+                        intercambio.sendResponseHeaders(200, respuesta.length);
+                        try (var salida = intercambio.getResponseBody()) {
+                            salida.write(respuesta);
+                        }
+                        intercambio.close();
+                    });
+            servidor.start();
+            return servidor;
+        } catch (IOException error) {
+            throw new ExceptionInInitializerError(error);
+        }
     }
-    @AfterAll static void cerrar() { OPERACION.stop(0); }
+
+    @AfterAll
+    static void cerrar() {
+        OPERACION.stop(0);
+    }
 }

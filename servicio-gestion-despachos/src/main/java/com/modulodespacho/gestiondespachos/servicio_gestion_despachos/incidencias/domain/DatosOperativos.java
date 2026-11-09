@@ -15,9 +15,14 @@ public record DatosOperativos(Map<String, Repartidor> repartidores, Map<String, 
 
     public record Repartidor(String idRepartidor, String nombre) {}
 
-    public enum EstadoJornada { ACTIVA, CERRADA, DESCONOCIDA }
+    public enum EstadoJornada {
+        ACTIVA,
+        CERRADA,
+        DESCONOCIDA
+    }
 
-    public record Jornada(String idJornada, EstadoJornada estado, Instant cerradaEn, Instant consultadaEn) {
+    public record Jornada(
+            String idJornada, EstadoJornada estado, Instant cerradaEn, Instant consultadaEn) {
         public static Jornada desconocida(String idJornada, Instant consultadaEn) {
             return new Jornada(idJornada, EstadoJornada.DESCONOCIDA, null, consultadaEn);
         }

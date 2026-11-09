@@ -11,17 +11,38 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClient;
 
-@Configuration(proxyBeanMethods=false)
+@Configuration(proxyBeanMethods = false)
 @Profile("!integracion-local")
 public class ConfiguracionJornadas {
-    @Bean @ConditionalOnMissingBean(Clock.class) Clock relojJornadas() { return Clock.systemUTC(); }
-    @Bean ConsultaZonaHttp consultaZona(@Value("${despacho.gestion.url}") String url) {
+    @Bean
+    @ConditionalOnMissingBean(Clock.class)
+    Clock relojJornadas() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    ConsultaZonaHttp consultaZona(@Value("${despacho.gestion.url}") String url) {
         URI origen = URI.create(url);
-        Assert.isTrue(("https".equalsIgnoreCase(origen.getScheme()) || "http".equalsIgnoreCase(origen.getScheme())) && origen.getHost()!=null
-                && origen.getRawUserInfo()==null && origen.getRawQuery()==null && origen.getRawFragment()==null
-                && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),"GESTION_DESPACHOS_URL debe ser un origen HTTP(S) sin ruta ni credenciales.");
-        var peticiones = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build());
+        Assert.isTrue(
+                ("https".equalsIgnoreCase(origen.getScheme())
+                                || "http".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null
+                        && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null
+                        && origen.getRawFragment() == null
+                        && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
+                "GESTION_DESPACHOS_URL debe ser un origen HTTP(S) sin ruta ni credenciales.");
+        var peticiones =
+                new JdkClientHttpRequestFactory(
+                        HttpClient.newBuilder()
+                                .connectTimeout(Duration.ofSeconds(3))
+                                .followRedirects(HttpClient.Redirect.NEVER)
+                                .build());
         peticiones.setReadTimeout(Duration.ofSeconds(5));
-        return new ConsultaZonaHttp(RestClient.builder().baseUrl(url.replaceAll("/+$", "")).requestFactory(peticiones).build());
+        return new ConsultaZonaHttp(
+                RestClient.builder()
+                        .baseUrl(url.replaceAll("/+$", ""))
+                        .requestFactory(peticiones)
+                        .build());
     }
 }

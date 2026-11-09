@@ -2,8 +2,7 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.er
 
 public final class CodigosError {
 
-    private CodigosError() {
-    }
+    private CodigosError() {}
 
     public static final String SOLICITUD_INVALIDA = "DESP_ERROR_SOLICITUD_INVALIDA";
     public static final String CAMPOS_INVALIDOS = "DESP_ERROR_CAMPOS_INVALIDOS";
@@ -25,6 +24,7 @@ public final class CodigosError {
     public static final String LIMITE_COTIZACION = "DESP_ERROR_LIMITE_COTIZACION";
     public static final String LIMITE_SKUS_EXCEDIDO = "DESP_ERROR_LIMITE_SKUS_EXCEDIDO";
     public static final String PRODUCTO_NO_ELEGIBLE = "DESP_ERROR_PRODUCTO_NO_ELEGIBLE";
-    public static final String RESPUESTA_PRODUCTOS_INVALIDA = "DESP_ERROR_RESPUESTA_PRODUCTOS_INVALIDA";
+    public static final String RESPUESTA_PRODUCTOS_INVALIDA =
+            "DESP_ERROR_RESPUESTA_PRODUCTOS_INVALIDA";
     public static final String PERSISTENCIA_COTIZACION = "DESP_ERROR_PERSISTENCIA_COTIZACION";
 }

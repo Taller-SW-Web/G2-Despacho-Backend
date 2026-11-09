@@ -1,5 +1,11 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
@@ -14,12 +20,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Límite de cotizaciones por minuto por sub del token de servicio e IP. */
@@ -34,27 +34,35 @@ public class FiltroLimiteCotizaciones extends OncePerRequestFilter {
     private final ConcurrentHashMap<String, Contador> contadores = new ConcurrentHashMap<>();
 
     public FiltroLimiteCotizaciones(
-            @Value("${despacho.cotizacion.limite-por-minuto:60}") int limitePorMinuto, JsonMapper json) {
+            @Value("${despacho.cotizacion.limite-por-minuto:60}") int limitePorMinuto,
+            JsonMapper json) {
         this.limitePorMinuto = limitePorMinuto;
         this.json = json;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest solicitud) {
-        return !"POST".equalsIgnoreCase(solicitud.getMethod()) || !RUTA.equals(solicitud.getRequestURI());
+        return !"POST".equalsIgnoreCase(solicitud.getMethod())
+                || !RUTA.equals(solicitud.getRequestURI());
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest solicitud, HttpServletResponse respuesta,
-            FilterChain cadena) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest solicitud, HttpServletResponse respuesta, FilterChain cadena)
+            throws ServletException, IOException {
         String clave = identificador() + "|" + direccion(solicitud);
         long minuto = Instant.now().getEpochSecond() / 60;
-        int conteo = contadores.compute(clave, (ignorado, actual) -> {
-            if (actual == null || actual.minuto != minuto) {
-                return new Contador(minuto, 1);
-            }
-            return new Contador(minuto, actual.conteo + 1);
-        }).conteo;
+        // Ventana fija de un minuto por combinación de usuario e IP.
+        int conteo =
+                contadores.compute(
+                                clave,
+                                (ignorado, actual) -> {
+                                    if (actual == null || actual.minuto != minuto) {
+                                        return new Contador(minuto, 1);
+                                    }
+                                    return new Contador(minuto, actual.conteo + 1);
+                                })
+                        .conteo;
 
         if (conteo > limitePorMinuto) {
             escribirLimite(solicitud, respuesta);
@@ -82,9 +90,12 @@ public class FiltroLimiteCotizaciones extends OncePerRequestFilter {
         return solicitud.getRemoteAddr();
     }
 
-    private void escribirLimite(HttpServletRequest solicitud, HttpServletResponse respuesta) throws IOException {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
-                "Se superó el límite de cotizaciones por minuto");
+    private void escribirLimite(HttpServletRequest solicitud, HttpServletResponse respuesta)
+            throws IOException {
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "Se superó el límite de cotizaciones por minuto");
         problema.setTitle("Límite de cotizaciones excedido");
         problema.setInstance(URI.create(solicitud.getRequestURI()));
         problema.setProperty("code", CodigosError.LIMITE_COTIZACION);

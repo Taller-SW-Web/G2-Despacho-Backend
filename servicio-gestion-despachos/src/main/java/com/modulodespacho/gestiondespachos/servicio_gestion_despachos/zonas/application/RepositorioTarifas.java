@@ -1,10 +1,10 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.TarifaZona;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.TarifaZona;
 
 public interface RepositorioTarifas {
 

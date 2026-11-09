@@ -12,20 +12,31 @@ import org.springframework.stereotype.Component;
 @Profile("!integracion-local")
 public class ValidadorPerfilRepartidor {
     private final JdbcClient sql;
-    public ValidadorPerfilRepartidor(JdbcClient sql) { this.sql = sql; }
+
+    public ValidadorPerfilRepartidor(JdbcClient sql) {
+        this.sql = sql;
+    }
 
     public boolean permite(Authentication identidad) {
-        if (!(identidad instanceof JwtAuthenticationToken jwt) || !identidad.isAuthenticated()
+        if (!(identidad instanceof JwtAuthenticationToken jwt)
+                || !identidad.isAuthenticated()
                 || !"acceso".equals(jwt.getToken().getClaimAsString("tipo"))) return false;
         UUID usuario;
-        try { usuario = UUID.fromString(jwt.getToken().getSubject()); }
-        catch (IllegalArgumentException | NullPointerException error) { return false; }
         try {
-            return sql.sql("""
+            usuario = UUID.fromString(jwt.getToken().getSubject());
+        } catch (IllegalArgumentException | NullPointerException error) {
+            return false;
+        }
+        try {
+            return sql.sql(
+                            """
                     SELECT EXISTS (SELECT 1 FROM perfiles_flota
                         WHERE id_usuario_seguridad = :usuario AND estado_registro = 'ACTIVO'
                             AND estado_vinculacion = 'VINCULADO')
-                    """).param("usuario", usuario).query(Boolean.class).single();
+                    """)
+                    .param("usuario", usuario)
+                    .query(Boolean.class)
+                    .single();
         } catch (DataAccessException error) {
             throw new PerfilRepartidorNoDisponible(error);
         }

@@ -1,9 +1,9 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence;
 
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RegistroConflictos;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.ConflictoZonaLog;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
 @Component
 @Profile("!integracion-local")

@@ -1,6 +1,5 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain;
 
-import java.util.UUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.util.UUID;
 
 @Entity
 @Table(name = "zonas")
@@ -38,7 +38,9 @@ public class Zona extends EntidadConFechas {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    public Long getVersion() { return version; }
+    public Long getVersion() {
+        return version;
+    }
 
     public UUID getId() {
         return id;

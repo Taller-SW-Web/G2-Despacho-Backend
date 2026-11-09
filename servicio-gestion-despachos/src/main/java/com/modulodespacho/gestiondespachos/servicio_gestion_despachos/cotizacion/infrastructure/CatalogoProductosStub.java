@@ -1,5 +1,7 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ProveedorDatosFisicos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -7,8 +9,6 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application.ProveedorDatosFisicos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
 
 /**
  * Stub configurable de Productos y Ofertas. Usa un catálogo local ampliable u reemplazable mediante
@@ -23,10 +23,20 @@ public class CatalogoProductosStub implements ProveedorDatosFisicos {
     private final Map<String, ProductoStub> catalogo = new LinkedHashMap<>();
 
     public CatalogoProductosStub() {
-        catalogo.put("POL-NEG-M", new ProductoStub(new BigDecimal("0.25"), new BigDecimal("10"),
-                new BigDecimal("10"), new BigDecimal("10")));
-        catalogo.put("ZAP-RUN-42", new ProductoStub(new BigDecimal("1.40"), new BigDecimal("20"),
-                new BigDecimal("20"), new BigDecimal("40")));
+        catalogo.put(
+                "POL-NEG-M",
+                new ProductoStub(
+                        new BigDecimal("0.25"),
+                        new BigDecimal("10"),
+                        new BigDecimal("10"),
+                        new BigDecimal("10")));
+        catalogo.put(
+                "ZAP-RUN-42",
+                new ProductoStub(
+                        new BigDecimal("1.40"),
+                        new BigDecimal("20"),
+                        new BigDecimal("20"),
+                        new BigDecimal("40")));
     }
 
     @Override
@@ -35,14 +45,24 @@ public class CatalogoProductosStub implements ProveedorDatosFisicos {
         for (String sku : skus) {
             ProductoStub producto = catalogo.get(sku);
             if (producto != null) {
-                resultado.put(sku, new DatosFisicos(producto.getPesoKg(), producto.getLargoCm(),
-                        producto.getAnchoCm(), producto.getAltoCm(), "ACTIVO", java.time.Instant.EPOCH));
+                resultado.put(
+                        sku,
+                        new DatosFisicos(
+                                producto.getPesoKg(),
+                                producto.getLargoCm(),
+                                producto.getAnchoCm(),
+                                producto.getAltoCm(),
+                                "ACTIVO",
+                                java.time.Instant.EPOCH));
             }
         }
         var ausentes = skus.stream().filter(sku -> !resultado.containsKey(sku)).toList();
         if (!ausentes.isEmpty()) {
-            throw com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio.de(
-                    422, "DESP_ERROR_PRODUCTO_NO_ENCONTRADO", "SKU no encontrado en el catálogo simulado")
+            throw com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores
+                    .ErrorDeNegocio.de(
+                            422,
+                            "DESP_ERROR_PRODUCTO_NO_ENCONTRADO",
+                            "SKU no encontrado en el catálogo simulado")
                     .conSkusAfectados(ausentes);
         }
         return resultado;
@@ -59,10 +79,10 @@ public class CatalogoProductosStub implements ProveedorDatosFisicos {
         private BigDecimal anchoCm;
         private BigDecimal altoCm;
 
-        public ProductoStub() {
-        }
+        public ProductoStub() {}
 
-        public ProductoStub(BigDecimal pesoKg, BigDecimal largoCm, BigDecimal anchoCm, BigDecimal altoCm) {
+        public ProductoStub(
+                BigDecimal pesoKg, BigDecimal largoCm, BigDecimal anchoCm, BigDecimal altoCm) {
             this.pesoKg = pesoKg;
             this.largoCm = largoCm;
             this.anchoCm = anchoCm;

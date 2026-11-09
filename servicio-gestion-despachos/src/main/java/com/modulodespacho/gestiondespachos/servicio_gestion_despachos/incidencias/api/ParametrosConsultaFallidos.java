@@ -1,33 +1,42 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.api;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.FiltrosConsultaFallidos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.FiltrosConsultaFallidos.Recepcion;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeCampo;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.springframework.util.MultiValueMap;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.FiltrosConsultaFallidos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.FiltrosConsultaFallidos.Recepcion;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeCampo;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 
 final class ParametrosConsultaFallidos {
 
-    private static final Set<String> PERMITIDOS = Set.of("pagina", "tamanoPagina", "motivo", "fechaDesde",
-            "fechaHasta", "recepcion", "soloRetornosAtrasados");
+    private static final Set<String> PERMITIDOS =
+            Set.of(
+                    "pagina",
+                    "tamanoPagina",
+                    "motivo",
+                    "fechaDesde",
+                    "fechaHasta",
+                    "recepcion",
+                    "soloRetornosAtrasados");
 
     private ParametrosConsultaFallidos() {}
 
     static FiltrosConsultaFallidos convertir(MultiValueMap<String, String> parametros) {
         List<ErrorDeCampo> errores = new ArrayList<>();
-        parametros.forEach((campo, valores) -> {
-            if (!PERMITIDOS.contains(campo)) errores.add(new ErrorDeCampo(campo, "Parámetro no admitido"));
-            if (valores == null || valores.size() != 1) {
-                errores.add(new ErrorDeCampo(campo, "Debe aparecer una sola vez"));
-            } else if (valores.getFirst() == null || valores.getFirst().isBlank()) {
-                errores.add(new ErrorDeCampo(campo, "No puede estar vacío"));
-            }
-        });
+        parametros.forEach(
+                (campo, valores) -> {
+                    if (!PERMITIDOS.contains(campo))
+                        errores.add(new ErrorDeCampo(campo, "Parámetro no admitido"));
+                    if (valores == null || valores.size() != 1) {
+                        errores.add(new ErrorDeCampo(campo, "Debe aparecer una sola vez"));
+                    } else if (valores.getFirst() == null || valores.getFirst().isBlank()) {
+                        errores.add(new ErrorDeCampo(campo, "No puede estar vacío"));
+                    }
+                });
         comprobar(errores);
         int pagina = entero(parametros, "pagina", 1, errores);
         int tamano = entero(parametros, "tamanoPagina", 20, errores);
@@ -43,15 +52,26 @@ final class ParametrosConsultaFallidos {
             }
         }
         String soloAtrasados = parametros.getFirst("soloRetornosAtrasados");
-        if (soloAtrasados != null && !soloAtrasados.equals("true") && !soloAtrasados.equals("false")) {
+        if (soloAtrasados != null
+                && !soloAtrasados.equals("true")
+                && !soloAtrasados.equals("false")) {
             errores.add(new ErrorDeCampo("soloRetornosAtrasados", "Debe ser true o false"));
         }
         comprobar(errores);
-        return new FiltrosConsultaFallidos(pagina, tamano, parametros.getFirst("motivo"), desde, hasta,
-                recepcion, "true".equals(soloAtrasados));
+        return new FiltrosConsultaFallidos(
+                pagina,
+                tamano,
+                parametros.getFirst("motivo"),
+                desde,
+                hasta,
+                recepcion,
+                "true".equals(soloAtrasados));
     }
 
-    private static int entero(MultiValueMap<String, String> parametros, String campo, int porDefecto,
+    private static int entero(
+            MultiValueMap<String, String> parametros,
+            String campo,
+            int porDefecto,
             List<ErrorDeCampo> errores) {
         String valor = parametros.getFirst(campo);
         if (valor == null) return porDefecto;
@@ -64,7 +84,8 @@ final class ParametrosConsultaFallidos {
         return porDefecto;
     }
 
-    private static LocalDate fecha(MultiValueMap<String, String> parametros, String campo, List<ErrorDeCampo> errores) {
+    private static LocalDate fecha(
+            MultiValueMap<String, String> parametros, String campo, List<ErrorDeCampo> errores) {
         String valor = parametros.getFirst(campo);
         if (valor == null) return null;
         try {
@@ -78,7 +99,11 @@ final class ParametrosConsultaFallidos {
 
     private static void comprobar(List<ErrorDeCampo> errores) {
         if (!errores.isEmpty()) {
-            throw ErrorDeNegocio.de(400, "DESP_ERROR_FILTROS_INVALIDOS", "Los filtros no son válidos", List.copyOf(errores));
+            throw ErrorDeNegocio.de(
+                    400,
+                    "DESP_ERROR_FILTROS_INVALIDOS",
+                    "Los filtros no son válidos",
+                    List.copyOf(errores));
         }
     }
 }

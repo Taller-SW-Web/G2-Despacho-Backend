@@ -1,11 +1,11 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain;
 
-import java.time.Instant;
-import java.util.UUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "zona_conflictos_log")
@@ -33,8 +33,12 @@ public class ConflictoZonaLog extends EntidadConFechas {
     @Column(name = "intentado_por")
     private UUID intentadoPor;
 
-    public static ConflictoZonaLog de(String nombreIntentado, UUID zonaConflictoId, String motivo,
-            String detalle, UUID intentadoPor) {
+    public static ConflictoZonaLog de(
+            String nombreIntentado,
+            UUID zonaConflictoId,
+            String motivo,
+            String detalle,
+            UUID intentadoPor) {
         ConflictoZonaLog conflicto = new ConflictoZonaLog();
         conflicto.id = UUID.randomUUID();
         conflicto.nombreIntentado = nombreIntentado;

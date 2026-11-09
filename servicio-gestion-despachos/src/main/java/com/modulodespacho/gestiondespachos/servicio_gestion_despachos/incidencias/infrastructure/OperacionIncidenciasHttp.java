@@ -1,5 +1,10 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorDatosOperativos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.EstadoJornada;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.Jornada;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.Repartidor;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashSet;
@@ -13,11 +18,6 @@ import java.util.function.Supplier;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorDatosOperativos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.EstadoJornada;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.Jornada;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.DatosOperativos.Repartidor;
 
 /** Consumidor de Operación §5.4. Sin caché, escrituras ni acceso a bases ajenas. */
 public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
@@ -36,14 +36,16 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
         this(cliente, proveedorToken, false);
     }
 
-    public OperacionIncidenciasHttp(RestClient cliente, Supplier<String> proveedorToken, boolean sinAutenticacion) {
+    public OperacionIncidenciasHttp(
+            RestClient cliente, Supplier<String> proveedorToken, boolean sinAutenticacion) {
         this.cliente = Objects.requireNonNull(cliente);
         this.proveedorToken = Objects.requireNonNull(proveedorToken);
         this.sinAutenticacion = sinAutenticacion;
     }
 
     @Override
-    public DatosOperativos consultar(Collection<String> idsRepartidor, Collection<String> idsJornada) {
+    public DatosOperativos consultar(
+            Collection<String> idsRepartidor, Collection<String> idsJornada) {
         List<String> repartidoresUnicos = identificadoresUnicos(idsRepartidor);
         List<String> jornadasUnicas = identificadoresUnicos(idsJornada);
         Map<String, Repartidor> repartidores = new LinkedHashMap<>();
@@ -70,13 +72,16 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
             if (!sinAutenticacion && (token == null || token.isBlank())) {
                 return null;
             }
-            return cliente.post().uri(RUTA)
-                    .headers(encabezados -> {
-                        if (!sinAutenticacion) encabezados.setBearerAuth(token);
-                    })
+            return cliente.post()
+                    .uri(RUTA)
+                    .headers(
+                            encabezados -> {
+                                if (!sinAutenticacion) encabezados.setBearerAuth(token);
+                            })
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new Solicitud(idsRepartidor, idsJornada))
-                    .retrieve().body(Respuesta.class);
+                    .retrieve()
+                    .body(Respuesta.class);
         } catch (RestClientException error) {
             // Incluye timeout, respuesta inválida y rechazo de la credencial técnica.
             // No se filtran mensajes internos ni se reutilizan lecturas de una consulta anterior.
@@ -84,8 +89,8 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
         }
     }
 
-    private static void incorporarRepartidores(List<String> solicitados, List<Repartidor> respuesta,
-            Map<String, Repartidor> destino) {
+    private static void incorporarRepartidores(
+            List<String> solicitados, List<Repartidor> respuesta, Map<String, Repartidor> destino) {
         if (respuesta == null) return;
         Set<String> permitidos = new HashSet<>(solicitados);
         Set<String> vistos = new HashSet<>();
@@ -93,15 +98,18 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
             if (repartidor == null || !permitidos.contains(repartidor.idRepartidor())) continue;
             String id = repartidor.idRepartidor();
             boolean unico = vistos.add(id);
-            String nombre = unico && repartidor.nombre() != null && !repartidor.nombre().isBlank()
-                    ? repartidor.nombre() : null;
+            String nombre =
+                    unico && repartidor.nombre() != null && !repartidor.nombre().isBlank()
+                            ? repartidor.nombre()
+                            : null;
             destino.put(id, new Repartidor(id, nombre));
         }
     }
 
-    private static void incorporarJornadas(List<String> solicitadas, Respuesta respuesta,
-            Map<String, Jornada> destino) {
-        solicitadas.forEach(id -> destino.put(id, Jornada.desconocida(id, respuesta.consultadoEn())));
+    private static void incorporarJornadas(
+            List<String> solicitadas, Respuesta respuesta, Map<String, Jornada> destino) {
+        solicitadas.forEach(
+                id -> destino.put(id, Jornada.desconocida(id, respuesta.consultadoEn())));
         if (respuesta.jornadas() == null) return;
         Set<String> permitidas = new HashSet<>(solicitadas);
         Set<String> vistas = new HashSet<>();
@@ -116,25 +124,36 @@ public final class OperacionIncidenciasHttp implements LectorDatosOperativos {
                     estado = EstadoJornada.ACTIVA;
                 }
             }
-            destino.put(id, new Jornada(id, estado,
-                    estado == EstadoJornada.CERRADA ? jornada.cerradaEn() : null, respuesta.consultadoEn()));
+            destino.put(
+                    id,
+                    new Jornada(
+                            id,
+                            estado,
+                            estado == EstadoJornada.CERRADA ? jornada.cerradaEn() : null,
+                            respuesta.consultadoEn()));
         }
     }
 
     private static List<String> identificadoresUnicos(Collection<String> identificadores) {
         Objects.requireNonNull(identificadores);
         if (identificadores.stream().anyMatch(id -> id == null || id.isBlank())) {
-            throw new IllegalArgumentException("Los identificadores operativos no pueden estar vacíos");
+            throw new IllegalArgumentException(
+                    "Los identificadores operativos no pueden estar vacíos");
         }
         // Los identificadores son opacos: no se convierten a UUID ni se modifica su contenido.
         return List.copyOf(new LinkedHashSet<>(identificadores));
     }
 
     private static List<String> lote(List<String> ids, int inicio) {
-        return inicio >= ids.size() ? List.of() : ids.subList(inicio, Math.min(inicio + TAMANO_LOTE, ids.size()));
+        return inicio >= ids.size()
+                ? List.of()
+                : ids.subList(inicio, Math.min(inicio + TAMANO_LOTE, ids.size()));
     }
 
     public record Solicitud(List<String> idsRepartidor, List<String> idsJornada) {}
+
     public record JornadaRespuesta(String idJornada, String estado, Instant cerradaEn) {}
-    public record Respuesta(List<Repartidor> repartidores, List<JornadaRespuesta> jornadas, Instant consultadoEn) {}
+
+    public record Respuesta(
+            List<Repartidor> repartidores, List<JornadaRespuesta> jornadas, Instant consultadoEn) {}
 }

@@ -1,5 +1,8 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.api;
 
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.DespachoNoDisponible;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.EvidenciaNoDisponible;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.SolicitudEvidenciaInvalida;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -9,9 +12,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.DespachoNoDisponible;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.EvidenciaNoDisponible;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.SolicitudEvidenciaInvalida;
 
 @RestControllerAdvice(assignableTypes = ControladorAutorizacionEvidencia.class)
 @Profile("!integracion-local")
@@ -21,22 +21,28 @@ public class ErroresEvidencia {
         return camposInvalidos();
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, HandlerMethodValidationException.class})
+    @ExceptionHandler({
+        HttpMessageNotReadableException.class,
+        HandlerMethodValidationException.class
+    })
     public ProblemDetail formatoInvalido(Exception error) {
         return camposInvalidos();
     }
 
     @ExceptionHandler(SolicitudEvidenciaInvalida.class)
     public ProblemDetail solicitudInvalida(SolicitudEvidenciaInvalida error) {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, error.getMessage());
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, error.getMessage());
         problema.setTitle("No fue posible autorizar la evidencia");
         problema.setProperty("code", "DESP_ERROR_CAMPOS_INVALIDOS");
         return problema;
     }
 
     private ProblemDetail camposInvalidos() {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-                "Revisa los datos requeridos para autorizar la evidencia.");
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        "Revisa los datos requeridos para autorizar la evidencia.");
         problema.setTitle("No fue posible autorizar la evidencia");
         problema.setProperty("code", "DESP_ERROR_CAMPOS_INVALIDOS");
         return problema;
@@ -44,7 +50,8 @@ public class ErroresEvidencia {
 
     @ExceptionHandler(DespachoNoDisponible.class)
     public ProblemDetail despachoNoDisponible(DespachoNoDisponible error) {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.getMessage());
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, error.getMessage());
         problema.setTitle("Despacho no disponible");
         problema.setProperty("code", "DESP_ERROR_DESPACHO_NO_ENCONTRADO");
         return problema;
@@ -61,8 +68,10 @@ public class ErroresEvidencia {
     }
 
     private ProblemDetail evidenciaNoDisponible() {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
-                "No fue posible autorizar la carga de evidencia. Reintenta más tarde.");
+        ProblemDetail problema =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "No fue posible autorizar la carga de evidencia. Reintenta más tarde.");
         problema.setTitle("Evidencia no disponible");
         problema.setProperty("code", "DESP_ERROR_EVIDENCIA_NO_DISPONIBLE");
         return problema;

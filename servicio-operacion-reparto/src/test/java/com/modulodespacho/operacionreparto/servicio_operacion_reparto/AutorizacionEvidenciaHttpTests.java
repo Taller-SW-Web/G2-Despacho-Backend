@@ -1,5 +1,11 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.AutorizadorCargaStorage;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,21 +20,16 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.AutorizadorCargaStorage;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@SpringBootTest(properties = {
-        "SEGURIDAD_URL=http://127.0.0.1:1",
-        "EVIDENCIAS_TIPOS_PERMITIDOS=image/jpeg",
-        "EVIDENCIAS_MAXIMO_BYTES=2000000",
-        "EVIDENCIAS_STORAGE_URL=https://proyecto.supabase.co",
-        "EVIDENCIAS_CLAVE_SERVICIO=secreto-de-prueba",
-        "EVIDENCIAS_BUCKET=evidencias"
-})
+@SpringBootTest(
+        properties = {
+            "SEGURIDAD_URL=http://127.0.0.1:1",
+            "EVIDENCIAS_TIPOS_PERMITIDOS=image/jpeg",
+            "EVIDENCIAS_MAXIMO_BYTES=2000000",
+            "EVIDENCIAS_STORAGE_URL=https://proyecto.supabase.co",
+            "EVIDENCIAS_CLAVE_SERVICIO=secreto-de-prueba",
+            "EVIDENCIAS_BUCKET=evidencias"
+        })
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureMockMvc
 class AutorizacionEvidenciaHttpTests {
@@ -47,11 +48,14 @@ class AutorizacionEvidenciaHttpTests {
 
     @BeforeEach
     void preparar() {
-        sql.sql("""
+        sql.sql(
+                        """
                 TRUNCATE evidencias, proyecciones_despacho, reservas_capacidad,
                     asignaciones_diarias, repartidores, furgonetas CASCADE
-                """).update();
-        sql.sql("""
+                """)
+                .update();
+        sql.sql(
+                        """
                 INSERT INTO repartidores (
                     id, nombres, apellidos, dni, telefono, correo, numero_brevete,
                     turno_habitual, estado_registro, id_usuario_seguridad, estado_vinculacion,
@@ -61,14 +65,22 @@ class AutorizacionEvidenciaHttpTests {
                     'BRE-123', 'COMPLETO', 'ACTIVO', :usuario, 'VINCULADO',
                     now(), :usuario, :usuario
                 )
-                """).param("id", REPARTIDOR).param("usuario", USUARIO).update();
-        sql.sql("""
+                """)
+                .param("id", REPARTIDOR)
+                .param("usuario", USUARIO)
+                .update();
+        sql.sql(
+                        """
                 INSERT INTO furgonetas (
                     id, placa, estado, capacidad_max_kg, capacidad_max_m3, max_paquetes,
                     creado_por, actualizado_por
                 ) VALUES (:id, 'ABC-123', 'DISPONIBLE', 100, 10, 20, :usuario, :usuario)
-                """).param("id", FURGONETA).param("usuario", USUARIO).update();
-        sql.sql("""
+                """)
+                .param("id", FURGONETA)
+                .param("usuario", USUARIO)
+                .update();
+        sql.sql(
+                        """
                 INSERT INTO asignaciones_diarias (
                     id, repartidor_id, furgoneta_id, zona_id_externa, fecha_jornada,
                     capacidad_max_kg, capacidad_max_m3, max_paquetes, estado, abierta_por
@@ -76,27 +88,42 @@ class AutorizacionEvidenciaHttpTests {
                     :id, :repartidor, :furgoneta, :zona, CURRENT_DATE,
                     100, 10, 20, 'ACTIVA', :usuario
                 )
-                """).param("id", JORNADA).param("repartidor", REPARTIDOR).param("furgoneta", FURGONETA)
-                .param("zona", UUID.randomUUID()).param("usuario", USUARIO).update();
-        sql.sql("""
+                """)
+                .param("id", JORNADA)
+                .param("repartidor", REPARTIDOR)
+                .param("furgoneta", FURGONETA)
+                .param("zona", UUID.randomUUID())
+                .param("usuario", USUARIO)
+                .update();
+        sql.sql(
+                        """
                 INSERT INTO proyecciones_despacho (
                     despacho_id_externo, asignacion_diaria_id, estado, secuencia_ruta
                 ) VALUES (:despacho, :jornada, 'EN_CAMINO', 1)
-                """).param("despacho", DESPACHO).param("jornada", JORNADA).update();
+                """)
+                .param("despacho", DESPACHO)
+                .param("jornada", JORNADA)
+                .update();
         when(decodificador.decode("repartidor")).thenReturn(token(USUARIO));
-        when(storage.autorizar(any(UUID.class), any(UUID.class))).thenReturn(new AutorizadorCargaStorage.AutorizacionStorage(
-                URL_FIRMADA, Instant.now().plusSeconds(7200)));
+        when(storage.autorizar(any(UUID.class), any(UUID.class)))
+                .thenReturn(
+                        new AutorizadorCargaStorage.AutorizacionStorage(
+                                URL_FIRMADA, Instant.now().plusSeconds(7200)));
     }
 
     @Test
     void autorizaUnaFotoPropiaYNoAlmacenaLaUrlFirmada() throws Exception {
-        String cuerpo = """
+        String cuerpo =
+                """
                 {"idDespacho":"%s","tipo":"ENTREGA","contentType":"image/jpeg","tamanioBytes":4096}
-                """.formatted(DESPACHO);
+                """
+                        .formatted(DESPACHO);
 
-        http.perform(post("/api/v1/repartidor/evidencias/autorizaciones")
-                        .header("Authorization", "Bearer repartidor")
-                        .contentType("application/json").content(cuerpo))
+        http.perform(
+                        post("/api/v1/repartidor/evidencias/autorizaciones")
+                                .header("Authorization", "Bearer repartidor")
+                                .contentType("application/json")
+                                .content(cuerpo))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(jsonPath("$.idEvidencia").isString())
@@ -104,37 +131,54 @@ class AutorizacionEvidenciaHttpTests {
                 .andExpect(jsonPath("$.venceEn").isString());
 
         verify(storage).autorizar(any(UUID.class), any(UUID.class));
-        org.assertj.core.api.Assertions.assertThat(sql.sql("SELECT count(*) FROM evidencias WHERE despacho_id_externo = :id")
-                .param("id", DESPACHO).query(Long.class).single()).isEqualTo(1);
-        org.assertj.core.api.Assertions.assertThat(sql.sql("SELECT count(*) FROM evidencias WHERE ruta_objeto LIKE '%token%'")
-                .query(Long.class).single()).isZero();
+        org.assertj.core.api.Assertions.assertThat(
+                        sql.sql("SELECT count(*) FROM evidencias WHERE despacho_id_externo = :id")
+                                .param("id", DESPACHO)
+                                .query(Long.class)
+                                .single())
+                .isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(
+                        sql.sql("SELECT count(*) FROM evidencias WHERE ruta_objeto LIKE '%token%'")
+                                .query(Long.class)
+                                .single())
+                .isZero();
     }
 
     @Test
     void rechazaFormatoNoPermitidoAntesDeSolicitarUrl() throws Exception {
-        String cuerpo = """
+        String cuerpo =
+                """
                 {"idDespacho":"%s","tipo":"ENTREGA","contentType":"image/png","tamanioBytes":4096}
-                """.formatted(DESPACHO);
+                """
+                        .formatted(DESPACHO);
 
-        http.perform(post("/api/v1/repartidor/evidencias/autorizaciones")
-                        .header("Authorization", "Bearer repartidor")
-                        .contentType("application/json").content(cuerpo))
+        http.perform(
+                        post("/api/v1/repartidor/evidencias/autorizaciones")
+                                .header("Authorization", "Bearer repartidor")
+                                .contentType("application/json")
+                                .content(cuerpo))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_CAMPOS_INVALIDOS"));
 
         verifyNoInteractions(storage);
-        org.assertj.core.api.Assertions.assertThat(sql.sql("SELECT count(*) FROM evidencias").query(Long.class).single()).isZero();
+        org.assertj.core.api.Assertions.assertThat(
+                        sql.sql("SELECT count(*) FROM evidencias").query(Long.class).single())
+                .isZero();
     }
 
     @Test
     void rechazaDespachoQueNoPerteneceAlRepartidorSinSolicitarUrl() throws Exception {
-        String cuerpo = """
+        String cuerpo =
+                """
                 {"idDespacho":"%s","tipo":"FALLO","contentType":"image/jpeg","tamanioBytes":4096}
-                """.formatted(UUID.randomUUID());
+                """
+                        .formatted(UUID.randomUUID());
 
-        http.perform(post("/api/v1/repartidor/evidencias/autorizaciones")
-                        .header("Authorization", "Bearer repartidor")
-                        .contentType("application/json").content(cuerpo))
+        http.perform(
+                        post("/api/v1/repartidor/evidencias/autorizaciones")
+                                .header("Authorization", "Bearer repartidor")
+                                .contentType("application/json")
+                                .content(cuerpo))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("DESP_ERROR_DESPACHO_NO_ENCONTRADO"));
 
@@ -143,12 +187,16 @@ class AutorizacionEvidenciaHttpTests {
 
     @Test
     void exigeJwtHumanoConPerfilVinculado() throws Exception {
-        String cuerpo = """
+        String cuerpo =
+                """
                 {"idDespacho":"%s","tipo":"ENTREGA","contentType":"image/jpeg","tamanioBytes":4096}
-                """.formatted(DESPACHO);
+                """
+                        .formatted(DESPACHO);
 
-        http.perform(post("/api/v1/repartidor/evidencias/autorizaciones")
-                        .contentType("application/json").content(cuerpo))
+        http.perform(
+                        post("/api/v1/repartidor/evidencias/autorizaciones")
+                                .contentType("application/json")
+                                .content(cuerpo))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(storage);
@@ -156,8 +204,13 @@ class AutorizacionEvidenciaHttpTests {
 
     private Jwt token(UUID subject) {
         Instant ahora = Instant.now();
-        return Jwt.withTokenValue("repartidor").header("alg", "RS256").subject(subject.toString())
-                .issuedAt(ahora).expiresAt(ahora.plusSeconds(300))
-                .claim("tipo", "acceso").claim("roles", List.of("REPARTIDOR")).build();
+        return Jwt.withTokenValue("repartidor")
+                .header("alg", "RS256")
+                .subject(subject.toString())
+                .issuedAt(ahora)
+                .expiresAt(ahora.plusSeconds(300))
+                .claim("tipo", "acceso")
+                .claim("roles", List.of("REPARTIDOR"))
+                .build();
     }
 }

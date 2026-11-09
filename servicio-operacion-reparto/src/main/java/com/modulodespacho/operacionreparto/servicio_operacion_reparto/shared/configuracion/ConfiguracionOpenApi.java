@@ -17,9 +17,16 @@ public class ConfiguracionOpenApi {
     OpenAPI documentacion(@Value("${despacho.gateway.url-publica}") String urlGateway) {
         return new OpenAPI()
                 .info(new Info().title("Operación de Reparto").version("v1"))
-                .addServersItem(new Server().url(urlGateway).description("Entrada pública del API Gateway"))
-                .components(new Components().addSecuritySchemes("bearerAuth", new SecurityScheme()
-                        .type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")))
+                .addServersItem(
+                        new Server().url(urlGateway).description("Entrada pública del API Gateway"))
+                .components(
+                        new Components()
+                                .addSecuritySchemes(
+                                        "bearerAuth",
+                                        new SecurityScheme()
+                                                .type(SecurityScheme.Type.HTTP)
+                                                .scheme("bearer")
+                                                .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 }
