@@ -1,8 +1,8 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.application;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
 import java.util.Collection;
 import java.util.Map;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
 
 /** Puerto hacia Productos y Ofertas para obtener el peso y las dimensiones vigentes. */
 public interface ProveedorDatosFisicos {

@@ -4,5 +4,6 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
 
 public interface PuertoCotizacion {
     boolean tieneCobertura(String distrito);
+
     ResultadoCotizacion cotizar(SolicitudCotizacion solicitud);
 }

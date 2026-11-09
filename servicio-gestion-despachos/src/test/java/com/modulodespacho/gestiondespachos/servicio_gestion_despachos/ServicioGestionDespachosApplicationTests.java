@@ -8,8 +8,6 @@ import org.springframework.context.annotation.Import;
 @SpringBootTest(properties = "SEGURIDAD_URL=http://localhost:9999")
 class ServicioGestionDespachosApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {}
 }

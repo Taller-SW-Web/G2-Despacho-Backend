@@ -1,11 +1,13 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.api;
 
-import java.time.Instant;
-import java.util.UUID;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.AutorizadorEvidencia;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.TipoEvidencia;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.Instant;
+import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.application.AutorizadorEvidencia;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.TipoEvidencia;
 
 @RestController
 @RequestMapping("/api/v1/repartidor/evidencias")
@@ -29,15 +29,24 @@ public class ControladorAutorizacionEvidencia {
     }
 
     @PostMapping("/autorizaciones")
-    public ResponseEntity<RespuestaAutorizacion> autorizar(@RequestBody @Valid SolicitudAutorizacion solicitud,
+    public ResponseEntity<RespuestaAutorizacion> autorizar(
+            @RequestBody @Valid SolicitudAutorizacion solicitud,
             @AuthenticationPrincipal Jwt token) {
-        AutorizadorEvidencia.Autorizacion resultado = autorizador.autorizar(
-                new AutorizadorEvidencia.Solicitud(solicitud.idDespacho(), solicitud.tipo(),
-                        solicitud.contentType(), solicitud.tamanioBytes()),
-                token.getSubject());
+        AutorizadorEvidencia.Autorizacion resultado =
+                autorizador.autorizar(
+                        new AutorizadorEvidencia.Solicitud(
+                                solicitud.idDespacho(),
+                                solicitud.tipo(),
+                                solicitud.contentType(),
+                                solicitud.tamanioBytes()),
+                        token.getSubject());
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new RespuestaAutorizacion(resultado.idEvidencia(), resultado.urlCarga(), resultado.venceEn()));
+                .body(
+                        new RespuestaAutorizacion(
+                                resultado.idEvidencia(),
+                                resultado.urlCarga(),
+                                resultado.venceEn()));
     }
 
     public record SolicitudAutorizacion(

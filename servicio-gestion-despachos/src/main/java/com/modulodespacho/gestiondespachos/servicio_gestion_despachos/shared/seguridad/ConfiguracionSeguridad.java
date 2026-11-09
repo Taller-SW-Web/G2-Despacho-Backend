@@ -1,12 +1,15 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.infrastructure.FiltroLimiteCotizaciones;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.RespuestasSeguridad;
+import jakarta.servlet.DispatcherType;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,10 +40,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.util.Assert;
+import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestClient;
-import org.springframework.beans.factory.ObjectProvider;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.infrastructure.FiltroLimiteCotizaciones;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.RespuestasSeguridad;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableMethodSecurity
@@ -48,41 +52,86 @@ public class ConfiguracionSeguridad {
 
     @Bean
     @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-            name = "despacho.demo.sin-autenticacion", havingValue = "false", matchIfMissing = true)
+            name = "despacho.demo.sin-autenticacion",
+            havingValue = "false",
+            matchIfMissing = true)
     JwtDecoder decodificadorJwt(
             @Value("${despacho.seguridad.url}") String urlSeguridad,
             @Value("${despacho.seguridad.audiencia}") String audiencia,
             @Value("${despacho.seguridad.algoritmo}") String algoritmo) {
-        Assert.hasText(urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
+        Assert.hasText(
+                urlSeguridad, "Configure SEGURIDAD_URL con el origen del servicio de Seguridad");
         URI origen = URI.create(urlSeguridad);
-        Assert.isTrue(("http".equalsIgnoreCase(origen.getScheme()) || "https".equalsIgnoreCase(origen.getScheme()))
-                        && origen.getHost() != null && origen.getRawUserInfo() == null
-                        && origen.getRawQuery() == null && origen.getRawFragment() == null
+        Assert.isTrue(
+                ("http".equalsIgnoreCase(origen.getScheme())
+                                || "https".equalsIgnoreCase(origen.getScheme()))
+                        && origen.getHost() != null
+                        && origen.getRawUserInfo() == null
+                        && origen.getRawQuery() == null
+                        && origen.getRawFragment() == null
                         && (origen.getPath().isEmpty() || "/".equals(origen.getPath())),
                 "SEGURIDAD_URL debe ser un origen HTTP(S), sin rutas, credenciales ni parámetros");
         SignatureAlgorithm algoritmoFirma = SignatureAlgorithm.from(algoritmo);
         Assert.notNull(algoritmoFirma, "Configure un algoritmo de firma asimétrica válido");
-        JdkClientHttpRequestFactory peticiones = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5)).build());
+        JdkClientHttpRequestFactory peticiones =
+                new JdkClientHttpRequestFactory(
+                        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
         peticiones.setReadTimeout(Duration.ofSeconds(5));
-        RestClient cliente = RestClient.builder().requestFactory(peticiones)
-                .baseUrl(urlSeguridad.replaceAll("/+$", "")).build();
-        JwtDecoder diferido = new SupplierJwtDecoder(() -> {
-            Map<String, Object> configuracion = cliente.get()
-                    .uri("/api/v1/auth/.well-known/openid-configuration").retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
-            Assert.notNull(configuracion, "Seguridad debe publicar su configuración");
-            String emisor = (String) configuracion.get("issuer");
-            String claves = (String) configuracion.get("jwks_uri");
-            Assert.hasText(emisor, "Seguridad debe publicar issuer");
-            Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
-            NimbusJwtDecoder resultado = NimbusJwtDecoder.withJwkSetUri(claves)
-                    .jwsAlgorithm(algoritmoFirma).restOperations(
-                            new org.springframework.web.client.RestTemplate(peticiones)).build();
-            resultado.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                    JwtValidators.createDefaultWithIssuer(emisor), new ValidadorTokenDespacho(audiencia)));
-            return resultado;
-        });
+        RestClient cliente =
+                RestClient.builder()
+                        .requestFactory(peticiones)
+                        .baseUrl(urlSeguridad.replaceAll("/+$", ""))
+                        .build();
+        RestTemplate clienteClaves =
+                new RestTemplate(peticiones) {
+                    @Override
+                    protected <T> T doExecute(
+                            URI url,
+                            String plantilla,
+                            HttpMethod metodo,
+                            RequestCallback preparar,
+                            ResponseExtractor<T> extraer) {
+                        long inicio = System.nanoTime();
+                        try {
+                            return super.doExecute(url, plantilla, metodo, preparar, extraer);
+                        } catch (RestClientException error) {
+                            throw new DiagnosticoJwt.FalloConsulta("jwks", inicio, error);
+                        }
+                    }
+                };
+        JwtDecoder diferido =
+                new SupplierJwtDecoder(
+                        () -> {
+                            long inicio = System.nanoTime();
+                            try {
+                                Map<String, Object> configuracion =
+                                        cliente.get()
+                                                .uri(
+                                                        "/api/v1/auth/.well-known/openid-configuration")
+                                                .retrieve()
+                                                .body(
+                                                        new ParameterizedTypeReference<
+                                                                Map<String, Object>>() {});
+                                Assert.notNull(
+                                        configuracion, "Seguridad debe publicar su configuración");
+                                String emisor = (String) configuracion.get("issuer");
+                                String claves = (String) configuracion.get("jwks_uri");
+                                Assert.hasText(emisor, "Seguridad debe publicar issuer");
+                                Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
+                                NimbusJwtDecoder resultado =
+                                        NimbusJwtDecoder.withJwkSetUri(claves)
+                                                .jwsAlgorithm(algoritmoFirma)
+                                                .restOperations(clienteClaves)
+                                                .build();
+                                resultado.setJwtValidator(
+                                        new DelegatingOAuth2TokenValidator<>(
+                                                JwtValidators.createDefaultWithIssuer(emisor),
+                                                new ValidadorTokenDespacho(audiencia)));
+                                return resultado;
+                            } catch (RuntimeException error) {
+                                throw new DiagnosticoJwt.FalloConsulta("openid", inicio, error);
+                            }
+                        });
         return token -> {
             try {
                 return diferido.decode(token);
@@ -93,14 +142,20 @@ public class ConfiguracionSeguridad {
     }
 
     @Bean
-    SecurityFilterChain seguridad(HttpSecurity http, RespuestasSeguridad respuestas,
+    SecurityFilterChain seguridad(
+            HttpSecurity http,
+            RespuestasSeguridad respuestas,
             ObjectProvider<FiltroLimiteCotizaciones> filtroLimite,
             @Value("${springdoc.api-docs.enabled:false}") boolean documentacionHabilitada,
             @Value("${despacho.demo.sin-autenticacion:false}") boolean modoDemo,
-            @Value("${despacho.demo.usuario-id:00000000-0000-4000-8000-000000000001}") String usuarioDemo) throws Exception {
+            @Value("${despacho.demo.usuario-id:00000000-0000-4000-8000-000000000001}")
+                    String usuarioDemo)
+            throws Exception {
         if (modoDemo) {
-            http.addFilterBefore(new FiltroIdentidadDemo(usuarioDemo),
-                    org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
+            http.addFilterBefore(
+                    new FiltroIdentidadDemo(usuarioDemo),
+                    org.springframework.security.web.authentication.AnonymousAuthenticationFilter
+                            .class);
         }
         FiltroLimiteCotizaciones limite = filtroLimite.getIfAvailable();
         if (limite != null) {
@@ -111,60 +166,103 @@ public class ConfiguracionSeguridad {
                 .formLogin(configuracion -> configuracion.disable())
                 .logout(configuracion -> configuracion.disable())
                 .requestCache(configuracion -> configuracion.disable())
-                .sessionManagement(configuracion -> configuracion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(reglas -> {
-                    reglas.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
-                    reglas.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll();
-                    if (documentacionHabilitada) {
-                        reglas.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
-                                "/swagger-ui.html").permitAll();
-                    }
-                    reglas
-                        .requestMatchers(HttpMethod.GET, "/api/v1/catalogos/motivos-fallo").hasRole("GESTOR_DESPACHO")
-                        .requestMatchers(HttpMethod.POST, "/internal/v1/despachos/*/transiciones").access(operacionInterna())
-                        .requestMatchers(HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo").access(operacionInterna())
-                        .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones").access(servicioConScope("cotizaciones:calcular"))
-                        .requestMatchers(HttpMethod.POST, "/api/v1/despachos").access(servicioConScope("despachos:crear"))
-                        .requestMatchers(HttpMethod.POST, "/api/v1/despachos/pedidos/*/cancelacion").access(servicioConScope("despachos:cancelar"))
-                        .requestMatchers(HttpMethod.GET, "/api/v1/seguimientos/pedidos/*").access(servicioConScope("seguimientos:leer"))
-                        .requestMatchers("/api/v1/zonas/**", "/api/v1/distritos/**", "/api/v1/despachos/**",
-                                "/api/v1/jornadas/*/ruta", "/api/v1/jornadas/*/secuencia")
-                        .hasRole("GESTOR_DESPACHO")
-                        .anyRequest().denyAll();
-                })
-                .exceptionHandling(errores -> errores
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+                .sessionManagement(
+                        configuracion ->
+                                configuracion.sessionCreationPolicy(
+                                        SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        reglas -> {
+                            reglas.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
+                            reglas.requestMatchers(
+                                            HttpMethod.GET, "/actuator/health", "/actuator/info")
+                                    .permitAll();
+                            if (documentacionHabilitada) {
+                                reglas.requestMatchers(
+                                                HttpMethod.GET,
+                                                "/v3/api-docs/**",
+                                                "/swagger-ui/**",
+                                                "/swagger-ui.html")
+                                        .permitAll();
+                            }
+                            reglas.requestMatchers(
+                                            HttpMethod.GET, "/api/v1/catalogos/motivos-fallo")
+                                    .hasRole("GESTOR_DESPACHO")
+                                    .requestMatchers(
+                                            HttpMethod.POST,
+                                            "/internal/v1/despachos/*/transiciones")
+                                    .access(operacionInterna())
+                                    .requestMatchers(
+                                            HttpMethod.GET, "/internal/v1/catalogos/motivos-fallo")
+                                    .access(operacionInterna())
+                                    .requestMatchers(HttpMethod.POST, "/api/v1/cotizaciones")
+                                    .access(servicioConScope("cotizaciones:calcular"))
+                                    .requestMatchers(HttpMethod.POST, "/api/v1/despachos")
+                                    .access(servicioConScope("despachos:crear"))
+                                    .requestMatchers(
+                                            HttpMethod.POST,
+                                            "/api/v1/despachos/pedidos/*/cancelacion")
+                                    .access(servicioConScope("despachos:cancelar"))
+                                    .requestMatchers(
+                                            HttpMethod.GET, "/api/v1/seguimientos/pedidos/*")
+                                    .access(servicioConScope("seguimientos:leer"))
+                                    .requestMatchers(
+                                            "/api/v1/zonas/**",
+                                            "/api/v1/distritos/**",
+                                            "/api/v1/despachos/**",
+                                            "/api/v1/jornadas/*/ruta",
+                                            "/api/v1/jornadas/*/secuencia")
+                                    .hasRole("GESTOR_DESPACHO")
+                                    .anyRequest()
+                                    .denyAll();
+                        })
+                .exceptionHandling(
+                        errores ->
+                                errores.authenticationEntryPoint(respuestas)
+                                        .accessDeniedHandler(respuestas));
         if (!modoDemo) {
-            http.oauth2ResourceServer(oauth -> oauth
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidorAutenticacion()))
-                        .authenticationEntryPoint(respuestas).accessDeniedHandler(respuestas));
+            http.oauth2ResourceServer(
+                    oauth ->
+                            oauth.jwt(
+                                            jwt ->
+                                                    jwt.jwtAuthenticationConverter(
+                                                            convertidorAutenticacion()))
+                                    .authenticationEntryPoint(respuestas)
+                                    .accessDeniedHandler(respuestas));
         }
         return http.build();
     }
 
     private JwtAuthenticationConverter convertidorAutenticacion() {
         JwtAuthenticationConverter convertidor = new JwtAuthenticationConverter();
-        convertidor.setJwtGrantedAuthoritiesConverter(token -> {
-            List<GrantedAuthority> permisos = new ArrayList<>();
-            if ("servicio".equals(token.getClaimAsString("tipo"))) {
-                permisos.addAll(new JwtGrantedAuthoritiesConverter().convert(token));
-            } else if ("acceso".equals(token.getClaimAsString("tipo"))) {
-                List<String> roles = token.getClaimAsStringList("roles");
-                if (roles != null) {
-                    roles.forEach(rol -> permisos.add(new SimpleGrantedAuthority("ROLE_" + rol)));
-                }
-            }
-            return permisos;
-        });
+        convertidor.setJwtGrantedAuthoritiesConverter(
+                token -> {
+                    List<GrantedAuthority> permisos = new ArrayList<>();
+                    if ("servicio".equals(token.getClaimAsString("tipo"))) {
+                        permisos.addAll(new JwtGrantedAuthoritiesConverter().convert(token));
+                    } else if ("acceso".equals(token.getClaimAsString("tipo"))) {
+                        List<String> roles = token.getClaimAsStringList("roles");
+                        if (roles != null) {
+                            roles.forEach(
+                                    rol -> permisos.add(new SimpleGrantedAuthority("ROLE_" + rol)));
+                        }
+                    }
+                    return permisos;
+                });
         return convertidor;
     }
 
     private AuthorizationManager<RequestAuthorizationContext> servicioConScope(String scope) {
         return (autenticacion, contexto) -> {
             Authentication identidad = autenticacion.get();
-            boolean autorizado = esTokenDeTipo(identidad, "servicio") && identidad.getAuthorities()
-                    .stream().anyMatch(permiso -> permiso.getAuthority().equals("SCOPE_" + scope));
-            if (scope.startsWith("despachos:")) autorizado = autorizado && "modulo-ventas".equals(identidad.getName());
+            boolean autorizado =
+                    esTokenDeTipo(identidad, "servicio")
+                            && identidad.getAuthorities().stream()
+                                    .anyMatch(
+                                            permiso ->
+                                                    permiso.getAuthority()
+                                                            .equals("SCOPE_" + scope));
+            if (scope.startsWith("despachos:"))
+                autorizado = autorizado && "modulo-ventas".equals(identidad.getName());
             return new AuthorizationDecision(autorizado);
         };
     }
@@ -173,12 +271,15 @@ public class ConfiguracionSeguridad {
     private AuthorizationManager<RequestAuthorizationContext> operacionInterna() {
         return (autenticacion, contexto) -> {
             Authentication identidad = autenticacion.get();
-            return new AuthorizationDecision(esTokenDeTipo(identidad, "servicio") && "modulo-despacho".equals(identidad.getName()));
+            return new AuthorizationDecision(
+                    esTokenDeTipo(identidad, "servicio")
+                            && "modulo-despacho".equals(identidad.getName()));
         };
     }
 
     private boolean esTokenDeTipo(Authentication identidad, String tipo) {
-        return identidad instanceof JwtAuthenticationToken jwt && identidad.isAuthenticated()
+        return identidad instanceof JwtAuthenticationToken jwt
+                && identidad.isAuthenticated()
                 && tipo.equals(jwt.getToken().getClaimAsString("tipo"));
     }
 }

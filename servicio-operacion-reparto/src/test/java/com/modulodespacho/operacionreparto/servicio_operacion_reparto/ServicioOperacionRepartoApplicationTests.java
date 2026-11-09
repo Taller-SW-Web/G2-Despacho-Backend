@@ -14,13 +14,11 @@ import org.springframework.web.client.RestClient;
 @SpringBootTest(properties = "SEGURIDAD_URL=http://localhost:9999")
 class ServicioOperacionRepartoApplicationTests {
 
-	@Autowired
-	private ApplicationContext contexto;
+    @Autowired private ApplicationContext contexto;
 
-	@Test
-	void iniciaConClienteRestYAutorizadorRealDeEvidencias() {
-		assertThat(contexto.getBean(RestClient.Builder.class)).isNotNull();
-		assertThat(contexto.getBean(AutorizadorCargaSupabase.class)).isNotNull();
-	}
-
+    @Test
+    void iniciaConClienteRestYAutorizadorRealDeEvidencias() {
+        assertThat(contexto.getBean(RestClient.Builder.class)).isNotNull();
+        assertThat(contexto.getBean(AutorizadorCargaSupabase.class)).isNotNull();
+    }
 }

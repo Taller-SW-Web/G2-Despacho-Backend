@@ -1,11 +1,11 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.infrastructure;
 
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.TipoEvidencia;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
-import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias.domain.TipoEvidencia;
 
 @Repository
 @Profile("!integracion-local")
@@ -17,7 +17,8 @@ public class RepositorioEvidenciaJdbc {
     }
 
     public boolean perteneceADespachadorEnRuta(UUID idDespacho, UUID usuarioId) {
-        return sql.sql("""
+        return sql.sql(
+                        """
                 SELECT EXISTS (
                     SELECT 1
                     FROM proyecciones_despacho d
@@ -37,10 +38,19 @@ public class RepositorioEvidenciaJdbc {
                 .single();
     }
 
-    public boolean registrarAutorizada(UUID idEvidencia, UUID idDespacho, String rutaObjeto,
-            TipoEvidencia tipo, String contentType, int tamanioBytes, String usuarioId, UUID idUsuario,
+    public boolean registrarAutorizada(
+            UUID idEvidencia,
+            UUID idDespacho,
+            String rutaObjeto,
+            TipoEvidencia tipo,
+            String contentType,
+            int tamanioBytes,
+            String usuarioId,
+            UUID idUsuario,
             Instant venceEn) {
-        int filas = sql.sql("""
+        int filas =
+                sql.sql(
+                                """
                 WITH despacho_autorizable AS MATERIALIZED (
                     SELECT d.despacho_id_externo
                     FROM proyecciones_despacho d
@@ -66,16 +76,16 @@ public class RepositorioEvidenciaJdbc {
                 )
                 ON CONFLICT (id) DO NOTHING
                 """)
-                .param("id", idEvidencia)
-                .param("despacho", idDespacho)
-                .param("ruta", rutaObjeto)
-                .param("tipo", tipo.name())
-                .param("mime", contentType)
-                .param("tamano", tamanioBytes)
-                .param("usuario", usuarioId)
-                .param("idUsuario", idUsuario)
-                .param("venceEn", java.sql.Timestamp.from(venceEn))
-                .update();
+                        .param("id", idEvidencia)
+                        .param("despacho", idDespacho)
+                        .param("ruta", rutaObjeto)
+                        .param("tipo", tipo.name())
+                        .param("mime", contentType)
+                        .param("tamano", tamanioBytes)
+                        .param("usuario", usuarioId)
+                        .param("idUsuario", idUsuario)
+                        .param("venceEn", java.sql.Timestamp.from(venceEn))
+                        .update();
         return filas == 1;
     }
 }

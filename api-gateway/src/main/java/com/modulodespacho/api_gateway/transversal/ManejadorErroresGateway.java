@@ -26,28 +26,40 @@ public class ManejadorErroresGateway implements WebExceptionHandler {
             return Mono.error(error);
         }
         if (esDependenciaNoDisponible(error)) {
-            return problemas.escribir(intercambio, HttpStatus.SERVICE_UNAVAILABLE,
-                    "DESP_ERROR_SERVICIO_NO_DISPONIBLE", "Servicio no disponible",
+            return problemas.escribir(
+                    intercambio,
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "DESP_ERROR_SERVICIO_NO_DISPONIBLE",
+                    "Servicio no disponible",
                     "El servicio de destino no está disponible temporalmente");
         }
         if (error instanceof ResponseStatusException respuesta) {
             HttpStatus estado = HttpStatus.resolve(respuesta.getStatusCode().value());
-            return problemas.escribir(intercambio, estado == null ? HttpStatus.INTERNAL_SERVER_ERROR : estado,
-                    "DESP_ERROR_SOLICITUD_NO_PROCESADA", "Solicitud no procesada",
+            return problemas.escribir(
+                    intercambio,
+                    estado == null ? HttpStatus.INTERNAL_SERVER_ERROR : estado,
+                    "DESP_ERROR_SOLICITUD_NO_PROCESADA",
+                    "Solicitud no procesada",
                     "No fue posible procesar la solicitud");
         }
-        return problemas.escribir(intercambio, HttpStatus.INTERNAL_SERVER_ERROR,
-                "DESP_ERROR_INTERNO", "Error interno", "No fue posible procesar la solicitud");
+        return problemas.escribir(
+                intercambio,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "DESP_ERROR_INTERNO",
+                "Error interno",
+                "No fue posible procesar la solicitud");
     }
 
     private boolean esDependenciaNoDisponible(Throwable error) {
         for (Throwable causa = error; causa != null; causa = causa.getCause()) {
-            if (causa instanceof ConnectException || causa instanceof TimeoutException
+            if (causa instanceof ConnectException
+                    || causa instanceof TimeoutException
                     || causa instanceof io.netty.handler.timeout.ReadTimeoutException
                     || causa instanceof java.net.UnknownHostException
                     || causa instanceof reactor.netty.http.client.PrematureCloseException
                     || causa instanceof ResponseStatusException respuesta
-                        && (respuesta.getStatusCode().value() == 502 || respuesta.getStatusCode().value() == 504)) {
+                            && (respuesta.getStatusCode().value() == 502
+                                    || respuesta.getStatusCode().value() == 504)) {
                 return true;
             }
             if (causa == causa.getCause()) {

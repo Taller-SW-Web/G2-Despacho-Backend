@@ -1,5 +1,7 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.infrastructure.persistence;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RepositorioTarifas;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.TarifaZona;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,8 +10,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.RepositorioTarifas;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.TarifaZona;
 
 @Component
 @Profile("!integracion-local")
@@ -46,10 +46,12 @@ public class TarifasAdaptadorJpa implements RepositorioTarifas {
 
     @Override
     public void desactivarVigente(UUID zonaId) {
-        tarifas.findFirstByZonaIdAndActivaTrue(zonaId).ifPresent(tarifa -> {
-            tarifa.setActiva(false);
-            tarifas.saveAndFlush(tarifa);
-        });
+        tarifas.findFirstByZonaIdAndActivaTrue(zonaId)
+                .ifPresent(
+                        tarifa -> {
+                            tarifa.setActiva(false);
+                            tarifas.saveAndFlush(tarifa);
+                        });
     }
 
     @Override

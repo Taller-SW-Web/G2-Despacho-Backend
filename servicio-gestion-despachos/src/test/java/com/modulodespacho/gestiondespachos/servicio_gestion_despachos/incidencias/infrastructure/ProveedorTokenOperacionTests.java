@@ -1,13 +1,5 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.infrastructure;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -15,6 +7,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 class ProveedorTokenOperacionTests {
 
@@ -27,16 +27,31 @@ class ProveedorTokenOperacionTests {
                     .andExpect(content().string(containsString("grant_type=client_credentials")))
                     .andExpect(content().string(containsString("client_secret=secreto-prueba")))
                     .andExpect(content().string(not(containsString("scope="))))
-                    .andRespond(withSuccess("{\"accessToken\":\"cabecera.cuerpo." + firma
-                            + "\",\"tokenType\":\"Bearer\",\"expiresIn\":100}", MediaType.APPLICATION_JSON));
+                    .andRespond(
+                            withSuccess(
+                                    "{\"accessToken\":\"cabecera.cuerpo."
+                                            + firma
+                                            + "\",\"tokenType\":\"Bearer\",\"expiresIn\":100}",
+                                    MediaType.APPLICATION_JSON));
         }
-        servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token")).andRespond(withServiceUnavailable());
+        servidor.expect(requestTo("http://seguridad-prueba/api/v1/auth/token"))
+                .andRespond(withServiceUnavailable());
         Clock reloj = mock(Clock.class);
         Instant inicio = Instant.parse("2026-10-16T18:00:00Z");
-        when(reloj.instant()).thenReturn(inicio, inicio.plusSeconds(5), inicio.plusSeconds(80), inicio.plusSeconds(160));
+        when(reloj.instant())
+                .thenReturn(
+                        inicio,
+                        inicio.plusSeconds(5),
+                        inicio.plusSeconds(80),
+                        inicio.plusSeconds(160));
         AtomicReference<String> externo = new AtomicReference<>("");
-        ProveedorTokenOperacion proveedor = new ProveedorTokenOperacion(cliente.build(), "modulo-despacho",
-                () -> "secreto-prueba", externo::get, reloj);
+        ProveedorTokenOperacion proveedor =
+                new ProveedorTokenOperacion(
+                        cliente.build(),
+                        "modulo-despacho",
+                        () -> "secreto-prueba",
+                        externo::get,
+                        reloj);
         assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.primera");
         assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.primera");
         assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.renovada");

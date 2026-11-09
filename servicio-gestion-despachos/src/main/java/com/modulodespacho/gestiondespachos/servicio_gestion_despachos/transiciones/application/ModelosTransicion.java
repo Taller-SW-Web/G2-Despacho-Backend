@@ -6,10 +6,28 @@ import java.time.Instant;
 public final class ModelosTransicion {
     private ModelosTransicion() {}
 
-    public record SolicitudTransicion(String estadoDestino, String idRepartidor, String idJornada, String idEvidencia,
-            String recibidoPor, String motivo, String comentario, String ejecutor, String origen) {}
+    public record SolicitudTransicion(
+            String estadoDestino,
+            String idRepartidor,
+            String idJornada,
+            String idEvidencia,
+            String recibidoPor,
+            String motivo,
+            String comentario,
+            String ejecutor,
+            String origen) {}
+
     /** Marcas temporales del ciclo vigente del despacho, tomadas del historial. */
-    public record Hitos(Instant asignadoEn, Instant enCaminoEn, Instant entregadoEn, Instant fallidoEn) {}
-    public record RespuestaTransicion(String idDespacho, String estadoAnterior, String estado, int version,
-            int numeroIntentos, String motivoFallo, Hitos hitos, Instant registradoEn) {}
+    public record Hitos(
+            Instant asignadoEn, Instant enCaminoEn, Instant entregadoEn, Instant fallidoEn) {}
+
+    public record RespuestaTransicion(
+            String idDespacho,
+            String estadoAnterior,
+            String estado,
+            int version,
+            int numeroIntentos,
+            String motivoFallo,
+            Hitos hitos,
+            Instant registradoEn) {}
 }

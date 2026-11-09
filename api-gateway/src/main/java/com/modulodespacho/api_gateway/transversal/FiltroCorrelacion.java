@@ -22,21 +22,42 @@ public class FiltroCorrelacion implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange intercambio, WebFilterChain cadena) {
         String recibido = intercambio.getRequest().getHeaders().getFirst(ENCABEZADO);
-        String correlacion = recibido != null && recibido.matches(
-                "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-                ? recibido : UUID.randomUUID().toString();
+        String correlacion =
+                recibido != null
+                                && recibido.matches(
+                                        "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+                        ? recibido
+                        : UUID.randomUUID().toString();
         intercambio.getAttributes().put(ATRIBUTO, correlacion);
         intercambio.getResponse().getHeaders().set(ENCABEZADO, correlacion);
+        String ray = intercambio.getRequest().getHeaders().getFirst("CF-Ray");
+        String cfRay = ray != null && ray.matches("[0-9a-fA-F]{16,32}(?:-[A-Z]{3})?") ? ray : "-";
         long inicio = System.nanoTime();
-        intercambio.getResponse().beforeCommit(() -> {
-            intercambio.getResponse().getHeaders().set(ENCABEZADO, correlacion);
-            REGISTRO.info("Solicitud {} finalizada con estado {} en {} ms. Correlación: {}",
-                    intercambio.getRequest().getMethod(), intercambio.getResponse().getStatusCode() == null
-                            ? 200 : intercambio.getResponse().getStatusCode().value(),
-                    (System.nanoTime() - inicio) / 1_000_000, correlacion);
-            return Mono.empty();
-        });
-        return cadena.filter(intercambio.mutate().request(peticion ->
-                peticion.headers(encabezados -> encabezados.set(ENCABEZADO, correlacion))).build());
+        intercambio
+                .getResponse()
+                .beforeCommit(
+                        () -> {
+                            intercambio.getResponse().getHeaders().set(ENCABEZADO, correlacion);
+                            REGISTRO.info(
+                                    "Solicitud {} {} finalizada con estado {} en {} ms. Correlación: {} CF-Ray: {}",
+                                    intercambio.getRequest().getMethod(),
+                                    intercambio.getRequest().getURI().getRawPath(),
+                                    intercambio.getResponse().getStatusCode() == null
+                                            ? 200
+                                            : intercambio.getResponse().getStatusCode().value(),
+                                    (System.nanoTime() - inicio) / 1_000_000,
+                                    correlacion,
+                                    cfRay);
+                            return Mono.empty();
+                        });
+        return cadena.filter(
+                intercambio
+                        .mutate()
+                        .request(
+                                peticion ->
+                                        peticion.headers(
+                                                encabezados ->
+                                                        encabezados.set(ENCABEZADO, correlacion)))
+                        .build());
     }
 }

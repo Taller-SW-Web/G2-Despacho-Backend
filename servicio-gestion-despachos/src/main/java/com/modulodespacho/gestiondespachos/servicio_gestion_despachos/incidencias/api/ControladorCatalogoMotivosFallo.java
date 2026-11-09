@@ -1,5 +1,8 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.api;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorCatalogoMotivosFallo;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.MotivoFallo;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataAccessException;
@@ -8,9 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.LectorCatalogoMotivosFallo;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.domain.MotivoFallo;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 
 /** Entrada del catálogo para el Gestor de F-04 y, por la ruta interna, para el perfil de campo de Operación. */
 @RestController
@@ -37,10 +37,14 @@ public class ControladorCatalogoMotivosFallo {
 
     private ResponseEntity<RespuestaCatalogo> catalogo() {
         try {
-            return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            return ResponseEntity.ok()
+                    .cacheControl(CacheControl.noStore())
                     .body(new RespuestaCatalogo(catalogo.consultarTodos()));
         } catch (DataAccessException error) {
-            throw ErrorDeNegocio.de(503, "DESP_ERROR_CONSULTA_NO_DISPONIBLE", "No se pudo consultar el catálogo de motivos");
+            throw ErrorDeNegocio.de(
+                    503,
+                    "DESP_ERROR_CONSULTA_NO_DISPONIBLE",
+                    "No se pudo consultar el catálogo de motivos");
         }
     }
 

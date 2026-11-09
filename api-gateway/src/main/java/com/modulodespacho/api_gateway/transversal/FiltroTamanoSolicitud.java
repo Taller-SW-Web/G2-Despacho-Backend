@@ -22,7 +22,8 @@ public class FiltroTamanoSolicitud implements WebFilter {
     private final int maximoBytes;
     private final ProblemasGateway problemas;
 
-    public FiltroTamanoSolicitud(@Value("${despacho.solicitudes.maximo-bytes}") int maximoBytes,
+    public FiltroTamanoSolicitud(
+            @Value("${despacho.solicitudes.maximo-bytes}") int maximoBytes,
             ProblemasGateway problemas) {
         Assert.isTrue(maximoBytes > 0, "El tamaño máximo de solicitud debe ser positivo");
         this.maximoBytes = maximoBytes;
@@ -39,30 +40,47 @@ public class FiltroTamanoSolicitud implements WebFilter {
         }
         // Limita también cuerpos por fragmentos que no declaran Content-Length.
         return DataBufferUtils.join(intercambio.getRequest().getBody(), maximoBytes)
-                .map(datos -> {
-                    byte[] contenido = new byte[datos.readableByteCount()];
-                    try {
-                        datos.read(contenido);
-                    } finally {
-                        DataBufferUtils.release(datos);
-                    }
-                    return contenido;
-                })
-                .defaultIfEmpty(new byte[0])
-                .flatMap(contenido -> cadena.filter(intercambio.mutate()
-                        .request(new ServerHttpRequestDecorator(intercambio.getRequest()) {
-                            @Override
-                            public Flux<DataBuffer> getBody() {
-                                return Flux.defer(() -> Flux.just(
-                                        intercambio.getResponse().bufferFactory().wrap(contenido)));
+                .map(
+                        datos -> {
+                            byte[] contenido = new byte[datos.readableByteCount()];
+                            try {
+                                datos.read(contenido);
+                            } finally {
+                                DataBufferUtils.release(datos);
                             }
-                        }).build()))
+                            return contenido;
+                        })
+                .defaultIfEmpty(new byte[0])
+                .flatMap(
+                        contenido ->
+                                cadena.filter(
+                                        intercambio
+                                                .mutate()
+                                                .request(
+                                                        new ServerHttpRequestDecorator(
+                                                                intercambio.getRequest()) {
+                                                            @Override
+                                                            public Flux<DataBuffer> getBody() {
+                                                                return Flux.defer(
+                                                                        () ->
+                                                                                Flux.just(
+                                                                                        intercambio
+                                                                                                .getResponse()
+                                                                                                .bufferFactory()
+                                                                                                .wrap(
+                                                                                                        contenido)));
+                                                            }
+                                                        })
+                                                .build()))
                 .onErrorResume(DataBufferLimitException.class, error -> rechazar(intercambio));
     }
 
     private Mono<Void> rechazar(ServerWebExchange intercambio) {
-        return problemas.escribir(intercambio, HttpStatus.CONTENT_TOO_LARGE,
-                "DESP_ERROR_SOLICITUD_DEMASIADO_GRANDE", "Solicitud demasiado grande",
+        return problemas.escribir(
+                intercambio,
+                HttpStatus.CONTENT_TOO_LARGE,
+                "DESP_ERROR_SOLICITUD_DEMASIADO_GRANDE",
+                "Solicitud demasiado grande",
                 "El cuerpo de la solicitud supera el tamaño permitido");
     }
 }

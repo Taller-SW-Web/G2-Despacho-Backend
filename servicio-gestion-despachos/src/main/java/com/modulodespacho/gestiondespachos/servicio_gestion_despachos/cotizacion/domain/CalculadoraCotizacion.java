@@ -6,15 +6,14 @@ import java.util.List;
 /** Cálculo puro de totales y costo según la fórmula de F-01. */
 public final class CalculadoraCotizacion {
 
-    private CalculadoraCotizacion() {
-    }
+    private CalculadoraCotizacion() {}
 
-    public record ItemCalculo(DatosFisicos datos, int cantidad) {
-    }
+    public record ItemCalculo(DatosFisicos datos, int cantidad) {}
 
-    public record Totales(BigDecimal pesoTotalKg, BigDecimal volumenTotalM3, BigDecimal pesoCotizableKg) {
-    }
+    public record Totales(
+            BigDecimal pesoTotalKg, BigDecimal volumenTotalM3, BigDecimal pesoCotizableKg) {}
 
+    /** El peso cotizable suma el peso real y el volumen convertido con el factor volumétrico. */
     public static Totales calcular(List<ItemCalculo> items, BigDecimal factorVolumetrico) {
         BigDecimal pesoTotal = BigDecimal.ZERO;
         BigDecimal volumenTotal = BigDecimal.ZERO;
@@ -28,8 +27,12 @@ public final class CalculadoraCotizacion {
         return new Totales(pesoTotal, volumenTotal, pesoCotizable);
     }
 
-    public static BigDecimal costo(BigDecimal tarifaBase, BigDecimal recargoKgAdicional,
-            BigDecimal pesoIncluidoKg, BigDecimal pesoCotizableKg) {
+    /** Cobra la tarifa base más el recargo por cada kg cotizable que exceda el peso incluido. */
+    public static BigDecimal costo(
+            BigDecimal tarifaBase,
+            BigDecimal recargoKgAdicional,
+            BigDecimal pesoIncluidoKg,
+            BigDecimal pesoCotizableKg) {
         BigDecimal recargo = recargoKgAdicional == null ? BigDecimal.ZERO : recargoKgAdicional;
         BigDecimal incluido = pesoIncluidoKg == null ? BigDecimal.ZERO : pesoIncluidoKg;
         BigDecimal excedente = pesoCotizableKg.subtract(incluido).max(BigDecimal.ZERO);

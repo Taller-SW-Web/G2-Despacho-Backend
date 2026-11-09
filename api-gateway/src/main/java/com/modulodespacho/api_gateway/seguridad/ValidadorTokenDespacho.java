@@ -8,6 +8,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 /** La audiencia solo es obligatoria en tokens de servicio, conforme al contrato. */
 public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
 
+    static final String AUDIENCIA_INCORRECTA = "La audiencia no corresponde a Despacho";
+
     private final String audiencia;
 
     public ValidadorTokenDespacho(String audiencia) {
@@ -19,12 +21,18 @@ public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
         String tipo = token.getClaimAsString("tipo");
         boolean identidadValida = token.getSubject() != null && !token.getSubject().isBlank();
         boolean tipoValido = "acceso".equals(tipo) || "servicio".equals(tipo);
-        boolean audienciaValida = !"servicio".equals(tipo)
-                || token.getAudience() != null && token.getAudience().contains(audiencia);
+        boolean audienciaValida =
+                !"servicio".equals(tipo)
+                        || token.getAudience() != null && token.getAudience().contains(audiencia);
         if (identidadValida && tipoValido && audienciaValida && token.getExpiresAt() != null) {
             return OAuth2TokenValidatorResult.success();
         }
         return OAuth2TokenValidatorResult.failure(
-                new OAuth2Error("invalid_token", "El token no cumple el contrato de Despacho", null));
+                new OAuth2Error(
+                        "invalid_token",
+                        audienciaValida
+                                ? "El token no cumple el contrato de Despacho"
+                                : AUDIENCIA_INCORRECTA,
+                        null));
     }
 }

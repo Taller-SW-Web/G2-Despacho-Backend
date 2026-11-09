@@ -299,6 +299,17 @@ python herramientas/mantener_backends_activos.py --url https://HOST-REAL/actuato
 
 Estas consultas reducen la inactividad de los servicios; no garantizan disponibilidad frente a reinicios, límites del plan o fallos de red. En el plan gratuito, las 750 horas mensuales se comparten por workspace: mantener servicios encendidos también consume ese cupo. Referencia: [límites de Render](https://render.com/docs/free). Tampoco corrigen errores SQL, migraciones pendientes ni permisos de negocio. No se instala una tarea del sistema ni se inicia un proceso permanente automáticamente.
 
+## Formato del código
+
+Java usa google-java-format en estilo AOSP (4 espacios por nivel, 100 columnas) mediante Spotless; la configuración está en el `pom.xml` de cada servicio y en `.editorconfig`. Dentro de cada servicio:
+
+```powershell
+.\mvnw.cmd spotless:apply  # Aplica el formato
+.\mvnw.cmd spotless:check  # Comprueba el formato sin modificar archivos
+```
+
+`seguridad-local` no es un módulo Maven y queda fuera de estos comandos.
+
 ## Pruebas y contratos
 
 La implementación backend de ES-F04-03 y sus límites se describen en [verificación de recepción en centro](servicio-gestion-despachos/docs/ES-F04-03-verificacion.md). Esa especificación reutiliza V1/V2. ES-F04-04 añade V3 para conservar la respuesta de reprogramación junto con su historial y evento; no modifica Operación ni su base. Las verificaciones usan bases desechables. Los datos históricos sin referencias completas requieren reconciliación verificable; los comandos los rechazan sin adivinar reservas. La trazabilidad vigente de reprogramación se mantiene en [su evidencia SDD](../G2-Despacho-Specs/especificaciones/ES-F04-04-ReprogramarDespachoFallido/evidence.md).

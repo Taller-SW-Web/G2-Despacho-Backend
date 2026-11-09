@@ -1,14 +1,14 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.api;
 
-import java.util.List;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.DistritoCatalogoVista;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.GestionDistritos;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.DistritoCatalogoVista;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application.GestionDistritos;
 
 @RestController
 @Profile("!integracion-local")

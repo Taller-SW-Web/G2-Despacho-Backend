@@ -1,16 +1,16 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.auditoria.domain;
 
-import java.time.Instant;
-import java.util.UUID;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.auditoria.AccionAuditoria;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.auditoria.AccionAuditoria;
 
 @Entity
 @Table(name = "auditoria_configuracion")
@@ -44,8 +44,13 @@ public class AuditoriaConfiguracion {
     @Column(name = "registrado_en", nullable = false)
     private Instant registradoEn;
 
-    public static AuditoriaConfiguracion registro(String entidad, String entidadId, AccionAuditoria accion,
-            String datosAnteriores, String datosNuevos, String usuarioId) {
+    public static AuditoriaConfiguracion registro(
+            String entidad,
+            String entidadId,
+            AccionAuditoria accion,
+            String datosAnteriores,
+            String datosNuevos,
+            String usuarioId) {
         AuditoriaConfiguracion auditoria = new AuditoriaConfiguracion();
         auditoria.id = UUID.randomUUID();
         auditoria.entidad = entidad;

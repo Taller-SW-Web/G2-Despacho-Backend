@@ -20,8 +20,12 @@ public class ProblemasGateway {
         this.json = json;
     }
 
-    public Mono<Void> escribir(ServerWebExchange intercambio, HttpStatus estado,
-            String codigo, String titulo, String detalle) {
+    public Mono<Void> escribir(
+            ServerWebExchange intercambio,
+            HttpStatus estado,
+            String codigo,
+            String titulo,
+            String detalle) {
         if (intercambio.getResponse().isCommitted()) {
             return Mono.empty();
         }
@@ -36,7 +40,14 @@ public class ProblemasGateway {
         if (estado == HttpStatus.UNAUTHORIZED) {
             intercambio.getResponse().getHeaders().set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
         }
-        return intercambio.getResponse().writeWith(Mono.fromSupplier(() ->
-                intercambio.getResponse().bufferFactory().wrap(json.writeValueAsBytes(problema))));
+        return intercambio
+                .getResponse()
+                .writeWith(
+                        Mono.fromSupplier(
+                                () ->
+                                        intercambio
+                                                .getResponse()
+                                                .bufferFactory()
+                                                .wrap(json.writeValueAsBytes(problema))));
     }
 }
