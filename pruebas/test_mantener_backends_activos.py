@@ -1,11 +1,14 @@
 """Regresión HTTP local del consultor periódico; no llama a Render."""
+from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
 import threading
 import unittest
+from unittest.mock import patch
 
-from herramientas.mantener_backends_activos import consultar, segundos_retry_after
+from herramientas.mantener_backends_activos import consultar, main, segundos_retry_after
 
 
 class RespuestasSalud(BaseHTTPRequestHandler):
@@ -17,7 +20,9 @@ class RespuestasSalud(BaseHTTPRequestHandler):
             self.close_connection = True
             return
         estado, cuerpo = 200, b'{"status":"UP"}'
-        if self.path == "/limite":
+        if self.path == "/productos":
+            cuerpo = b'{"status":"ok"}'
+        elif self.path == "/limite":
             estado, cuerpo = 429, b'{}'
         elif self.path == "/arrancando":
             cuerpo = b'<html>Starting...</html>'
@@ -64,6 +69,19 @@ class MantenerBackendsTests(unittest.TestCase):
 
     def test_no_confunde_pagina_de_arranque_con_salud_up(self):
         self.assertFalse(consultar(self.origen + "/arrancando", 2)[0])
+
+    def test_solo_consulta_dependencias_al_pedirlas_y_admite_la_salud_de_productos(self):
+        servicios = (("Gestión", self.origen + "/gestion", "UP"),)
+        dependencias = (("G7", self.origen + "/seguridad", "UP"),
+                        ("G6", self.origen + "/productos", "ok"))
+        modulo = "herramientas.mantener_backends_activos"
+        inicio = len(RespuestasSalud.llegadas)
+        with patch(modulo + ".SERVICIOS", servicios), patch(modulo + ".DEPENDENCIAS_COTIZACION", dependencias):
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(main(["--una-vez"]), 0)
+                self.assertEqual(main(["--una-vez", "--con-dependencias"]), 0)
+        self.assertEqual(RespuestasSalud.llegadas[inicio:],
+                         [("/gestion", None), ("/gestion", None), ("/seguridad", None), ("/productos", None)])
 
     def test_no_sigue_redirecciones(self):
         inicio = len(RespuestasSalud.llegadas)
