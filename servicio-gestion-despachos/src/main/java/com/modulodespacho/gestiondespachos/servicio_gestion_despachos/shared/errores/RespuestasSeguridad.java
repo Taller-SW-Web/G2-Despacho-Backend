@@ -1,11 +1,14 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.DiagnosticoJwt;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class RespuestasSeguridad implements AuthenticationEntryPoint, AccessDeniedHandler {
 
+    private static final Logger REGISTRO = LoggerFactory.getLogger(RespuestasSeguridad.class);
     private final JsonMapper json;
 
     public RespuestasSeguridad(JsonMapper json) {
@@ -32,6 +36,13 @@ public class RespuestasSeguridad implements AuthenticationEntryPoint, AccessDeni
             HttpServletResponse respuesta,
             AuthenticationException error)
             throws IOException {
+        REGISTRO.warn(
+                "Autenticación rechazada en Gestión. ruta={} estado=401 correlacion={} duracion_ms={} {}",
+                solicitud.getRequestURI(),
+                solicitud.getAttribute(FiltroCorrelacion.ATRIBUTO),
+                FiltroCorrelacion.duracionMs(solicitud),
+                DiagnosticoJwt.describir(
+                        error, solicitud.getHeader(HttpHeaders.AUTHORIZATION) != null));
         respuesta.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
         escribir(
                 solicitud,
@@ -48,6 +59,10 @@ public class RespuestasSeguridad implements AuthenticationEntryPoint, AccessDeni
             HttpServletResponse respuesta,
             AccessDeniedException error)
             throws IOException {
+        REGISTRO.warn(
+                "Acceso denegado en Gestión. ruta={} estado=403 correlacion={}",
+                solicitud.getRequestURI(),
+                solicitud.getAttribute(FiltroCorrelacion.ATRIBUTO));
         escribir(
                 solicitud,
                 respuesta,

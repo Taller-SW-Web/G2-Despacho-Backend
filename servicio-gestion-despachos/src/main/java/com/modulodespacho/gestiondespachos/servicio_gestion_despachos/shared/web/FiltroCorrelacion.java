@@ -6,9 +6,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -17,6 +20,21 @@ public class FiltroCorrelacion extends OncePerRequestFilter {
 
     public static final String ATRIBUTO = "despacho.correlacion";
     public static final String ENCABEZADO = "X-Correlation-Id";
+    private static final String INICIO = "despacho.inicioSolicitud";
+
+    public static Long duracionMs(HttpServletRequest solicitud) {
+        return solicitud.getAttribute(INICIO) instanceof Long inicio
+                ? TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio)
+                : null;
+    }
+
+    public static String correlacionActual() {
+        if (RequestContextHolder.getRequestAttributes()
+                instanceof ServletRequestAttributes contexto) {
+            return (String) contexto.getRequest().getAttribute(ATRIBUTO);
+        }
+        return null;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -30,6 +48,7 @@ public class FiltroCorrelacion extends OncePerRequestFilter {
                         ? recibido
                         : UUID.randomUUID().toString();
         solicitud.setAttribute(ATRIBUTO, correlacion);
+        solicitud.setAttribute(INICIO, System.nanoTime());
         respuesta.setHeader(ENCABEZADO, correlacion);
         cadena.doFilter(solicitud, respuesta);
     }

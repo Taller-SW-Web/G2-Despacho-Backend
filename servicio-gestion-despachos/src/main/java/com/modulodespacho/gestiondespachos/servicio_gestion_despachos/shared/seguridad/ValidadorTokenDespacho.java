@@ -13,6 +13,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
  */
 public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
 
+    static final String AUDIENCIA_INCORRECTA = "La audiencia no corresponde a Despacho";
+
     static final String CLIENTE_INTERNO = "modulo-despacho";
 
     private final String audiencia;
@@ -35,6 +37,10 @@ public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
         }
         return OAuth2TokenValidatorResult.failure(
                 new OAuth2Error(
-                        "invalid_token", "El token no cumple el contrato de Despacho", null));
+                        "invalid_token",
+                        audienciaValida
+                                ? "El token no cumple el contrato de Despacho"
+                                : AUDIENCIA_INCORRECTA,
+                        null));
     }
 }

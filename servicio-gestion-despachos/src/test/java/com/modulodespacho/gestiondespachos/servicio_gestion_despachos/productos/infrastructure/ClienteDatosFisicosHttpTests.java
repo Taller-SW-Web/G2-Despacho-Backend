@@ -6,15 +6,24 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
+import java.net.http.HttpTimeoutException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+@ExtendWith(OutputCaptureExtension.class)
 class ClienteDatosFisicosHttpTests {
     private MockRestServiceServer servidor;
     private ClienteDatosFisicosHttp cliente;
@@ -130,11 +139,38 @@ class ClienteDatosFisicosHttpTests {
     }
 
     @Test
-    void erroresTecnicosYDeCredencialSalienteSonIndisponibilidad() {
+    void erroresTecnicosYDeCredencialSalienteSonIndisponibilidad(CapturedOutput salida) {
         for (int estado : List.of(401, 403, 500, 503)) {
             preparar();
             responder(estado, "{}");
             comprobarError(503, "DESP_ERROR_PRODUCTOS_NO_DISPONIBLE", List.of("A"));
+        }
+        assertThat(salida.getAll())
+                .contains(
+                        "motivo=credencial_rechazada estado_productos=401",
+                        "motivo=error_del_proveedor estado_productos=503")
+                .doesNotContain("credencial-propia");
+    }
+
+    @Test
+    void conservaLaCorrelacionYRegistraTiempoAgotadoSinDatosSensibles(CapturedOutput salida) {
+        String correlacion = "35ac19fa-4b25-4a98-bbdd-882234ec1a2c";
+        var solicitud = new MockHttpServletRequest();
+        solicitud.setAttribute(FiltroCorrelacion.ATRIBUTO, correlacion);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(solicitud));
+        try {
+            servidor.expect(
+                            requestTo(
+                                    "https://productos.prueba/api/v1/productos/datos-fisicos/consulta"))
+                    .andExpect(header(FiltroCorrelacion.ENCABEZADO, correlacion))
+                    .andRespond(withException(new HttpTimeoutException("mensaje-reservado")));
+            comprobarError(503, "DESP_ERROR_PRODUCTOS_NO_DISPONIBLE", List.of("A"));
+            assertThat(salida.getAll())
+                    .contains("correlacion=" + correlacion + " motivo=tiempo_agotado")
+                    .doesNotContain("mensaje-reservado", "credencial-propia");
+            servidor.verify();
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
         }
     }
 

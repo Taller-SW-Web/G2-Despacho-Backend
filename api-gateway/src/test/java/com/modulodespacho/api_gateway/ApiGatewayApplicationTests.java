@@ -1,5 +1,6 @@
 package com.modulodespacho.api_gateway;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -7,7 +8,10 @@ import java.time.Instant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.BadJwtException;
@@ -24,6 +28,7 @@ import reactor.netty.http.server.HttpServer;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"SEGURIDAD_URL=http://localhost:9999", "SOLICITUD_MAXIMO_BYTES=128"})
+@ExtendWith(OutputCaptureExtension.class)
 class ApiGatewayApplicationTests {
 
     private static final DisposableServer GESTION = destino("gestion");
@@ -163,7 +168,7 @@ class ApiGatewayApplicationTests {
     }
 
     @Test
-    void rechazaTokenAusenteEInvalidoConProblemaContractual() {
+    void rechazaTokenAusenteEInvalidoConProblemaContractual(CapturedOutput salida) {
         cliente.post()
                 .uri("/api/v1/cotizaciones")
                 .exchange()
@@ -177,11 +182,19 @@ class ApiGatewayApplicationTests {
                 .jsonPath("$.code")
                 .isEqualTo("DESP_ERROR_TOKEN_INVALIDO");
         cliente.post()
-                .uri("/api/v1/cotizaciones")
+                .uri("/api/v1/cotizaciones?prueba=valor-reservado")
+                .header("X-Correlation-Id", CORRELACION)
+                .header("CF-Ray", "0123456789abcdef-LIM")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer invalido")
                 .exchange()
                 .expectStatus()
                 .isUnauthorized();
+        assertThat(salida.getAll())
+                .contains(
+                        "motivo=token_ausente",
+                        "ruta=/api/v1/cotizaciones estado=401 correlacion=" + CORRELACION,
+                        "CF-Ray: 0123456789abcdef-LIM")
+                .doesNotContain("valor-reservado", "Bearer invalido");
     }
 
     @Test

@@ -4,6 +4,8 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion.domain.DatosFisicos;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.CodigosError;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.DiagnosticoJwt;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,39 +57,34 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
             throw ErrorDeNegocio.de(
                     400, CodigosError.SOLICITUD_INVALIDA, "Debe indicar SKU no vacíos");
         }
+        String correlacion = FiltroCorrelacion.correlacionActual();
+        long inicio = System.nanoTime();
         try {
             String credencial = token.get();
-            if (credencial == null || credencial.isBlank()) throw noDisponible();
+            if (credencial == null || credencial.isBlank()) {
+                registrarFallo(correlacion, "token_de_despacho_no_disponible", null, inicio);
+                throw noDisponible();
+            }
             return cliente.post()
                     .uri("/api/v1/productos/datos-fisicos/consulta")
                     .headers(
                             cabeceras -> {
                                 cabeceras.setBearerAuth(credencial);
-                                if (org.springframework.web.context.request.RequestContextHolder
-                                                .getRequestAttributes()
-                                        instanceof
-                                        org.springframework.web.context.request
-                                                        .ServletRequestAttributes
-                                                contexto) {
-                                    Object correlacion =
-                                            contexto.getRequest()
-                                                    .getAttribute(
-                                                            com.modulodespacho.gestiondespachos
-                                                                    .servicio_gestion_despachos
-                                                                    .shared.web.FiltroCorrelacion
-                                                                    .ATRIBUTO);
-                                    if (correlacion != null)
-                                        cabeceras.set("X-Correlation-Id", correlacion.toString());
-                                }
+                                if (correlacion != null)
+                                    cabeceras.set(FiltroCorrelacion.ENCABEZADO, correlacion);
                             })
                     .body(Map.of("skus", solicitados))
                     .exchange(
                             (peticion, respuesta) -> {
                                 int estado = respuesta.getStatusCode().value();
                                 if (estado >= 500 || estado == 401 || estado == 403) {
-                                    LOG.warn(
-                                            "Productos no disponible: HTTP {} en la consulta física",
-                                            estado);
+                                    registrarFallo(
+                                            correlacion,
+                                            estado < 500
+                                                    ? "credencial_rechazada"
+                                                    : "error_del_proveedor",
+                                            estado,
+                                            inicio);
                                     throw noDisponible();
                                 }
                                 if (estado != 200 && estado != 422) throw invalida();
@@ -103,11 +101,27 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
         } catch (ErrorDeNegocio error) {
             throw error;
         } catch (RestClientException error) {
-            LOG.warn("No fue posible completar la consulta HTTP a Productos");
+            registrarFallo(
+                    correlacion,
+                    DiagnosticoJwt.tiempoAgotado(error)
+                            ? "tiempo_agotado"
+                            : "consulta_http_fallida",
+                    null,
+                    inicio);
             throw noDisponible();
         } catch (RuntimeException error) {
+            registrarFallo(correlacion, "consulta_fallida", null, inicio);
             throw noDisponible();
         }
+    }
+
+    private void registrarFallo(String correlacion, String motivo, Integer estado, long inicio) {
+        LOG.warn(
+                "Falló la consulta física de Productos. correlacion={} motivo={} estado_productos={} duracion_ms={}",
+                correlacion,
+                motivo,
+                estado,
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio));
     }
 
     private Map<String, DatosFisicos> validarLote(JsonNode cuerpo, List<String> solicitados) {
