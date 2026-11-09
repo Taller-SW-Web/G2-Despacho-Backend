@@ -63,9 +63,12 @@ Para cambiar el intervalo, comprobar una sola ronda o sustituir las URLs públic
 ```powershell
 python herramientas/mantener_backends_activos.py --intervalo 300 --timeout 75
 python herramientas/mantener_backends_activos.py --una-vez
+python herramientas/mantener_backends_activos.py --una-vez --con-dependencias
 python herramientas/mantener_backends_activos.py --url https://HOST-REAL/actuator/health
 ```
 
-`--url` se puede repetir y sustituye los tres destinos predeterminados. Confirmar las URLs con el responsable del despliegue si cambian. `--una-vez` termina con código `0` cuando todos responden `200` y `status=UP`, o `1` si alguno falla. El intervalo mínimo es 60 segundos. Para verificar el consultor sin llamar a Render: `python -B -m unittest discover -s pruebas -p test_mantener_backends_activos.py -v`.
+`--con-dependencias` agrega la salud de Seguridad (G7) y del Gateway de Productos (G6). El Gateway de G6 debe responder `status=ok`; los demás servicios, `status=UP`. Para comprobar que Despacho obtiene los datos físicos de G6, ejecutar además una cotización con SKU.
+
+`--url` se puede repetir para sustituir los tres destinos predeterminados y se usa por separado de `--con-dependencias`. `--una-vez` termina con código `0` cuando todos responden `200` y el estado esperado, o `1` si alguno falla. El intervalo mínimo es 60 segundos. Para verificar el consultor sin llamar a Render: `python -B -m unittest discover -s pruebas -p test_mantener_backends_activos.py -v`.
 
 Las consultas reducen la inactividad y ayudan a diagnosticar disponibilidad. No corrigen errores de SQL, migraciones o permisos.

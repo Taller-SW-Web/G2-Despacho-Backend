@@ -15,6 +15,7 @@ La fecha identifica la preparación del corte.
 - RT-04: consulta de seguimiento por pedido para los canales autorizados.
 - Gateway: rutas de acceso humano, MFA, renovación y cierre de sesión. Seguridad temporal incorpora cuentas ficticias para probar los dos perfiles.
 - CI/CD: pruebas y construcción de imágenes, publicación en GHCR desde `main`, compuerta de despliegue en Render y comprobación posterior de salud.
+- Diagnóstico opcional de salud de Seguridad (G7) y Productos (G6) para las pruebas de cotización.
 
 ### Cambiado
 
