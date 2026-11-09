@@ -4,7 +4,7 @@
 
 Levantar el entorno local, preparar una zona con tarifa y solicitar una cotización como Marketplace o Chatbot. Los cuerpos de esta guía son ejemplos de prueba; el contrato canónico se mantiene en Specs [cite: 1].
 
-En la implementación revisada el 02/11/2026, la cotización utiliza `CatalogoProductosStub` y todavía no escribe su resultado en `cotizaciones`. Los planes de [persistencia](./plan-persistencia-cotizaciones.md) e [integración con Productos](./plan-integracion-productos.md) describen esos pendientes; una respuesta exitosa de esta guía no acredita que estén implementados.
+Con el perfil predeterminado, Gestión consulta Productos por HTTP cuando la solicitud incluye SKU, cobertura y tarifa. La cobertura sola se resuelve localmente. Para comprobar el cálculo completo sin G6, activar `productos-simulados` como se indica abajo. Una cotización exacta exitosa se guarda en PostgreSQL antes de responder; el catálogo de prueba marca su instantánea como simulada.
 
 ## 2. Levantar el entorno
 
@@ -13,7 +13,7 @@ Requisitos: Docker con Docker Compose y Postman. Docker compila Java dentro de l
 Desde la raíz del backend, donde está `compose.yaml`:
 
 ```bash
-docker compose up --build -d
+docker compose up -d --build
 ```
 
 El Compose inicia Gateway, Gestión, Operación, Seguridad temporal y PostgreSQL con dos bases locales separadas. Funciona sin crear un `.env`; si ya existe uno, sus valores pueden cambiar los puertos y las credenciales de esta guía [cite: 2].
@@ -26,6 +26,25 @@ docker compose logs --tail=100 servicio-gestion-despachos servicio-operacion-rep
 ```
 
 Esperar a que los servicios estén saludables. La primera construcción descarga imágenes y dependencias. El volumen conserva los datos de arranques anteriores; una base nueva no trae zonas ni tarifas de negocio.
+
+### Catálogo simulado para cotizar con SKU
+
+Para probar cobertura, usar el arranque normal. Para completar la cotización con los SKU de esta guía sin consultar G6, crear un archivo local `compose.cotizacion-local.yaml` junto al Compose principal:
+
+```yaml
+services:
+  servicio-gestion-despachos:
+    environment:
+      SPRING_PROFILES_ACTIVE: productos-simulados
+```
+
+Arrancar desde la raíz del backend con ambos archivos:
+
+```powershell
+docker compose -f compose.yaml -f compose.cotizacion-local.yaml up -d --build
+```
+
+El catálogo simulado se usa en cotización. Para volver al proveedor HTTP, ejecutar `docker compose up -d` usando el Compose principal.
 
 ## 3. Preparar Postman y comprobar salud
 
@@ -234,7 +253,7 @@ La cobertura tiene precedencia: sin cobertura no se validan las líneas ni se co
 
 ## 10. Ver los registros y resolver problemas
 
-Las zonas y tarifas creadas se pueden consultar mediante la [guía de pgAdmin](./conexion-pgadmin-local.md). En el código revisado, `cotizaciones` puede permanecer vacía aunque se reciba una cotización exacta exitosa; implementar su escritura es el pendiente descrito en el plan de persistencia.
+Las zonas y tarifas creadas se pueden consultar mediante la [guía de pgAdmin](./conexion-pgadmin-local.md). Una cotización exacta exitosa agrega una fila en `cotizaciones`. El modo `productos-simulados` la marca con `es_simulado=true`. Una respuesta de solo cobertura no agrega una fila.
 
 | Problema | Comprobación |
 |---|---|
@@ -244,7 +263,8 @@ Las zonas y tarifas creadas se pueden consultar mediante la [guía de pgAdmin](.
 | `403` en cotización | Usar `tokenServicio` con `cotizaciones:calcular`. |
 | Cobertura falsa | Revisar distrito, código postal y estado de la zona. |
 | Cobertura sin costo | Comprobar tarifa vigente y envío de `lineas`. |
-| `422` por producto | Usar SKU presentes en el catálogo simulado. |
+| `422` por producto | Verificar que los SKU existan en el catálogo activo. |
+| `503` al consultar productos | Configurar el acceso a G6 o activar explícitamente `productos-simulados`. |
 
 El token de gestor dura 15 minutos y el de servicio una hora. Si se reinicia Seguridad temporal, obtener tokens nuevos y reiniciar Gateway/Gestión/Operación si conservan las claves anteriores en caché [cite: 3].
 
