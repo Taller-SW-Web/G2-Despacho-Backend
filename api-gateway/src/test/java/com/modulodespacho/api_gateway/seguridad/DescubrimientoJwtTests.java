@@ -1,5 +1,6 @@
 package com.modulodespacho.api_gateway.seguridad;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.nimbusds.jose.JOSEException;
@@ -14,6 +15,7 @@ import com.nimbusds.jwt.SignedJWT;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -157,7 +159,7 @@ class DescubrimientoJwtTests {
                         List.of("api-despacho"),
                         Instant.now().plusSeconds(300));
         StepVerifier.create(decodificador.decode(token))
-                .expectError(BadJwtException.class)
+                .expectErrorSatisfies(error -> comprobarDiagnostico(error, "motivo=firma"))
                 .verify();
     }
 
@@ -195,11 +197,89 @@ class DescubrimientoJwtTests {
                                 EMISOR,
                                 null,
                                 Instant.now().plusSeconds(300)));
-        for (String token : tokens) {
-            StepVerifier.create(decodificador.decode(token))
-                    .expectError(BadJwtException.class)
+        List<String> motivos =
+                List.of(
+                        "emisor_incorrecto",
+                        "audiencia_incorrecta",
+                        "audiencia_incorrecta",
+                        "vencido",
+                        "claims_invalidos");
+        for (int indice = 0; indice < tokens.size(); indice++) {
+            String motivo = motivos.get(indice);
+            StepVerifier.create(decodificador.decode(tokens.get(indice)))
+                    .expectErrorSatisfies(error -> comprobarDiagnostico(error, "motivo=" + motivo))
                     .verify();
         }
+    }
+
+    @Test
+    void distingueFalloOpenIdDeFalloJwksYReintentaElDescubrimiento() throws JOSEException {
+        var openIdDisponible = new AtomicBoolean(false);
+        var origen =
+                HttpServer.create()
+                        .host("127.0.0.1")
+                        .port(0)
+                        .route(
+                                rutas ->
+                                        rutas.get(
+                                                        "/api/v1/auth/.well-known/openid-configuration",
+                                                        (solicitud, respuesta) ->
+                                                                openIdDisponible.get()
+                                                                        ? respuesta
+                                                                                .header(
+                                                                                        "Content-Type",
+                                                                                        "application/json")
+                                                                                .sendString(
+                                                                                        Mono.just(
+                                                                                                "{\"issuer\":\""
+                                                                                                        + EMISOR
+                                                                                                        + "\",\"jwks_uri\":\"/claves\"}"))
+                                                                        : respuesta
+                                                                                .status(503)
+                                                                                .send())
+                                                .get(
+                                                        "/claves",
+                                                        (solicitud, respuesta) ->
+                                                                respuesta.status(502).send()))
+                        .bindNow();
+        try {
+            ReactiveJwtDecoder cliente =
+                    new ConfiguracionSeguridad()
+                            .decodificadorJwt(
+                                    WebClient.builder(),
+                                    "http://127.0.0.1:" + origen.port(),
+                                    "api-despacho",
+                                    "RS256");
+            String token =
+                    firmar(
+                            clavePublicada,
+                            "servicio",
+                            EMISOR,
+                            List.of("api-despacho"),
+                            Instant.now().plusSeconds(300));
+            StepVerifier.create(cliente.decode(token))
+                    .expectErrorSatisfies(
+                            error ->
+                                    comprobarDiagnostico(
+                                            error,
+                                            "etapa=openid motivo=respuesta_http estado_g7=503"))
+                    .verify();
+            openIdDisponible.set(true);
+            StepVerifier.create(cliente.decode(token))
+                    .expectErrorSatisfies(
+                            error ->
+                                    comprobarDiagnostico(
+                                            error,
+                                            "etapa=jwks motivo=respuesta_http estado_g7=502"))
+                    .verify();
+        } finally {
+            origen.disposeNow();
+        }
+    }
+
+    private void comprobarDiagnostico(Throwable error, String esperado) {
+        assertThat(error).isInstanceOf(BadJwtException.class);
+        assertThat(DiagnosticoJwt.describir(error, true)).contains(esperado);
     }
 
     @Test

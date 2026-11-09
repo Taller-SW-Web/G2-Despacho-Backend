@@ -10,13 +10,18 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import java.time.Clock;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+@ExtendWith(OutputCaptureExtension.class)
 class ProveedorTokenServicioTests {
     @Test
-    void solicitaScopePropioRenuevaYNoReutilizaCredencialVencidaTrasUnaCaida() {
+    void solicitaScopePropioRenuevaYNoReutilizaCredencialVencidaTrasUnaCaida(
+            CapturedOutput salida) {
         var cliente = RestClient.builder().baseUrl("http://seguridad-prueba");
         var servidor = MockRestServiceServer.bindTo(cliente).build();
         for (String firma : new String[] {"primera", "segunda"})
@@ -52,6 +57,9 @@ class ProveedorTokenServicioTests {
         assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.primera");
         assertThat(proveedor.get()).isEqualTo("cabecera.cuerpo.segunda");
         assertThat(proveedor.get()).isEmpty();
+        assertThat(salida.getAll())
+                .contains("permiso=productos:fisicos:leer motivo=respuesta_http estado_g7=503")
+                .doesNotContain("secreto-prueba", "cabecera.cuerpo.segunda");
         servidor.verify();
     }
 

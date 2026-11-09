@@ -1,16 +1,22 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 /** Credencial propia por dependencia, con renovación; nunca reenvía el JWT entrante. */
 public final class ProveedorTokenServicio implements Supplier<String> {
+    private static final Logger REGISTRO = LoggerFactory.getLogger(ProveedorTokenServicio.class);
     private final RestClient cliente;
     private final String idCliente;
     private final String secreto;
@@ -49,6 +55,7 @@ public final class ProveedorTokenServicio implements Supplier<String> {
         if (scopes != null && !scopes.isBlank()) formulario.add("scope", scopes);
         token = "";
         renovarEn = Instant.MIN;
+        long inicio = System.nanoTime();
         try {
             Respuesta respuesta =
                     cliente.post()
@@ -79,12 +86,28 @@ public final class ProveedorTokenServicio implements Supplier<String> {
                                         respuesta.expiresIn()
                                                 - Math.min(30, respuesta.expiresIn() / 2)));
                 token = respuesta.accessToken();
+            } else {
+                registrarFallo("respuesta_invalida_o_permiso_ausente", null, inicio);
             }
+        } catch (RestClientResponseException error) {
+            registrarFallo("respuesta_http", error.getStatusCode().value(), inicio);
         } catch (RuntimeException error) {
-            token = "";
-            renovarEn = Instant.MIN;
+            registrarFallo(
+                    DiagnosticoJwt.tiempoAgotado(error) ? "tiempo_agotado" : "consulta_fallida",
+                    null,
+                    inicio);
         }
         return token;
+    }
+
+    private void registrarFallo(String motivo, Integer estado, long inicio) {
+        REGISTRO.warn(
+                "No se obtuvo el token de servicio en G7. correlacion={} permiso={} motivo={} estado_g7={} duracion_ms={}",
+                FiltroCorrelacion.correlacionActual(),
+                scopes,
+                motivo,
+                estado,
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio));
     }
 
     public record Respuesta(

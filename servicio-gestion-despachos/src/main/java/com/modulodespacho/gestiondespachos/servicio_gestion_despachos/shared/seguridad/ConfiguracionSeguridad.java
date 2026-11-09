@@ -40,7 +40,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.util.Assert;
+import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableMethodSecurity
@@ -78,34 +82,55 @@ public class ConfiguracionSeguridad {
                         .requestFactory(peticiones)
                         .baseUrl(urlSeguridad.replaceAll("/+$", ""))
                         .build();
+        RestTemplate clienteClaves =
+                new RestTemplate(peticiones) {
+                    @Override
+                    protected <T> T doExecute(
+                            URI url,
+                            String plantilla,
+                            HttpMethod metodo,
+                            RequestCallback preparar,
+                            ResponseExtractor<T> extraer) {
+                        long inicio = System.nanoTime();
+                        try {
+                            return super.doExecute(url, plantilla, metodo, preparar, extraer);
+                        } catch (RestClientException error) {
+                            throw new DiagnosticoJwt.FalloConsulta("jwks", inicio, error);
+                        }
+                    }
+                };
         JwtDecoder diferido =
                 new SupplierJwtDecoder(
                         () -> {
-                            Map<String, Object> configuracion =
-                                    cliente.get()
-                                            .uri("/api/v1/auth/.well-known/openid-configuration")
-                                            .retrieve()
-                                            .body(
-                                                    new ParameterizedTypeReference<
-                                                            Map<String, Object>>() {});
-                            Assert.notNull(
-                                    configuracion, "Seguridad debe publicar su configuración");
-                            String emisor = (String) configuracion.get("issuer");
-                            String claves = (String) configuracion.get("jwks_uri");
-                            Assert.hasText(emisor, "Seguridad debe publicar issuer");
-                            Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
-                            NimbusJwtDecoder resultado =
-                                    NimbusJwtDecoder.withJwkSetUri(claves)
-                                            .jwsAlgorithm(algoritmoFirma)
-                                            .restOperations(
-                                                    new org.springframework.web.client.RestTemplate(
-                                                            peticiones))
-                                            .build();
-                            resultado.setJwtValidator(
-                                    new DelegatingOAuth2TokenValidator<>(
-                                            JwtValidators.createDefaultWithIssuer(emisor),
-                                            new ValidadorTokenDespacho(audiencia)));
-                            return resultado;
+                            long inicio = System.nanoTime();
+                            try {
+                                Map<String, Object> configuracion =
+                                        cliente.get()
+                                                .uri(
+                                                        "/api/v1/auth/.well-known/openid-configuration")
+                                                .retrieve()
+                                                .body(
+                                                        new ParameterizedTypeReference<
+                                                                Map<String, Object>>() {});
+                                Assert.notNull(
+                                        configuracion, "Seguridad debe publicar su configuración");
+                                String emisor = (String) configuracion.get("issuer");
+                                String claves = (String) configuracion.get("jwks_uri");
+                                Assert.hasText(emisor, "Seguridad debe publicar issuer");
+                                Assert.hasText(claves, "Seguridad debe publicar jwks_uri");
+                                NimbusJwtDecoder resultado =
+                                        NimbusJwtDecoder.withJwkSetUri(claves)
+                                                .jwsAlgorithm(algoritmoFirma)
+                                                .restOperations(clienteClaves)
+                                                .build();
+                                resultado.setJwtValidator(
+                                        new DelegatingOAuth2TokenValidator<>(
+                                                JwtValidators.createDefaultWithIssuer(emisor),
+                                                new ValidadorTokenDespacho(audiencia)));
+                                return resultado;
+                            } catch (RuntimeException error) {
+                                throw new DiagnosticoJwt.FalloConsulta("openid", inicio, error);
+                            }
                         });
         return token -> {
             try {

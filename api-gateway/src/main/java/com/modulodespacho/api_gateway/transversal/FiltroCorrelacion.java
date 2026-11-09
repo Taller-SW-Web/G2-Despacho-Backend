@@ -30,6 +30,8 @@ public class FiltroCorrelacion implements WebFilter {
                         : UUID.randomUUID().toString();
         intercambio.getAttributes().put(ATRIBUTO, correlacion);
         intercambio.getResponse().getHeaders().set(ENCABEZADO, correlacion);
+        String ray = intercambio.getRequest().getHeaders().getFirst("CF-Ray");
+        String cfRay = ray != null && ray.matches("[0-9a-fA-F]{16,32}(?:-[A-Z]{3})?") ? ray : "-";
         long inicio = System.nanoTime();
         intercambio
                 .getResponse()
@@ -37,13 +39,15 @@ public class FiltroCorrelacion implements WebFilter {
                         () -> {
                             intercambio.getResponse().getHeaders().set(ENCABEZADO, correlacion);
                             REGISTRO.info(
-                                    "Solicitud {} finalizada con estado {} en {} ms. Correlación: {}",
+                                    "Solicitud {} {} finalizada con estado {} en {} ms. Correlación: {} CF-Ray: {}",
                                     intercambio.getRequest().getMethod(),
+                                    intercambio.getRequest().getURI().getRawPath(),
                                     intercambio.getResponse().getStatusCode() == null
                                             ? 200
                                             : intercambio.getResponse().getStatusCode().value(),
                                     (System.nanoTime() - inicio) / 1_000_000,
-                                    correlacion);
+                                    correlacion,
+                                    cfRay);
                             return Mono.empty();
                         });
         return cadena.filter(
