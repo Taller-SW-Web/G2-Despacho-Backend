@@ -1,41 +1,37 @@
 # Historial de cambios
 
-Este archivo resume los cambios significativos del backend. Los cambios en integración se registran en `Sin publicar`; al preparar una entrega se agrupan en una versión con fecha y se promueven de `develop` a `main` mediante PR.
+Los cambios de cada entrega se consolidan al preparar una línea base en `main`, según la [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md). Los tags se crean sobre los commits de entrega aprobados.
 
-El equipo revisa el corte de entrega aproximadamente cada dos semanas. El número de versión cambia cuando hay una entrega de cambios, no automáticamente por el paso del tiempo. Durante el desarrollo inicial se utiliza `0.x.y`: nuevas capacidades en `0.2.0`, `0.3.0`, etc., y correcciones sobre una entrega en `0.1.1`, por ejemplo. Los tags se agregan manualmente; este proceso no crea GitHub Releases.
+## 0.2.0 — 2026-11-09
 
-## Sin publicar
+La fecha identifica la preparación del corte.
 
 ### Añadido
 
-- ES-F04-03 en Gestión: recepción en centro atómica, respuesta original durable, control de concurrencia y liberación recuperable de la reserva original mediante HTTP; pruebas de validación, seguridad, rollback, recuperación y contrato de Operación.
-- CI para PR y cambios en `develop` y `main`: compilación y pruebas existentes de Gateway, Gestión y Operación, incluidas las integraciones con bases temporales; pruebas propias de Seguridad temporal.
-- Instrucciones del backend enlazadas con las especificaciones y contratos del equipo.
-- F-03, comandos del repartidor en Operación: inicio de traslado, entrega y fallo con evidencia verificada en el bucket, y catálogo de motivos de campo. Cada comando es idempotente por `Idempotency-Key` del usuario (migración V6 `comandos_repartidor`) y se coordina con Gestión fuera de las transacciones locales.
-- F-03 en Gestión: `POST /internal/v1/despachos/{id}/transiciones` (contrato de Gestión §6.1) con máquina de estados, contador de intentos, incidencia vigente, historial F-03, eventos para Ventas, proyección para Operación y solicitud durable de liberación de capacidad al entregar. Catálogo interno de motivos para Operación (§6.2).
-- Proyección y consultas del repartidor con `motivoFallo` y `hitos` (asignado, en camino, entregado o fallido); resumen ampliado con estado y hora de cierre y paquetes por devolver.
-- Seguridad temporal: login propuesto `POST /api/v1/auth/login` con cuentas ficticias, enrutado por el Gateway sin JWT; scopes `gestion:despachos:transicionar` y `gestion:catalogos:leer` para `modulo-despacho`.
+- F-02: consulta y reordenamiento de rutas, reasignación con motivo y transferencia de reservas, y cancelación por anulación del pedido con recuperación de solicitudes.
+- F-03: comandos idempotentes de inicio de traslado, entrega y fallo con evidencia en Operación. Gestión coordina las transiciones, el historial, la proyección, la liberación de capacidad y los eventos a Ventas. Las consultas del repartidor incluyen hitos y el resumen de jornada.
+- F-04: confirmación de recepción en centro con liberación recuperable de capacidad, reprogramación y cierre administrativo como `DEVUELTO_A_ORIGEN`. Gestión conserva el resultado de los comandos y registra su historial.
+- F-01: consulta de los datos físicos de Productos (G6), persistencia de cotizaciones exactas con su instantánea de tarifa y redondeos acordados. El catálogo simulado se activa mediante un perfil de prueba.
+- RT-04: consulta de seguimiento por pedido para los canales autorizados.
+- Gateway: rutas de acceso humano, MFA, renovación y cierre de sesión. Seguridad temporal incorpora cuentas ficticias para probar los dos perfiles.
+- CI/CD: pruebas y construcción de imágenes, publicación en GHCR desde `main`, compuerta de despliegue en Render y comprobación posterior de salud.
+- Diagnóstico opcional de salud de Seguridad (G7) y Productos (G6) para las pruebas de cotización.
 
 ### Cambiado
 
-- Rutas internas sin scopes: Gestión y Operación ya no exigen `gestion:despachos:transicionar`, `gestion:catalogos:leer`, `operacion:capacidad:reservar`, `operacion:capacidad:liberar`, `operacion:proyecciones:escribir` ni `operacion:incidencias:leer`. Se conserva la verificación del token de servicio de `modulo-despacho` (firma, emisor, vencimiento y audiencia) y los scopes externos. Se dejan de solicitar al obtener el token y se eliminan `OPERACION_CAPACIDAD_SCOPES` y `GESTION_SCOPES`.
-- Entorno local unificado en `compose.yaml`, con los tres backends, Seguridad temporal y dos bases PostgreSQL locales.
-- Historia local de Gestión reconstruida con V1 original y V2 acumulada; configuración de pruebas adaptada a PostGIS.
-- Recursos de compatibilidad y datos utilizados por pruebas de Operación reubicados dentro del servicio.
-- Documentación de ejecución y configuración consolidada en el README; eliminación de Compose y guías redundantes.
-
-- El cierre de jornada del repartidor exige `Idempotency-Key` y resuelve los pendientes como `FALLIDO`/`NO_INTENTADO` en Gestión antes de cerrar, en lugar de rechazar el cierre.
+- Gestión y Operación autentican a `modulo-despacho` en rutas internas sin scopes internos. Los permisos de las rutas externas se mantienen.
+- El cierre de jornada del repartidor resuelve los pendientes como `FALLIDO` con motivo `NO_INTENTADO` antes de cerrar y conserva la clave de idempotencia.
+- El entorno local usa un Compose con Gateway, Gestión, Operación, Seguridad temporal y PostgreSQL/PostGIS. Las bases separadas aplican sus propias migraciones.
+- F-05/F-06: validación JWT alineada con el contrato de Seguridad y auditoría de cierres de jornada por baja de repartidor o retiro de vehículo.
 
 ### Corregido
 
-- Resumen del repartidor: `noIntentados` contaba un estado `NO_INTENTADO` que Gestión no emite; ahora usa el motivo del `FALLIDO`.
-
-- Preparación de las pruebas F01: conservar el catálogo de distritos creado por Flyway al limpiar los escenarios.
-- Generación de despachos simulados: consultar también `zonas_codigos_postales` y conservar la correspondencia entre distrito y código postal; adaptar la prueba de cobertura postal a las restricciones del esquema vigente.
+- Compatibilidad con las respuestas de firma de carga y lectura de evidencias, y encabezados CORS duplicados en el acceso.
+- Conteo de despachos no intentados en el resumen del repartidor y correspondencia de distrito y código postal en simulaciones.
 
 ## 0.1.0
 
-Primera línea base de código documentada. Se toma como referencia el commit [0ab1609](https://github.com/Taller-SW-Web/G2-Despacho-Backend/tree/0ab16093007401cbfbe61027ea31b2cf0e7ad2c2), actualmente en `main`, del 17/10/2026. Esa fecha identifica el commit de referencia, no una publicación ni un tag ya creado. Los cambios posteriores de `develop` figuran arriba en `Sin publicar`.
+Primera línea base de código documentada, correspondiente al commit del 17/10/2026 identificado por el tag [v0.1.0](https://github.com/Taller-SW-Web/G2-Despacho-Backend/tree/v0.1.0).
 
 ### Añadido
 

@@ -1,5 +1,7 @@
-name: CI backend
+name: CI/CD backend
 
+# Cadena: compilar y probar -> construir imágenes -> compuerta -> desplegar -> verificar.
+# El despliegue solo ocurre en main (push o ejecución manual) y únicamente si todo lo anterior salió bien.
 on:
   pull_request:
     branches: [develop, main]
@@ -12,9 +14,14 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Solo se cancelan ejecuciones obsoletas de PR; un push a develop/main termina siempre,
+  # para que cada commit integrado conserve su resultado (y su despliegue, en main).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 1. COMPILAR Y PROBAR
+  # ---------------------------------------------------------------------------
   verificador-f02:
     name: Pruebas del verificador F-02 (sin servicios)
     runs-on: ubuntu-24.04
@@ -65,7 +72,7 @@ jobs:
         run: bash ./mvnw --batch-mode --no-transfer-progress -Dpruebas.postgres.externo=false clean verify
 
       - name: Conservar los informes de pruebas
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: pruebas-${{ matrix.servicio }}
@@ -105,3 +112,162 @@ jobs:
             seguridad-local/pruebas/EmisorSeguridadLocalPruebas.java
           java --add-modules jdk.httpserver \
             -cp "$RUNNER_TEMP/seguridad-local-pruebas" EmisorSeguridadLocalPruebas
+
+  # ---------------------------------------------------------------------------
+  # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
+  #    En PR y en develop solo se verifica que cada Dockerfile construye.
+  #    En main, además, se publica la imagen versionada por commit en GHCR.
+  #    seguridad-local se construye pero nunca se publica ni se despliega: es un
+  #    emisor de pruebas que no debe usarse en un despliegue público.
+  # ---------------------------------------------------------------------------
+  imagenes:
+    name: Imagen Docker (${{ matrix.servicio }})
+    needs: [verificador-f02, servicios, seguridad-local]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - servicio: api-gateway
+            publicar: true
+          - servicio: servicio-gestion-despachos
+            publicar: true
+          - servicio: servicio-operacion-reparto
+            publicar: true
+          - servicio: seguridad-local
+            publicar: false
+    env:
+      SERVICIO: ${{ matrix.servicio }}
+      PUBLICAR: ${{ matrix.publicar && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Construir la imagen
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY,,}"
+          imagen="ghcr.io/${repo}/${SERVICIO}"
+          echo "IMAGEN=${imagen}" >> "$GITHUB_ENV"
+          docker build --pull \
+            --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --tag "${imagen}:${GITHUB_SHA}" \
+            --tag "${imagen}:latest" \
+            "./${SERVICIO}"
+          docker image inspect "${imagen}:${GITHUB_SHA}" --format 'Imagen {{.RepoTags}} · {{.Size}} bytes'
+
+      - name: Publicar la imagen en GHCR (solo main)
+        if: env.PUBLICAR == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "${IMAGEN}:${GITHUB_SHA}"
+          docker push "${IMAGEN}:latest"
+          echo "Publicada ${IMAGEN}:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # 3. COMPUERTA: un único check que resume todo lo anterior.
+  #    Es el que conviene exigir en la protección de ramas (no depende de la matriz).
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI backend verde
+    if: ${{ always() }}
+    needs: [verificador-f02, servicios, seguridad-local, imagenes]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Exigir que todas las etapas hayan salido bien
+        env:
+          RESULTADOS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Resultados de las etapas: ${RESULTADOS}"
+          for resultado in ${RESULTADOS}; do
+            if [ "${resultado}" != "success" ]; then
+              echo "::error::Alguna etapa no terminó en success (${RESULTADOS}). No se debe integrar ni desplegar."
+              exit 1
+            fi
+          done
+
+  # ---------------------------------------------------------------------------
+  # 4. DESPLEGAR en Render (solo main) y 5. VERIFICAR la salud posterior.
+  #    Requiere los secretos RENDER_DEPLOY_HOOK_* (ver README, "Despliegue continuo").
+  #    En Render debe estar desactivado el despliegue automático al hacer push: este
+  #    job es el único que despliega, y solo después de que la compuerta pasó.
+  # ---------------------------------------------------------------------------
+  desplegar:
+    name: Desplegar en Render y verificar
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+    needs: [ci-ok]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment: produccion
+    concurrency:
+      group: despliegue-backend-produccion
+      cancel-in-progress: false
+    steps:
+      - name: Obtener el código (para la herramienta de verificación)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Orden: primero los servicios de dominio y al final el Gateway que los enruta.
+      - name: Disparar los despliegues del commit
+        env:
+          HOOK_OPERACION: ${{ secrets.RENDER_DEPLOY_HOOK_OPERACION }}
+          HOOK_GESTION: ${{ secrets.RENDER_DEPLOY_HOOK_GESTION }}
+          HOOK_GATEWAY: ${{ secrets.RENDER_DEPLOY_HOOK_GATEWAY }}
+        run: |
+          set -euo pipefail
+          faltan=0
+          for nombre in OPERACION GESTION GATEWAY; do
+            var="HOOK_${nombre}"
+            if [ -z "${!var}" ]; then
+              echo "::error::Falta el secreto RENDER_DEPLOY_HOOK_${nombre} (Settings > Secrets and variables > Actions)."
+              faltan=1
+            fi
+          done
+          [ "${faltan}" -eq 0 ] || exit 1
+
+          disparar() {
+            local nombre="$1" url="$2" codigo
+            codigo="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --max-time 30 --retry 2 --retry-delay 5 --request POST "${url}&ref=${GITHUB_SHA}")"
+            case "${codigo}" in
+              2??) echo "${nombre}: despliegue solicitado (HTTP ${codigo})" ;;
+              *)   echo "::error::${nombre}: Render respondió HTTP ${codigo}"; return 1 ;;
+            esac
+          }
+          disparar "Operación" "${HOOK_OPERACION}"
+          disparar "Gestión"   "${HOOK_GESTION}"
+          disparar "Gateway"   "${HOOK_GATEWAY}"
+          {
+            echo "### Despliegue solicitado en Render"
+            echo "Commit \`${GITHUB_SHA}\` para Operación, Gestión y Gateway."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # El hook solo encola el despliegue: se espera a que arranque antes de consultar la salud.
+      - name: Verificar la salud de los tres servicios
+        run: |
+          set -uo pipefail
+          sleep 90
+          for intento in $(seq 1 14); do
+            echo "::group::Intento ${intento} de 14"
+            if python3 -B herramientas/mantener_backends_activos.py --una-vez --timeout 90; then
+              echo "::endgroup::"
+              echo "Gateway, Gestión y Operación responden 200 y status=UP." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::endgroup::"
+            sleep 30
+          done
+          echo "::error::Los servicios no quedaron UP tras el despliegue. Revisar los logs en Render."
+          exit 1
