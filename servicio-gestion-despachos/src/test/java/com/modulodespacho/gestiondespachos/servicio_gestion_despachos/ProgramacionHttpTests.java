@@ -74,6 +74,8 @@ class ProgramacionHttpTests {
     static void configurar(DynamicPropertyRegistry propiedades) {
         propiedades.add("despacho.seguridad.url", () -> URL);
         propiedades.add("despacho.productos.url", () -> URL);
+        // El modo LENTO de Productos tarda 1,8 s: el timeout de lectura debe quedar por debajo.
+        propiedades.add("despacho.productos.timeout-lectura-ms", () -> "1000");
         propiedades.add("despacho.operacion.url", () -> URL);
         propiedades.add("despacho.ventas.url", () -> URL);
         propiedades.add("despacho.productos.token-servicio", () -> "tecnico-productos");
