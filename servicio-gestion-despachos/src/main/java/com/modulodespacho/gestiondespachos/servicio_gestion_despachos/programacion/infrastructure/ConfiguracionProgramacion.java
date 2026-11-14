@@ -26,8 +26,17 @@ public class ConfiguracionProgramacion {
 
     @Bean
     ClienteDatosFisicosHttp productosProgramacion(Environment entorno, Clock reloj) {
+        // Productos está en otra región (Azure, Chile): 1,5 s de lectura resultó insuficiente.
+        // Conexión + lectura deben quedar por debajo del response-timeout del gateway (10 s).
         return new ClienteDatosFisicosHttp(
-                cliente(entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1")),
+                cliente(
+                        entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1"),
+                        Duration.ofMillis(
+                                entorno.getProperty(
+                                        "despacho.productos.timeout-conexion-ms", Long.class, 3000L)),
+                        Duration.ofMillis(
+                                entorno.getProperty(
+                                        "despacho.productos.timeout-lectura-ms", Long.class, 6000L))),
                 credenciales(entorno, "productos", "productos:fisicos:leer", reloj));
     }
 
@@ -71,6 +80,10 @@ public class ConfiguracionProgramacion {
     }
 
     private static RestClient cliente(String url) {
+        return cliente(url, Duration.ofSeconds(1), Duration.ofMillis(1500));
+    }
+
+    private static RestClient cliente(String url, Duration conexion, Duration lectura) {
         URI origen = URI.create(url);
         Assert.isTrue(
                 ("http".equalsIgnoreCase(origen.getScheme())
@@ -84,10 +97,10 @@ public class ConfiguracionProgramacion {
         var peticiones =
                 new JdkClientHttpRequestFactory(
                         HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(1))
+                                .connectTimeout(conexion)
                                 .followRedirects(HttpClient.Redirect.NEVER)
                                 .build());
-        peticiones.setReadTimeout(Duration.ofMillis(1500));
+        peticiones.setReadTimeout(lectura);
         return RestClient.builder()
                 .baseUrl(url.replaceAll("/+$", ""))
                 .requestFactory(peticiones)
