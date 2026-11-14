@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Consulta periódicamente la salud pública de Despacho. Solo usa Python estándar."""
+"""Mantiene activo el backend de Productos (G6) consultando su salud.
+
+Productos corre en Azure Container Apps y se apaga cuando no recibe tráfico. Este script
+consulta /health periódicamente. Solo lectura: no envía tokens ni modifica nada.
+Independiente: solo usa Python estándar.
+"""
 
 import argparse
 from datetime import datetime, timezone
@@ -13,16 +18,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-
 SERVICIOS = (
-    ("Gateway", "https://taller-api-gateway.onrender.com/actuator/health", "UP"),
-    ("Gestión", "https://taller-servicio-gestion-despachos.onrender.com/actuator/health", "UP"),
-    ("Operación", "https://taller-servicio-operacion-reparto.onrender.com/actuator/health", "UP"),
-)
-DEPENDENCIAS_COTIZACION = (
-    ("Seguridad (G7)", "https://g7-auth-service.onrender.com/actuator/health", "UP"),
     ("Productos (G6)", "https://api-gateway.calmgrass-aec0b33c.chilecentral.azurecontainerapps.io/health", "ok"),
 )
+
+# --- Lógica de consulta (igual en los tres scripts) ---
+
+INTERVALO_MINIMO = 60
 
 
 class SinRedireccion(urllib.request.HTTPRedirectHandler):
@@ -56,7 +58,7 @@ def segundos_retry_after(valor):
 
 
 def consultar(url, timeout, salud_esperada="UP"):
-    """No envía tokens, no sigue redirecciones ni imprime cuerpos del servidor."""
+    """GET a la URL de salud. Devuelve (correcto, detalle, segundos_de_espera, duracion)."""
     inicio = time.monotonic()
     peticion = urllib.request.Request(url, headers={
         "Accept": "application/json", "User-Agent": "Despacho-Salud/1.0",
@@ -93,41 +95,45 @@ def numero_positivo(valor):
     return numero
 
 
-def main(argumentos=None):
+def preparar_salida():
     for flujo in (sys.stdout, sys.stderr):
         if hasattr(flujo, "reconfigure"):
             flujo.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--intervalo", type=numero_positivo, default=300,
-                        help="Segundos entre consultas por servicio; mínimo 60 (por defecto: 300)")
-    parser.add_argument("--timeout", type=numero_positivo, default=75,
-                        help="Espera máxima por petición, incluyendo arranques lentos (por defecto: 75)")
+
+
+def crear_parser(descripcion, intervalo, timeout=75):
+    parser = argparse.ArgumentParser(description=descripcion)
+    parser.add_argument("--intervalo", type=numero_positivo, default=intervalo,
+                        help=f"Segundos entre consultas por destino; mínimo {INTERVALO_MINIMO} "
+                             f"(por defecto: {intervalo:g})")
+    parser.add_argument("--timeout", type=numero_positivo, default=timeout,
+                        help=f"Espera máxima por petición, incluyendo arranques lentos "
+                             f"(por defecto: {timeout:g})")
     parser.add_argument("--una-vez", action="store_true", help="Consulta todos una vez y termina")
-    destinos = parser.add_mutually_exclusive_group()
-    destinos.add_argument("--url", action="append", type=validar_url,
-                         help="URL completa de salud; repetir para sustituir los tres destinos predeterminados")
-    destinos.add_argument("--con-dependencias", action="store_true",
-                         help="Agrega las consultas de salud de Seguridad (G7) y Productos (G6)")
-    opciones = parser.parse_args(argumentos)
-    if opciones.intervalo < 60:
-        parser.error("El intervalo mínimo es 60 segundos para evitar exceso de solicitudes")
-    servicios = SERVICIOS
-    if opciones.url:
-        servicios = tuple((urllib.parse.urlsplit(url).netloc, url, "UP")
-                          for url in dict.fromkeys(opciones.url))
-    elif opciones.con_dependencias:
-        servicios += DEPENDENCIAS_COTIZACION
-    proximas = {url: 0 for _, url, _ in servicios}
-    print(f"Consultando {len(servicios)} servicios cada {opciones.intervalo:g} s. Ctrl+C para detener.", flush=True)
+    return parser
+
+
+def validar_opciones(parser, opciones):
+    if opciones.intervalo < INTERVALO_MINIMO:
+        parser.error(f"El intervalo mínimo es {INTERVALO_MINIMO} segundos para evitar exceso de solicitudes")
+
+
+def ejecutar(destinos, opciones, consultor=None):
+    """Bucle común: consulta cada destino según su intervalo y respeta Retry-After."""
+    consultor = consultor or consultar
+    destinos = tuple(destinos)
+    proximas = {url: 0 for _, url, _ in destinos}
+    print(f"Consultando {len(destinos)} destino(s) cada {opciones.intervalo:g} s. "
+          f"Ctrl+C para detener.", flush=True)
     try:
         while True:
             todos_correctos = True
-            for nombre, url, salud_esperada in servicios:
+            for nombre, url, esperado in destinos:
                 if time.monotonic() < proximas[url]:
                     continue
                 print(f"Consultando {nombre}...", flush=True)
-                correcto, detalle, espera, duracion = consultar(url, opciones.timeout, salud_esperada)
-                # Respeta Retry-After sin bloquear las consultas de los demás servicios.
+                correcto, detalle, espera, duracion = consultor(url, opciones.timeout, esperado)
+                # Respeta Retry-After sin bloquear las consultas de los demás destinos.
                 demora = max(opciones.intervalo, espera)
                 proximas[url] = time.monotonic() + demora
                 todos_correctos = todos_correctos and correcto
@@ -141,6 +147,16 @@ def main(argumentos=None):
     except KeyboardInterrupt:
         print("\nConsultas detenidas.", flush=True)
         return 0
+
+
+# --- Programa ---
+
+def main(argumentos=None):
+    preparar_salida()
+    parser = crear_parser(__doc__, intervalo=120)
+    opciones = parser.parse_args(argumentos)
+    validar_opciones(parser, opciones)
+    return ejecutar(SERVICIOS, opciones)
 
 
 if __name__ == "__main__":
