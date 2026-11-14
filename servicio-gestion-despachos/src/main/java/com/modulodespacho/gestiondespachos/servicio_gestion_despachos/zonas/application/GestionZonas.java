@@ -103,6 +103,7 @@ public class GestionZonas {
 
         UUID zonaId = UUID.randomUUID();
         CoberturasValidadas coberturas = construirCoberturas(datos);
+        validarDistritosActivos(coberturas, null);
         if (solicitud.estado() == null || solicitud.estado() == EstadoZona.ACTIVO) {
             validarSolapamiento(zonaId, coberturas, datos.nombre());
         }
@@ -137,6 +138,7 @@ public class GestionZonas {
         validarNombreUnico(datos.nombre(), id);
 
         CoberturasValidadas coberturas = construirCoberturas(datos);
+        validarDistritosActivos(coberturas, id);
         if (zona.getEstado() == EstadoZona.ACTIVO)
             validarSolapamiento(id, coberturas, datos.nombre());
 
@@ -406,7 +408,8 @@ public class GestionZonas {
                                                         .distinct()
                                                         .sorted()
                                                         .toList(),
-                                                !completos.contains(distrito.getId())))
+                                                !completos.contains(distrito.getId()),
+                                                distrito.getEstado()))
                         .sorted(Comparator.comparing(DistritoVista::nombre))
                         .toList();
         return new ZonaVista(
@@ -419,6 +422,62 @@ public class GestionZonas {
                 zona.getCreadoEn(),
                 zona.getActualizadoEn(),
                 zona.getVersion());
+    }
+
+    private void validarDistritosActivos(CoberturasValidadas nuevas, UUID zonaId) {
+        // Una edición puede conservar o retirar cobertura inactiva, nunca ampliarla.
+        List<ZonaDistrito> anteriores =
+                zonaId == null ? List.of() : repositorioZonas.coberturasDe(List.of(zonaId));
+        List<ZonaCodigoPostal> codigosAnteriores =
+                zonaId == null ? List.of() : repositorioZonas.codigosPostalesDe(List.of(zonaId));
+        boolean invalida =
+                nuevas.distritos().stream()
+                                .anyMatch(
+                                        c ->
+                                                c.getDistrito().getEstado()
+                                                                == com.modulodespacho
+                                                                        .gestiondespachos
+                                                                        .servicio_gestion_despachos
+                                                                        .zonas.domain.EstadoDistrito
+                                                                        .INACTIVO
+                                                        && anteriores.stream()
+                                                                .noneMatch(
+                                                                        a ->
+                                                                                a.getDistrito()
+                                                                                        .getId()
+                                                                                        .equals(
+                                                                                                c.getDistrito()
+                                                                                                        .getId())))
+                        || nuevas.codigos().stream()
+                                .anyMatch(
+                                        c ->
+                                                c.getDistrito().getEstado()
+                                                                == com.modulodespacho
+                                                                        .gestiondespachos
+                                                                        .servicio_gestion_despachos
+                                                                        .zonas.domain.EstadoDistrito
+                                                                        .INACTIVO
+                                                        && codigosAnteriores.stream()
+                                                                .noneMatch(
+                                                                        a ->
+                                                                                a.getDistrito()
+                                                                                                .getId()
+                                                                                                .equals(
+                                                                                                        c.getDistrito()
+                                                                                                                .getId())
+                                                                                        && a.getCodigoPostal()
+                                                                                                .equals(
+                                                                                                        c
+                                                                                                                .getCodigoPostal())));
+        if (invalida)
+            throw ErrorDeNegocio.de(
+                    400,
+                    "DESP_ERROR_DISTRITO_INACTIVO",
+                    "Las asociaciones nuevas requieren distritos activos",
+                    List.of(
+                            new ErrorDeCampo(
+                                    "distritos",
+                                    "Solo puedes conservar o retirar asociaciones de distritos inactivos")));
     }
 
     private static List<String> limpiarLista(List<String> valores) {

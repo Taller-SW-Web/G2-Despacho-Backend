@@ -144,6 +144,35 @@ class ReprogramacionDespachoHttpTests {
     }
 
     @Test
+    void distritoInactivoNoImpideReprogramarDespachoExistente() throws Exception {
+        String distrito =
+                sql.sql("SELECT id::text FROM distrito WHERE nombre='Lima'")
+                        .query(String.class)
+                        .single();
+        long version = numero("SELECT version FROM distrito WHERE nombre='Lima'");
+        http.perform(
+                        patch("/api/v1/distritos/" + distrito + "/estado")
+                                .header("Authorization", "Bearer gestor")
+                                .contentType("application/json")
+                                .content(
+                                        "{\"estado\":\"INACTIVO\",\"versionDistrito\":"
+                                                + version
+                                                + "}"))
+                .andExpect(status().isOk());
+        try {
+            enviar("gestor", cuerpo("2026-10-25", null))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.estado").value("PENDIENTE_ASIGNACION"));
+            assertThat(texto("SELECT distrito FROM despachos")).isEqualTo("Lima");
+            assertThat(texto("SELECT zona_id::text FROM despachos")).isEqualTo(ZONA);
+        } finally {
+            sql.sql("UPDATE distrito SET estado='ACTIVO' WHERE id::text=:id")
+                    .param("id", distrito)
+                    .update();
+        }
+    }
+
+    @Test
     void replayConservaInstanteConRelojNanosegundoYEjecutorUuidEnMayusculas() throws Exception {
         ((RelojMutable) reloj).ahora.set(AHORA.plusNanos(123456789));
         String ejecutor = "abcdefaa-0000-4000-8000-000000000001";
@@ -642,7 +671,7 @@ class ReprogramacionDespachoHttpTests {
                         .dataSource(url, postgres.getUsername(), postgres.getPassword())
                         .load();
         migracion.migrate();
-        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("10");
+        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("11");
         try (var conexion =
                         java.sql.DriverManager.getConnection(
                                 url, postgres.getUsername(), postgres.getPassword());
