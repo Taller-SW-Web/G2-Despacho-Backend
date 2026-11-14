@@ -1,7 +1,12 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.domain.EstadoDistrito;
 import java.util.List;
 import java.util.UUID;
 
 public record DistritoVista(
-        UUID id, String nombre, List<String> codigosPostales, boolean soloCodigosPostales) {}
+        UUID id,
+        String nombre,
+        List<String> codigosPostales,
+        boolean soloCodigosPostales,
+        EstadoDistrito estado) {}

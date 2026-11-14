@@ -24,6 +24,7 @@ public interface ZonaDistritoRepositorioJpa extends JpaRepository<ZonaDistrito, 
             JOIN FETCH c.zona z
             LEFT JOIN FETCH c.distrito d
             WHERE z.estado = 'ACTIVO'
+              AND d.estado = 'ACTIVO'
               AND lower(d.nombre) = lower(:distrito)
             """)
     List<ZonaDistrito> buscarCobertura(@Param("distrito") String distrito);

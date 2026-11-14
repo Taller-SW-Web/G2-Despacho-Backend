@@ -9,6 +9,7 @@ public class ErrorDeNegocio extends RuntimeException {
     private final String codigo;
     private final List<ErrorDeCampo> errores;
     private String estadoActual;
+    private Long versionDistrito;
     private List<String> skusAfectados = List.of();
 
     private ErrorDeNegocio(int estado, String codigo, String mensaje, List<ErrorDeCampo> errores) {
@@ -46,6 +47,15 @@ public class ErrorDeNegocio extends RuntimeException {
 
     public String getEstadoActual() {
         return estadoActual;
+    }
+
+    public ErrorDeNegocio conVersionDistrito(Long version) {
+        this.versionDistrito = version;
+        return this;
+    }
+
+    public Long getVersionDistrito() {
+        return versionDistrito;
     }
 
     public ErrorDeNegocio conSkusAfectados(List<String> skus) {
