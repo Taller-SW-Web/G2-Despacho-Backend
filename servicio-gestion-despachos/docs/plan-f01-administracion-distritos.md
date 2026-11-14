@@ -2,7 +2,7 @@
 
 **Fecha:** 12/11/2026.
 
-**Estado:** Plan acordado; implementación y verificación pendientes.
+**Estado:** Implementado y verificado localmente el 13/11/2026; revisión del equipo y aceptación humana pendientes.
 
 **Servicio propietario:** Gestión de Despachos.
 
@@ -304,7 +304,16 @@ El resultado esperado es administrar distritos desde el frontend y suspender o r
 
 ## 10. Estado de verificación
 
-Al redactar este plan se revisaron código y documentación. No se implementó el CRUD, no se modificó el esquema y no se ejecutaron pruebas funcionales ni de integración para esta ampliación. Todas las comprobaciones de la sección 8 están pendientes.
+La preparación original del 12/11/2026 fue documental. El 13/11/2026 se ejecutó la ampliación en ramas `feature/f01-administracion-distritos` desde `develop` en backend y frontend, y `docs/f01-administracion-distritos` desde `main` en Specs.
+
+- Especificaciones ES-F01-09 a ES-F01-12 y contrato canónico de Gestión actualizados en Specs; formatos definitivos y precondiciones se consultan allí.
+- V11 implementada y probada tanto desde cero como sobre V10 con datos y asociaciones previas, preservando también las fechas originales.
+- Gestión: `SPRING_FLYWAY_ENABLED=true ./mvnw clean verify`, 267 pruebas aprobadas, sin fallos ni omisiones; PostgreSQL/PostGIS desechable con Testcontainers. La variable habilita Flyway en el proceso de pruebas frente a la configuración local.
+- Gateway: `./mvnw clean verify`, 34 pruebas aprobadas.
+- Frontend: `npm run test:f01` (24 pruebas), `npm run test:administrativo` (234 pruebas), `npm run typecheck` y `npm run build` aprobados.
+- Chromium: `npm run test:distritos:e2e`, dos recorridos aprobados con frontend, Gateway y Gestión reales locales, JWT de Seguridad temporal y Productos simulados; escritorio y móvil verificados. Entorno reproducible en la [guía de pruebas](../../docs/pruebas.md#administración-de-distritos-navegador-y-gateway-aislados).
+
+La evidencia por criterio reside en las carpetas ES-F01-09 a ES-F01-12 de Specs. Revisión por pares, integración de ramas y aceptación humana siguen pendientes; estos resultados no acreditan G6/G7 publicados.
 
 ## 11. Referencias
 

@@ -2,8 +2,11 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.dom
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.UUID;
 
 @Entity
@@ -25,6 +28,33 @@ public class Distrito extends EntidadConFechas {
 
     @Column(name = "ubigeo")
     private String ubigeo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoDistrito estado = EstadoDistrito.ACTIVO;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
+    @Column(name = "catalogo_base", nullable = false, updatable = false)
+    private boolean catalogoBase;
+
+    public EstadoDistrito getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoDistrito estado) {
+        this.estado = estado;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public boolean isCatalogoBase() {
+        return catalogoBase;
+    }
 
     public UUID getId() {
         return id;

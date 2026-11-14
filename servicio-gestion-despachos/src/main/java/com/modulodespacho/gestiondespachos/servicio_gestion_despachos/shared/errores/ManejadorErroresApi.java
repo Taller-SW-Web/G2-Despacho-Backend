@@ -52,6 +52,8 @@ public class ManejadorErroresApi {
         problema.setProperty("errores", error.getErrores());
         if (error.getEstadoActual() != null)
             problema.setProperty("estadoActual", error.getEstadoActual());
+        if (error.getVersionDistrito() != null)
+            problema.setProperty("versionDistrito", error.getVersionDistrito());
         if (!error.getSkusAfectados().isEmpty()) {
             problema.setProperty(
                     "details", java.util.Map.of("skusAfectados", error.getSkusAfectados()));
@@ -62,6 +64,11 @@ public class ManejadorErroresApi {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ProblemDetail cuerpoInvalido(
             HttpMessageNotReadableException error, HttpServletRequest solicitud) {
+        if (solicitud.getRequestURI().startsWith("/api/v1/distritos"))
+            return errorDeNegocio(
+                    com.modulodespacho.gestiondespachos.servicio_gestion_despachos.zonas.application
+                            .GestionDistritos.invalido("solicitud", "El cuerpo JSON no es válido"),
+                    solicitud);
         if (solicitud.getRequestURI().endsWith("/devolucion-origen"))
             return errorDeNegocio(
                     com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.api
@@ -86,6 +93,12 @@ public class ManejadorErroresApi {
         org.springframework.orm.ObjectOptimisticLockingFailureException.class
     })
     ProblemDetail versionDesactualizada(Exception error, HttpServletRequest solicitud) {
+        if (solicitud.getRequestURI().startsWith("/api/v1/distritos"))
+            return problema(
+                    409,
+                    "DESP_ERROR_DISTRITO_DESACTUALIZADO",
+                    "El distrito fue modificado; vuelve a consultar",
+                    solicitud);
         return problema(
                 409,
                 "DESP_ERROR_DESPACHO_DESACTUALIZADO",

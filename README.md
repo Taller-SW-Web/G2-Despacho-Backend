@@ -36,7 +36,7 @@ Las aplicaciones del frontend se ejecutan aparte y tienen sus propios archivos `
 
 ## Bases y migraciones
 
-En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V10 en Gestión** y **V1–V7 en Operación** en este corte. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
+En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V11 en Gestión** y **V1–V7 en Operación** en esta rama. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
 
 Para comprobar las migraciones con el usuario local predeterminado:
 
@@ -61,6 +61,8 @@ El emisor local usa cuentas ficticias y firma JWT de prueba. El gestor `gestor@d
 Con Java 21, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
 
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
+
+La administración de distritos de F-01 dispone de un [recorrido aislado por Gateway y navegador](./docs/pruebas.md#administración-de-distritos-navegador-y-gateway-aislados), con base desechable, Seguridad temporal y Productos simulados.
 
 ## Pipeline CI/CD
 

@@ -149,3 +149,33 @@ python3 -B -m unittest discover -s pruebas -p 'test_verificar_f02_publicado.py' 
 ```
 
 El primer comando escribe el informe JSON en la salida estándar. Devuelve `0` si todas las comprobaciones pasan, `1` si falla alguna y `2` si falta configuración. Ejecutarlo antes de iniciar traslado y después de converger la proyección de F-03. El reporte no acredita login/MFA, variación de capacidad antes/después, captura de ambas apps ni F-04; conservar esa evidencia aparte. Las pruebas unitarias usan dobles explícitos, no el despliegue.
+
+## Administración de distritos: navegador y Gateway aislados
+
+Construir Gestión y Gateway con `./mvnw clean verify` desde cada servicio, con Docker y Java 21. Si la configuración local desactiva Flyway, ejecutar `SPRING_FLYWAY_ENABLED=true ./mvnw clean verify` en Gestión: Testcontainers sigue proporcionando la base desechable; esa variable solo habilita las migraciones en el proceso de pruebas.
+
+Desde la raíz del backend, con los puertos `18080`, `18090` y `4187` disponibles:
+
+```bash
+docker compose --env-file /dev/null -p f01-distritos-qa -f pruebas/compose.f02.yaml -f pruebas/compose.f01-distritos.yaml up --build -d postgres seguridad-local gestion gateway
+curl --fail http://127.0.0.1:18080/actuator/health
+docker compose --env-file /dev/null -p f01-distritos-qa -f pruebas/compose.f02.yaml -f pruebas/compose.f01-distritos.yaml exec -T seguridad-local curl --fail http://gestion:8081/actuator/health
+```
+
+Esperar salud `UP` de ambos proveedores. Este proyecto usa PostgreSQL/PostGIS con `tmpfs`, sin volúmenes persistentes, sin el `.env` del desarrollador y con Seguridad temporal. El override habilita explícitamente Productos simulados para cotización. No inicia Operación ni utiliza una base compartida.
+
+Desde la raíz del frontend, con sus dependencias y Chromium de Playwright instalados:
+
+```bash
+npm run test:distritos:e2e
+```
+
+La configuración inicia Vite en `127.0.0.1:4187`, dirige las APIs al Gateway `18080` y desactiva el modo anónimo. El recorrido exige catálogo inicial de 50 distritos y cero zonas antes de escribir. Desde **Distritos** en zonas comprueba la administración unificada (formulario/listado), regreso con contexto conservado, alta y edición sin salir, filtros, descarte de borradores, duplicados, identidad protegida, confirmación de baja, código postal propio/ajeno, continuidad de otro distrito de la misma zona, conservación de asociaciones al editar zonas, reactivación, conflicto de versión y `401/403`. Compara costo, moneda, peso, volumen y plazo antes/después. La segunda prueba verifica paneles apilados, foco de edición sin quedar bajo la cabecera fija, teclado, desplazamiento interno de la tabla y ausencia de desbordamiento de página en móvil. Capturas y resultados quedan fuera de Git en `test-results/distritos/` del frontend; las trazas HTTP están desactivadas para no capturar tokens.
+
+Al terminar, desde backend:
+
+```bash
+docker compose --env-file /dev/null -p f01-distritos-qa -f pruebas/compose.f02.yaml -f pruebas/compose.f01-distritos.yaml down --remove-orphans
+```
+
+Para repetir, recrear el entorno: las pruebas aceptan cambios reales en su base desechable. Esta verificación acredita frontend, Gateway y Gestión locales con JWT del emisor temporal y Productos simulados; G6/G7 publicados y aceptación humana se registran por separado en la [evidencia de ES-F01-12](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/especificaciones/ES-F01-12-ActivarDesactivarDistrito/evidence.md).
