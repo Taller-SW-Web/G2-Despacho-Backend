@@ -22,7 +22,7 @@ public interface ZonaCodigoPostalRepositorioJpa extends JpaRepository<ZonaCodigo
     @Query(
             """
             SELECT DISTINCT c.zona FROM ZonaCodigoPostal c
-            WHERE c.zona.estado = 'ACTIVO' AND c.codigoPostal = :codigoPostal
+            WHERE c.zona.estado = 'ACTIVO' AND c.distrito.estado = 'ACTIVO' AND c.codigoPostal = :codigoPostal
             """)
     List<Zona> buscarCobertura(@Param("codigoPostal") String codigoPostal);
 

@@ -57,6 +57,8 @@ despacho:
     token-servicio: ${PRODUCTOS_TOKEN_SERVICIO:}
     cliente-id: ${PRODUCTOS_CLIENT_ID:modulo-despacho}
     cliente-secreto: ${PRODUCTOS_CLIENT_SECRET:}
+    timeout-conexion-ms: ${PRODUCTOS_TIMEOUT_CONEXION_MS:3000}
+    timeout-lectura-ms: ${PRODUCTOS_TIMEOUT_LECTURA_MS:6000}
     stub:
       catalogo:
         POL-NEG-M:

@@ -25,16 +25,19 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
     private final ZonaDistritoRepositorioJpa coberturas;
     private final ZonaCodigoPostalRepositorioJpa codigosPostales;
     private final org.springframework.jdbc.core.simple.JdbcClient sql;
+    private final DistritoRepositorioJpa distritos;
 
     public ZonasAdaptadorJpa(
             ZonaRepositorioJpa zonas,
             ZonaDistritoRepositorioJpa coberturas,
             ZonaCodigoPostalRepositorioJpa codigosPostales,
-            org.springframework.jdbc.core.simple.JdbcClient sql) {
+            org.springframework.jdbc.core.simple.JdbcClient sql,
+            DistritoRepositorioJpa distritos) {
         this.zonas = zonas;
         this.coberturas = coberturas;
         this.codigosPostales = codigosPostales;
         this.sql = sql;
+        this.distritos = distritos;
     }
 
     @Override
@@ -100,6 +103,18 @@ public class ZonasAdaptadorJpa implements RepositorioZonas {
 
     @Override
     public Optional<Zona> resolverCobertura(String distrito, String codigoPostal) {
+        // La baja del distrito informado prevalece incluso sobre un código postal ajeno.
+        if (distrito != null
+                && distritos
+                        .buscarPorNombres(List.of(distrito.toLowerCase(java.util.Locale.ROOT)))
+                        .stream()
+                        .anyMatch(
+                                d ->
+                                        d.getEstado()
+                                                == com.modulodespacho.gestiondespachos
+                                                        .servicio_gestion_despachos.zonas.domain
+                                                        .EstadoDistrito.INACTIVO))
+            return Optional.empty();
         Optional<Zona> porDistrito =
                 distrito == null
                         ? Optional.empty()

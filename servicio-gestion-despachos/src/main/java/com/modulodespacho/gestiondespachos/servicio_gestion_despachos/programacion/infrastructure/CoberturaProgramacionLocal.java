@@ -49,9 +49,11 @@ public class CoberturaProgramacionLocal implements CoberturaProgramacion {
                         """
                 SELECT z.id, z.nombre, d.nombre AS distrito, cobertura.codigo_postal FROM zonas z
                 JOIN LATERAL (
-                    SELECT zd.distrito_id, zd.codigo_postal FROM zonas_distritos zd WHERE zd.zona_id = z.id
+                    SELECT zd.distrito_id, zd.codigo_postal FROM zonas_distritos zd
+                    JOIN distrito dd ON dd.id = zd.distrito_id AND dd.estado = 'ACTIVO' WHERE zd.zona_id = z.id
                     UNION ALL
-                    SELECT cp.distrito_id, cp.codigo_postal FROM zonas_codigos_postales cp WHERE cp.zona_id = z.id
+                    SELECT cp.distrito_id, cp.codigo_postal FROM zonas_codigos_postales cp
+                    JOIN distrito dp ON dp.id = cp.distrito_id AND dp.estado = 'ACTIVO' WHERE cp.zona_id = z.id
                     ORDER BY codigo_postal NULLS LAST, distrito_id LIMIT 1
                 ) cobertura ON true
                 JOIN distrito d ON d.id = cobertura.distrito_id

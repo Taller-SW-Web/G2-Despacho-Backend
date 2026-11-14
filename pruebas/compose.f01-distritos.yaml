@@ -1,0 +1,10 @@
+# Override del entorno desechable compose.f02.yaml para el recorrido F-01.
+# Iniciar solo postgres, seguridad-local, gestion y gateway; Productos es un doble explícito.
+services:
+  gestion:
+    environment:
+      SPRING_PROFILES_ACTIVE: productos-simulados
+      LIMITE_COTIZACIONES_POR_MINUTO: '600'
+  gateway:
+    environment:
+      CORS_ORIGENES: http://127.0.0.1:4187
