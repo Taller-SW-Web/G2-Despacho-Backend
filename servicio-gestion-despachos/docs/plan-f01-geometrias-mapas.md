@@ -1,8 +1,8 @@
 # Plan de F-01: geometrías y mapas administrativos
 
-**Fecha:** 12/11/2026.
+**Fecha:** 12/11/2026. **Actualización:** 14/11/2026.
 
-**Estado:** Plan acordado; implementación y verificación pendientes.
+**Estado:** GeoJSON distritales y maquetas preparados localmente; formalización en Specs, validación topológica e implementación pendientes.
 
 **Servicio propietario:** Gestión de Despachos.
 
@@ -79,41 +79,79 @@ Ya existen:
 
 Falta implementar su carga, consulta y representación administrativa. La existencia de las columnas y las dependencias no acredita que haya geometrías cargadas en un entorno concreto. [cite: 4]
 
+La administración de distritos ya cuenta con implementación y verificación local del 13/11/2026, incluida V11. Esta ampliación utilizará ese catálogo y sus UUID, ubigeos, estados y restricciones de identidad como base. Su evidencia y los pendientes de aceptación se consultan en el plan del CRUD. [cite: 1]
+
 El frontend utiliza React 19, TypeScript y Mantine, pero todavía no tiene una biblioteca cartográfica instalada.
 
 Las especificaciones actuales de F-01 excluyen los mapas; se actualizará ese alcance antes de implementar. [cite: 5]
 
-## 4. Preparación de los datos iniciales
+## 4. Datos iniciales preparados
 
-Se revisarán como candidatos los archivos identificados en el checkout local de `geojson/peru-geojson-datasets/`, fuera de este repositorio:
+### 4.1. Archivo de origen
+
+La preparación local utilizó la versión detallada del checkout de `geojson/peru-geojson-datasets/`, fuera de este repositorio:
 
 ```text
-peru-geojson-datasets/
-├── lima_callao_distritos.geojson
-└── lima_callao_distritos_simple.geojson
+/home/elesel/Escritorio/geojson/peru-geojson-datasets/lima_callao_distritos.geojson
 ```
 
-Contienen 50 entidades: 43 distritos de Lima y siete del Callao.
+El origen contiene 50 entidades: 43 distritos de Lima y siete del Callao.
 
 | Archivo | Contenido observado | Tamaño aproximado |
 |---|---|---|
-| `lima_callao_distritos.geojson` | 50 entidades `MultiPolygon`. | 1,65 MiB. |
-| `lima_callao_distritos_simple.geojson` | 50 entidades `Polygon`. | 141 KiB. |
+| `lima_callao_distritos.geojson` | 50 entidades `MultiPolygon`; utilizado para exportar las geometrías completas. | 1,65 MiB. |
+| `lima_callao_distritos_simple.geojson` | 50 entidades `Polygon`; referencia disponible, no utilizada en la exportación. | 141 KiB. |
 
-La inspección estructural realizada no sustituye una validación topológica ni confirma la vigencia de los límites. La fuente candidata se referencia para preparar su evaluación, no como un conjunto ya adoptado. [cite: 6]
+El README del origen declara licencias MIT y Apache-2.0 y referencia las fuentes geográficas del conjunto. Queda pendiente fijar su revisión y documentar la procedencia, atribución y vigencia de los límites antes de adoptar el conjunto para la carga inicial. [cite: 6]
 
-### 4.1. Trabajo de preparación
+### 4.2. Entregable local: un GeoJSON por distrito
 
-1. Confirmar procedencia, versión, atribución y vigencia.
-2. Revisar la calidad de los límites.
-3. Crear una correspondencia entre cada geometría y su ubigeo.
-4. Resolver variantes nominales y errores de codificación.
-5. Validar polígonos, partes separadas y anillos interiores.
-6. Producir un conjunto normalizado reproducible.
+Se generaron 50 archivos UTF-8 con JSON legible en:
 
-Los identificadores del 1 al 50 presentes en esos archivos no son ubigeos. Además, Mi Perú aparece con un nombre mal codificado y requiere una correspondencia revisada.
+```text
+/home/elesel/Escritorio/distritos-geojson/
+├── 070101_callao.geojson
+├── 070107_mi_peru.geojson
+├── 150101_lima.geojson
+├── 150130_san_borja.geojson
+└── ... (50 archivos en total)
+```
 
-Se conservarán los archivos originales. La normalización no cambiará los nombres ni ubigeos del catálogo de Despacho.
+Cada archivo contiene un `FeatureCollection` con una única `Feature` y la geometría `MultiPolygon` completa del distrito. Sus propiedades son exclusivamente:
+
+| Propiedad | Contenido |
+|---|---|
+| `nombre` | Nombre legible de la tabla proporcionada por el usuario. |
+| `provincia` | `Lima` o `Callao`. |
+| `departamento` | `Lima` o `Callao`, respectivamente. |
+| `ubigeo` | Texto de seis dígitos, preservando los ceros iniciales del Callao. |
+
+Los nombres de archivo siguen `<ubigeo>_<nombre_sin_tildes_en_minusculas_con_guiones_bajos>.geojson`. Ejemplos: `150130_san_borja.geojson` y `070107_mi_peru.geojson`.
+
+La correspondencia se resolvió por provincia y nombre normalizados, utilizando la tabla de 50 ubigeos proporcionada por el usuario. Se corrigió el nombre mal codificado de Mi Perú en la exportación y se le asignó `"070107"`.
+
+Los identificadores numéricos del origen no son ubigeos ni UUID del catálogo. Los archivos exportados no inventan UUID, estado, versión ni fechas administrativas. La importación resolverá el distrito existente por `ubigeo`, conservando su identidad y los datos del catálogo.
+
+### 4.3. Comprobaciones realizadas
+
+- 50 archivos releídos y deserializados correctamente, con una entidad por archivo.
+- Distribución de 43 distritos de Lima y siete del Callao.
+- 50 ubigeos de texto válidos por formato y únicos, coincidentes con la tabla del usuario, sin correspondencias faltantes o repetidas.
+- Las cuatro propiedades previstas y los nombres de archivo coinciden con cada distrito.
+- Igualdad profunda de las 50 geometrías respecto del origen, incluidas sus 72 489 posiciones de coordenadas numéricas finitas.
+- Archivo de origen intacto, comprobado mediante SHA-256 antes y después de exportar.
+
+Esta comprobación acredita la estructura, la correspondencia con la tabla y la conservación de las geometrías. La validez topológica mediante PostGIS, la vigencia de los límites y la correspondencia contra el catálogo del entorno de importación siguen pendientes.
+
+### 4.4. Preparación pendiente para la entrega
+
+1. Fijar procedencia y revisión del conjunto, con su atribución y licencias.
+2. Validar con PostGIS las geometrías y revisar su calidad geográfica en una base desechable.
+3. Contrastar los ubigeos contra el catálogo del entorno de prueba, sin modificar sus nombres, estados ni asociaciones.
+4. Incorporar el proceso de exportación y verificación como una herramienta mantenida, con catálogo de correspondencias, huellas y resultado reproducible.
+5. Definir la ubicación compartida y versionada del conjunto aceptado y de su manifiesto de procedencia.
+
+La carpeta del Escritorio y el script temporal de exportación son artefactos locales de preparación; la aplicación recibirá el contenido mediante el importador, sin depender de esas rutas. Los archivos originales se conservan.
 
 ## 5. Persistencia y geometrías
 
@@ -181,13 +219,17 @@ En la sección Distritos habrá una acción Importar geometrías.
 8. Guardar geometrías, histórico y auditoría.
 9. Actualizar la vista administrativa.
 
+El importador aceptará los archivos individuales de la sección 4: por ejemplo, cargar `150130_san_borja.geojson` propondrá aplicar una geometría al distrito con ubigeo `150130`. No será necesario reunir los 50 distritos en un único archivo. Un `FeatureCollection` con varias entidades seguirá el mismo flujo, sujeto a los límites de la sección 8.1; cada archivo confirmado constituye su propio lote atómico.
+
 ### 6.2. Identificación de distritos
 
-- Si existe ubigeo válido en el archivo, se asociará con el distrito correspondiente.
+- Si existe ubigeo válido en `properties.ubigeo`, se asociará con el distrito correspondiente, incluidos los ceros iniciales del Callao; el backend confirmará su existencia.
 - Si falta, se podrán sugerir coincidencias por departamento, provincia y nombre.
 - Una sugerencia nominal requerirá confirmación explícita.
 - Los distritos desconocidos deberán registrarse mediante el CRUD.
 - Los nombres y estados del archivo no sobrescribirán los del catálogo.
+
+Para los 50 archivos preparados, los nombres, la provincia y el departamento sirven como información de revisión; el ubigeo determina la correspondencia. La fuente y la versión se declararán en la importación y se conservarán como metadatos, ya que no forman parte de esas cuatro propiedades.
 
 ### 6.3. Previsualización
 
@@ -259,9 +301,26 @@ Valores iniciales propuestos:
 
 Se verificarán en Gateway y Gestión. El límite habitual de las solicitudes de cotización conservará su configuración.
 
+Los 50 archivos preparados ocupan en total 6 382 371 bytes (aproximadamente 6,09 MiB) por su formato legible. El mayor es `150114_la_molina.geojson`, con 880 224 bytes (aproximadamente 0,84 MiB); todos caben individualmente bajo el máximo propuesto de 5 MiB. Las 72 489 posiciones del conjunto completo también quedan por debajo del límite de complejidad propuesto. El tamaño se comprobará sobre el cuerpo real enviado, incluidos los metadatos y su envoltura, no sobre la suma de tamaños de una carpeta.
+
 ## 9. Frontend administrativo
 
-### 9.1. Sección Distritos
+### 9.1. Maquetas disponibles
+
+Se prepararon seis maquetas de referencia en `/home/elesel/Escritorio/maquetas-f01-geometrias-mapas/`, con `galeria.html`, `LEEME.md` y `00-vista-general.png` para su revisión conjunta:
+
+| Archivo | Escenario |
+|---|---|
+| `01-distritos-mapa.png` | Mapa de distritos, filtros, leyenda y ficha geográfica. |
+| `02-zona-seleccion-mapa.png` | Formulario de zona y selección sincronizada con el mapa. |
+| `03-importar-archivo.png` | Selección del GeoJSON y declaración de fuente y versión. |
+| `04-correspondencias-distritos.png` | Coincidencias por ubigeo y revisión de asociaciones. |
+| `05-previsualizar-confirmar.png` | Comparación y confirmación de primeras cargas y reemplazos. |
+| `06-validacion-errores.png` | Incidencias geométricas y de correspondencia. |
+
+Son propuestas visuales con datos y estados ilustrativos, no evidencia de una interfaz implementada ni de errores reales del conjunto. Se trasladarán al diseño de Specs al formalizar el alcance. [cite: 10]
+
+### 9.2. Sección Distritos
 
 Mantendrá su acceso independiente de Zonas y tarifas.
 
@@ -277,7 +336,7 @@ Incluirá:
 
 La leyenda combinará color, contorno y texto, respetando el tema existente.
 
-### 9.2. Formulario de zonas
+### 9.3. Formulario de zonas
 
 En escritorio se dispondrán el formulario y el mapa en paneles contiguos. En móvil se ofrecerán vistas adaptadas y un resumen claro de selección.
 
@@ -292,7 +351,7 @@ Comportamiento:
 - Los conflictos se presentarán visualmente y se validarán en el backend.
 - La selección se persistirá únicamente al pulsar Guardar zona.
 
-### 9.3. Tecnología y funcionamiento
+### 9.4. Tecnología y funcionamiento
 
 Propuesta técnica:
 
@@ -337,6 +396,7 @@ Las carpetas SDD incluirán `spec.md`, `plan.md`, `tasks.md`, `ui.md` cuando cor
 ### 11.1. Backend y datos
 
 - Importación válida y consulta de GeoJSON.
+- Carga de un archivo distrital preparado, incluyendo Mi Perú con `"070107"`, y comprobación de asociación al UUID existente por ubigeo.
 - Conservación de partes separadas y huecos.
 - Rechazo de geometrías inválidas y ubigeos desconocidos.
 - Límites de tamaño y complejidad.
@@ -344,6 +404,8 @@ Las carpetas SDD incluirán `spec.md`, `plan.md`, `tasks.md`, `ui.md` cuando cor
 - Reversión completa ante fallos.
 - Histórico y auditoría coherentes.
 - Conservación de nombres, estados, tarifas y asociaciones.
+
+La conservación de partes separadas y huecos se probará además con geometrías de prueba específicas: las 50 entidades del conjunto preparado contienen en total 50 partes y 50 anillos, por lo que no ejercitan esos casos por sí solas.
 
 ### 11.2. Frontend
 
@@ -394,15 +456,17 @@ El recorrido en navegador se realizará mediante el Gateway y un entorno de prue
 
 ## 12. Orden de implementación
 
-| Etapa | Entregable |
-|---|---|
-| 1 | Especificaciones, contrato administrativo y diseño de interfaz. |
-| 2 | Dataset normalizado y correspondencias por ubigeo revisadas. |
-| 3 | Persistencia, versiones, histórico y auditoría. |
-| 4 | APIs de consulta, validación e importación; ajuste acotado del Gateway. |
-| 5 | Mapa de distritos e importador visual. |
-| 6 | Selección en mapa y representación de zonas. |
-| 7 | Pruebas de regresión, recorrido integrado y evidencia. |
+| Etapa | Entregable | Estado al 14/11/2026 |
+|---|---|---|
+| 1 | Especificaciones, contrato administrativo y diseño de interfaz. | Pendiente en Specs; seis maquetas locales disponibles como insumo. |
+| 2 | Dataset normalizado y correspondencias por ubigeo revisadas. | Exportación de 50 archivos y comprobaciones estructurales completadas; falta aceptación geográfica, contraste con el catálogo y preparación reproducible de entrega. |
+| 3 | Persistencia, versiones, histórico y auditoría. | Pendiente; utilizar una migración nueva posterior a las existentes. |
+| 4 | APIs de consulta, validación e importación; ajuste acotado del Gateway. | Pendiente. |
+| 5 | Mapa de distritos e importador visual. | Pendiente; aceptar los GeoJSON individuales preparados. |
+| 6 | Selección en mapa y representación de zonas. | Pendiente. |
+| 7 | Pruebas de regresión, recorrido integrado y evidencia. | Pendiente. |
+
+El siguiente incremento es formalizar el alcance y las operaciones en Specs utilizando las maquetas y los archivos ya preparados. La preparación restante del conjunto puede avanzar en paralelo; la persistencia y las APIs se implementarán después de fijar esas definiciones.
 
 Las ramas de código partirán de `develop`, por ejemplo `feature/f01-geometrias-mapas`. La documentación canónica de Specs seguirá su flujo de ramas desde `main`. [cite: 9]
 
@@ -414,7 +478,17 @@ El resultado esperado de esta entrega es que el administrador pueda visualizar t
 
 ## 13. Estado de verificación
 
-Este documento registra el plan y la revisión previa de código, dependencias y archivos candidatos. Todavía no se implementaron las APIs geográficas ni los mapas, no se ejecutaron migraciones y no se cargaron geometrías. Las pruebas funcionales y de integración de la sección 11 están pendientes.
+Al 14/11/2026 están disponibles los 50 GeoJSON distritales y las seis maquetas locales. Se ejecutaron las comprobaciones de exportación descritas en la sección 4.3, con 50 correspondencias correctas y conservación íntegra de las geometrías.
+
+La huella SHA-256 del archivo detallado utilizado es:
+
+```text
+b0627d6c0a5617fef2054ef066f54dd2d1e4c15d2506c7fef034fef6fc48db9e
+```
+
+El script utilizado para generar y verificar los archivos quedó temporalmente en `/tmp/opencode/exportar-distritos-geojson.mjs`; su incorporación a una ubicación mantenida sigue pendiente.
+
+Las APIs geográficas, la persistencia de sus metadatos e histórico y los mapas siguen pendientes de implementación. Esta preparación no ejecutó migraciones, no importó geometrías a una base ni validó su topología con PostGIS. Las pruebas funcionales y de integración de la sección 11, incluidos Maven, frontend y recorrido por Gateway, siguen pendientes para esta ampliación. La evidencia previa del CRUD de distritos mantiene su alcance propio. [cite: 1]
 
 ## 14. Referencias
 
@@ -423,7 +497,8 @@ Este documento registra el plan y la revisión previa de código, dependencias y
 3. [cite: 3] [Contrato externo y convenciones compartidas](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md), especialmente cotización, autenticación, errores e idempotencia.
 4. [cite: 4] [Migración V1: esquema e índices espaciales](../src/main/resources/db/migration/V1__esquema_original_gestion.sql) y [dependencias de Gestión](../pom.xml).
 5. [cite: 5] [Funcionalidad F-01](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/funcionalidades/F-01-Gestor_ZonasGeograficas.md), [diseño visual de F-01](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/disenio/funcionalidades/f-01.md) y [UI de ES-F01-02](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/especificaciones/ES-F01-02-RegistrarZonaCobertura/ui.md).
-6. [cite: 6] [Repositorio candidato peru-geojson-datasets](https://github.com/joseluisq/peru-geojson-datasets); procedencia y adecuación del conjunto pendientes de la revisión descrita en la sección 4.
+6. [cite: 6] [Repositorio peru-geojson-datasets](https://github.com/joseluisq/peru-geojson-datasets), su README y licencias `LICENSE-MIT` y `LICENSE-APACHE`; origen de la exportación local, con revisión y adecuación geográfica pendientes según la sección 4.
 7. [cite: 7] [Configuración del Gateway](../../api-gateway/src/main/resources/application.yaml) y [filtro de tamaño de solicitudes](../../api-gateway/src/main/java/com/modulodespacho/api_gateway/transversal/FiltroTamanoSolicitud.java).
 8. [cite: 8] [Metadatos publicados de React Leaflet 5.0.0](https://registry.npmjs.org/react-leaflet/5.0.0), [documentación de React Leaflet](https://react-leaflet.js.org/docs/start-introduction/) y [política de teselas de OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/) si se utiliza ese proveedor.
 9. [cite: 9] [Reglas del backend](../../AGENTS.md), [reglas de Specs](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/AGENTS.md) y [guía de contribución](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/CONTRIBUTING.md).
+10. [cite: 10] Galería local `/home/elesel/Escritorio/maquetas-f01-geometrias-mapas/galeria.html` y guía `LEEME.md` de esa carpeta; propuestas visuales pendientes de incorporación a Specs.
