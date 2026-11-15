@@ -1,0 +1,11 @@
+{
+  "fuente": "peru-geojson-datasets",
+  "repositorio": "https://github.com/joseluisq/peru-geojson-datasets",
+  "versionFuente": "2c2a8ae7dc317767a389a37b6b5ef4d3fc51ec16",
+  "archivo": "lima_callao_distritos.geojson",
+  "sha256": "b0627d6c0a5617fef2054ef066f54dd2d1e4c15d2506c7fef034fef6fc48db9e",
+  "licencias": ["MIT", "Apache-2.0"],
+  "atribucion": "© 2020 Jose Quintana; conservar los avisos LICENSE-MIT y LICENSE-APACHE del origen al redistribuir.",
+  "correspondencias": "Tabla de 50 distritos y ubigeos proporcionada por el usuario; catálogo base V2 de Gestión.",
+  "vigenciaOficial": "No certificada por esta exportación; revisar antes de adoptar límites administrativos oficiales."
+}

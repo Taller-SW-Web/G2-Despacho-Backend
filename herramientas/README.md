@@ -1,5 +1,7 @@
 # Herramientas: mantener activos los servicios
 
+La preparación de límites GeoJSON utiliza `preparar_geometrias.py`; consultar [preparación reproducible de geometrías](../datos/geometrias/README.md). Es independiente de las herramientas periódicas descritas a continuación.
+
 Los servicios del plan free de Render se apagan tras **15 minutos sin tráfico**, y Productos (G6),
 en Azure Container Apps, también se apaga cuando no recibe peticiones. Si un servicio está apagado,
 la primera petición tarda en responder mientras arranca, y las llamadas entre servicios pueden fallar

@@ -36,7 +36,7 @@ Las aplicaciones del frontend se ejecutan aparte y tienen sus propios archivos `
 
 ## Bases y migraciones
 
-En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V11 en Gestión** y **V1–V7 en Operación** en esta rama. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
+En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V12 en Gestión** y **V1–V7 en Operación** en esta rama. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
 
 Para comprobar las migraciones con el usuario local predeterminado:
 
@@ -63,6 +63,14 @@ Con Java 21, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Win
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
 
 La administración de distritos de F-01 dispone de un [recorrido aislado por Gateway y navegador](./docs/pruebas.md#administración-de-distritos-navegador-y-gateway-aislados), con base desechable, Seguridad temporal y Productos simulados.
+
+## Geometrías y mapas administrativos de F-01
+
+Distritos ofrece vista Tabla/Mapa e importación GeoJSON con previsualización, asociación por ubigeo, validación PostGIS y confirmación explícita. Zonas permite consultar su composición y seleccionar distritos desde el mapa del formulario. La cotización conserva su contrato y resolución por distrito/código postal.
+
+V12 incorpora metadatos, propuestas temporales e histórico geográfico; no carga límites automáticamente. La [preparación reproducible](./datos/geometrias/README.md) fija origen, revisión, catálogo y huellas. El [recorrido de mapas](./docs/pruebas.md#geometrías-y-mapas-administrativos-f-01) usa exclusivamente PostGIS desechable, Gateway y Seguridad temporal.
+
+`GEOMETRIAS_MAXIMO_BYTES=5242880` configura el cuerpo máximo de validación/importación en Gateway y Gestión. El máximo ordinario del Gateway continúa en `SOLICITUD_MAXIMO_BYTES=1048576`. Mantener ambos servicios con el mismo máximo geográfico y reiniciarlos al cambiarlo.
 
 ## Pipeline CI/CD
 
