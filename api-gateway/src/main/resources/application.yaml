@@ -48,3 +48,4 @@ despacho:
     origenes: ${CORS_ORIGENES:http://localhost:5173,http://localhost:5174,http://localhost:8081,http://localhost:8082}
   solicitudes:
     maximo-bytes: ${SOLICITUD_MAXIMO_BYTES:1048576}
+    geometrias-maximo-bytes: ${GEOMETRIAS_MAXIMO_BYTES:5242880}

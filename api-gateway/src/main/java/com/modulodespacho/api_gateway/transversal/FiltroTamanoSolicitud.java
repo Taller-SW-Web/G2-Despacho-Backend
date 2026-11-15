@@ -20,13 +20,17 @@ import reactor.core.publisher.Mono;
 public class FiltroTamanoSolicitud implements WebFilter {
 
     private final int maximoBytes;
+    private final int maximoGeometrias;
     private final ProblemasGateway problemas;
 
     public FiltroTamanoSolicitud(
             @Value("${despacho.solicitudes.maximo-bytes}") int maximoBytes,
+            @Value("${despacho.solicitudes.geometrias-maximo-bytes:5242880}") int maximoGeometrias,
             ProblemasGateway problemas) {
         Assert.isTrue(maximoBytes > 0, "El tamaño máximo de solicitud debe ser positivo");
+        Assert.isTrue(maximoGeometrias > 0, "El tamaño máximo geográfico debe ser positivo");
         this.maximoBytes = maximoBytes;
+        this.maximoGeometrias = maximoGeometrias;
         this.problemas = problemas;
     }
 
@@ -35,11 +39,18 @@ public class FiltroTamanoSolicitud implements WebFilter {
         if (!intercambio.getRequest().getPath().value().startsWith("/api/v1/")) {
             return cadena.filter(intercambio);
         }
-        if (intercambio.getRequest().getHeaders().getContentLength() > maximoBytes) {
+        String ruta = intercambio.getRequest().getPath().value();
+        boolean geografica =
+                org.springframework.http.HttpMethod.POST.equals(
+                                intercambio.getRequest().getMethod())
+                        && (ruta.equals("/api/v1/distritos/geometrias/validaciones")
+                                || ruta.equals("/api/v1/distritos/geometrias/importaciones"));
+        int limite = geografica ? maximoGeometrias : maximoBytes;
+        if (intercambio.getRequest().getHeaders().getContentLength() > limite) {
             return rechazar(intercambio);
         }
         // Limita también cuerpos por fragmentos que no declaran Content-Length.
-        return DataBufferUtils.join(intercambio.getRequest().getBody(), maximoBytes)
+        return DataBufferUtils.join(intercambio.getRequest().getBody(), limite)
                 .map(
                         datos -> {
                             byte[] contenido = new byte[datos.readableByteCount()];

@@ -27,6 +27,8 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  geometrias:
+    maximo-bytes: ${GEOMETRIAS_MAXIMO_BYTES:5242880}
   demo:
     sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
     usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
