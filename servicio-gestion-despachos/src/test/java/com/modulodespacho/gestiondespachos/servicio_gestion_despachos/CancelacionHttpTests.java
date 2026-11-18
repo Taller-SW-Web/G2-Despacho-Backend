@@ -127,7 +127,7 @@ class CancelacionHttpTests {
                 .isEqualTo(2);
         assertThat(
                         numero(
-                                "SELECT count(*) FROM historial_estados_despacho WHERE tipo_operacion='CANCELACION_POR_ANULACION' AND ejecutor_id='modulo-ventas' AND ejecutor_tipo='SERVICIO'"))
+                                "SELECT count(*) FROM historial_estados_despacho WHERE tipo_operacion='ANULACION_REGISTRADA' AND ejecutor_id='modulo-ventas' AND ejecutor_tipo='SERVICIO'"))
                 .isEqualTo(1);
         assertThat(
                         texto(
