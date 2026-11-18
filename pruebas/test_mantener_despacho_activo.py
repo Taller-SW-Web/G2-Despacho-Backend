@@ -8,7 +8,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from herramientas.mantener_backends_activos import consultar, main, segundos_retry_after
+from herramientas.mantener_despacho_activo import consultar, main, segundos_retry_after
 
 
 class RespuestasSalud(BaseHTTPRequestHandler):
@@ -41,7 +41,7 @@ class RespuestasSalud(BaseHTTPRequestHandler):
         pass
 
 
-class MantenerBackendsTests(unittest.TestCase):
+class MantenerDespachoTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.servidor = ThreadingHTTPServer(("127.0.0.1", 0), RespuestasSalud)
@@ -74,7 +74,7 @@ class MantenerBackendsTests(unittest.TestCase):
         servicios = (("Gestión", self.origen + "/gestion", "UP"),)
         dependencias = (("G7", self.origen + "/seguridad", "UP"),
                         ("G6", self.origen + "/productos", "ok"))
-        modulo = "herramientas.mantener_backends_activos"
+        modulo = "herramientas.mantener_despacho_activo"
         inicio = len(RespuestasSalud.llegadas)
         with patch(modulo + ".SERVICIOS", servicios), patch(modulo + ".DEPENDENCIAS_COTIZACION", dependencias):
             with redirect_stdout(io.StringIO()):

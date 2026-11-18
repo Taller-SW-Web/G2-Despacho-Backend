@@ -54,10 +54,19 @@ public class ConfiguracionProgramacion {
             Clock reloj,
             org.springframework.jdbc.core.simple.JdbcClient sql,
             tools.jackson.databind.json.JsonMapper json) {
+        // Ventas corre en Render free: tras hibernar, 1,5 s de lectura agota los reintentos.
+        // El envío es asíncrono (outbox), así que un plazo mayor no afecta a ninguna petición.
         return new EntregaEventosProgramacion(
                 sql,
                 json,
-                cliente(entorno.getProperty("despacho.ventas.url", "http://127.0.0.1:1")),
+                cliente(
+                        entorno.getProperty("despacho.ventas.url", "http://127.0.0.1:1"),
+                        Duration.ofMillis(
+                                entorno.getProperty(
+                                        "despacho.ventas.timeout-conexion-ms", Long.class, 3000L)),
+                        Duration.ofMillis(
+                                entorno.getProperty(
+                                        "despacho.ventas.timeout-lectura-ms", Long.class, 5000L))),
                 credenciales(entorno, "ventas", "ventas:pedidos:estado", reloj),
                 cliente(entorno.getRequiredProperty("despacho.operacion.url")),
                 credenciales(entorno, "operacion", "", reloj),

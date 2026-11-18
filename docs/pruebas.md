@@ -179,3 +179,28 @@ docker compose --env-file /dev/null -p f01-distritos-qa -f pruebas/compose.f02.y
 ```
 
 Para repetir, recrear el entorno: las pruebas aceptan cambios reales en su base desechable. Esta verificación acredita frontend, Gateway y Gestión locales con JWT del emisor temporal y Productos simulados; G6/G7 publicados y aceptación humana se registran por separado en la [evidencia de ES-F01-12](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/especificaciones/ES-F01-12-ActivarDesactivarDistrito/evidence.md).
+
+## Geometrías y mapas administrativos F-01
+
+Requisitos: Gestión y Gateway construidos con `./mvnw clean verify` (en Gestión habilitar Flyway en el proceso de pruebas si el entorno local lo desactiva), Docker, frontend instalado y Chromium de Playwright. Preparar los 50 GeoJSON mediante la [herramienta reproducible](../datos/geometrias/README.md), con el origen detallado y una carpeta de salida nueva:
+
+```bash
+python3 herramientas/preparar_geometrias.py --origen /ruta/lima_callao_distritos.geojson --destino /tmp/distritos-f01 --verificar-postgis
+docker compose --env-file /dev/null -p f01-geometrias-qa -f pruebas/compose.f02.yaml -f pruebas/compose.f01-distritos.yaml up --build -d postgres seguridad-local gestion gateway
+```
+
+Este proyecto utiliza bases en `tmpfs`, sin `.env` del desarrollador y sin puertos de bases persistentes. Reservar `18080/18090/4187`; no ejecutar al mismo tiempo que otro recorrido que los utilice. Esperar salud de Gateway/Gestión. Desde frontend:
+
+```bash
+F01_GEOMETRIAS_DIR=/tmp/distritos-f01 npm run test:geometrias:e2e
+```
+
+El runner exige 50 distritos sin geometría y cero zonas antes de escribir. Comprueba primera carga mediante pantalla, previsualización sin mutación, respuesta perdida con reintento exacto, error topológico, reemplazo, carga de las otras 49 entidades con cuerpo mayor de 1 MiB, igualdad de las 50 geometrías consultadas con el conjunto preparado y conservación de la cotización. La selección real de polígonos por teclado, cobertura postal sin relleno, inactivos, conflictos, mapa base caído, guardado y composición se verifican en escritorio/móvil. El proveedor de teselas se hace fallar explícitamente para verificar recuperación; no se atribuye disponibilidad externa.
+
+Resultados y seis capturas quedan fuera de Git en `test-results/geometrias/` del frontend. La evidencia por criterio se conserva en ES-F01-13 a ES-F01-16 de Specs. Para repetir, recrear el entorno; para terminar:
+
+```bash
+docker compose --env-file /dev/null -p f01-geometrias-qa -f pruebas/compose.f02.yaml -f pruebas/compose.f01-distritos.yaml down --remove-orphans
+```
+
+La prueba acredita Gateway/Gestión locales con PostGIS desechable, JWT temporal y Productos simulados. La topología no certifica vigencia oficial de los límites. La aceptación humana y la integración publicada se registran por separado.

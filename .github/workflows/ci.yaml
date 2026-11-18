@@ -261,7 +261,7 @@ jobs:
           sleep 90
           for intento in $(seq 1 14); do
             echo "::group::Intento ${intento} de 14"
-            if python3 -B herramientas/mantener_backends_activos.py --una-vez --timeout 90; then
+            if python3 -B herramientas/mantener_despacho_activo.py --una-vez --timeout 90; then
               echo "::endgroup::"
               echo "Gateway, Gestión y Operación responden 200 y status=UP." | tee -a "$GITHUB_STEP_SUMMARY"
               exit 0

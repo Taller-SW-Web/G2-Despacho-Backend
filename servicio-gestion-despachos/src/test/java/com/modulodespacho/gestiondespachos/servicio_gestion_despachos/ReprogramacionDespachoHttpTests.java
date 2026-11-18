@@ -671,7 +671,7 @@ class ReprogramacionDespachoHttpTests {
                         .dataSource(url, postgres.getUsername(), postgres.getPassword())
                         .load();
         migracion.migrate();
-        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("11");
+        assertThat(migracion.info().current().getVersion().toString()).isEqualTo("12");
         try (var conexion =
                         java.sql.DriverManager.getConnection(
                                 url, postgres.getUsername(), postgres.getPassword());
