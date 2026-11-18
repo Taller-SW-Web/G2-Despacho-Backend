@@ -583,6 +583,7 @@ class CierreDespachoHttpTests {
 
     @Test
     void anulacionRealImpideReprogramarYPermiteCierreConVersionActualizada() throws Exception {
+        String anulacion = "$.historial[?(@.tipoOperacion == 'ANULACION_REGISTRADA')]";
         when(decodificador.decode("ventas"))
                 .thenReturn(
                         Jwt.withTokenValue("ventas")
@@ -607,7 +608,12 @@ class CierreDespachoHttpTests {
                                 .header("Authorization", "Bearer gestor"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pedidoAnulado").value(true))
-                .andExpect(jsonPath("$.acciones.reprogramar.habilitada").value(false));
+                .andExpect(jsonPath("$.acciones.reprogramar.habilitada").value(false))
+                .andExpect(jsonPath(anulacion + ".estadoNuevo").value("FALLIDO"))
+                .andExpect(jsonPath(anulacion + ".funcionalidadOrigen").value("F-02"))
+                .andExpect(jsonPath(anulacion + ".motivo.codigo").value("PEDIDO_ANULADO"))
+                .andExpect(jsonPath(anulacion + ".motivo.etiqueta").value("Pedido anulado"))
+                .andExpect(jsonPath(anulacion + ".datos.idPedido").doesNotExist());
         http.perform(
                         post("/api/v1/despachos/" + DESPACHO + "/reprogramacion")
                                 .header("Authorization", "Bearer gestor")
