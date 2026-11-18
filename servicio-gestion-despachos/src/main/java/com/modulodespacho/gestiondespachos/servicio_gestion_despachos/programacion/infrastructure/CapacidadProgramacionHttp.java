@@ -54,7 +54,7 @@ public final class CapacidadProgramacionHttp
                                             "idJornada",
                                             intencion.idJornada(),
                                             "requerido",
-                                            intencion.carga()))
+                                            cargaOperacion(intencion.carga())))
                             .retrieve()
                             .onStatus(
                                     estado -> estado.value() != 200,
@@ -308,6 +308,19 @@ public final class CapacidadProgramacionHttp
         } catch (RuntimeException error) {
             throw noDisponible();
         }
+    }
+
+    /**
+     * Operación admite 3 decimales en peso y 4 en volumen. El volumen calculado con las medidas de
+     * G6 puede tener más (32 x 23 x 3 cm = 0,002208 m3), así que se redondea hacia arriba: nunca
+     * reserva menos capacidad de la que ocupa el paquete y la carga es siempre la misma en los
+     * reintentos idempotentes.
+     */
+    static Carga cargaOperacion(Carga carga) {
+        return new Carga(
+                carga.pesoKg().setScale(3, java.math.RoundingMode.CEILING),
+                carga.volumenM3().setScale(4, java.math.RoundingMode.CEILING),
+                carga.paquetes());
     }
 
     private String credencial() {
