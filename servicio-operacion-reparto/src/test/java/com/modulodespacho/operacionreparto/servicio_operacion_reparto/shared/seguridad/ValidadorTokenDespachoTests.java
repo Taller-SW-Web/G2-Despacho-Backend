@@ -123,6 +123,21 @@ class ValidadorTokenDespachoTests {
     }
 
     @Test
+    void aceptaTokenDeServicioDeG7SinJti() {
+        var base = token("servicio", List.of("api-productos", "api-ventas"));
+        Jwt sinJti =
+                Jwt.withTokenValue("prueba")
+                        .headers(h -> h.putAll(base.getHeaders()))
+                        .claims(
+                                c -> {
+                                    c.putAll(base.getClaims());
+                                    c.remove("jti");
+                                })
+                        .build();
+        assertThat(validador.validate(sinJti).hasErrors()).isFalse();
+    }
+
+    @Test
     void elServicioNoDependeDelClaimScope() {
         var base = token("servicio", List.of("api-despacho"));
         Jwt sinScope =
