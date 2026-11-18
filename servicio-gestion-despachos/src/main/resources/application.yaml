@@ -50,6 +50,8 @@ despacho:
     token-servicio: ${VENTAS_TOKEN_SERVICIO:}
     cliente-id: ${VENTAS_CLIENT_ID:modulo-despacho}
     cliente-secreto: ${VENTAS_CLIENT_SECRET:}
+    timeout-conexion-ms: ${VENTAS_TIMEOUT_CONEXION_MS:3000}
+    timeout-lectura-ms: ${VENTAS_TIMEOUT_LECTURA_MS:5000}
   cotizacion:
     limite-por-minuto: ${LIMITE_COTIZACIONES_POR_MINUTO:60}
   productos:
