@@ -8,6 +8,21 @@ El perfil `render` deja Flyway desactivado por defecto y usa `ddl-auto=none`. An
 
 Las rutas internas usan el token de servicio de `modulo-despacho` sin scopes internos. Gestión y Operación contemplan una excepción de audiencia para ese cliente propio mientras G7 no emita `api-despacho` para el intercambio interno. Los clientes técnicos externos conservan los requisitos de su contrato. Configurar las credenciales de Gestión y Operación, en particular `OPERACION_CLIENT_SECRET` en Gestión para reservar o liberar capacidad.
 
+### Eventos hacia Ventas
+
+Gestión envía los cambios de estado al webhook de Ventas desde la bandeja `eventos_salientes`. Configurar en Gestión:
+
+| Variable | Valor |
+|---|---|
+| `VENTAS_URL` | Origen de Ventas, sin `/api/v1`. Gestión agrega `/api/v1/integraciones/despachos/eventos`. |
+| `VENTAS_CLIENT_ID` | `modulo-despacho`. |
+| `VENTAS_CLIENT_SECRET` | Secreto de `modulo-despacho` emitido por G7. Es el mismo cliente que usan Productos y Operación; el token se pide con el scope `ventas:pedidos:estado` y G7 debe concederlo con `aud=api-ventas`. |
+| `VENTAS_TIMEOUT_CONEXION_MS` / `VENTAS_TIMEOUT_LECTURA_MS` | Opcionales. Por defecto, 3000 y 5000 ms. |
+
+El ciclo de recuperación revisa la bandeja cada 30 segundos mientras Gestión está activo. Un evento hacia Ventas tiene un envío y hasta cinco reintentos con espera creciente (30 s, 1, 2, 4 y 8 minutos). Cualquier respuesta distinta de `2xx` o un tiempo agotado cuenta como fallo. Agotados los reintentos, queda en `ENVIO_FALLIDO`.
+
+Un gestor puede devolver ese evento a la cola con `POST /api/v1/despachos/{idDespacho}/eventos-ventas/{idEvento}/reenvio`. Requiere el rol `GESTOR_DESPACHO` y responde `202` con `estadoEnvio=PENDIENTE`. El contenido y el `idEvento` no cambian, de modo que Ventas sigue deduplicando. Responde `404 DESP_ERROR_EVENTO_NO_ENCONTRADO` si el evento no pertenece a ese despacho o no va dirigido a Ventas, y `409 DESP_ERROR_EVENTO_NO_REENVIABLE` con `estadoActual` si no está en `ENVIO_FALLIDO`. Los identificadores de los eventos aparecen en las comunicaciones del detalle de la incidencia.
+
 
 ## Pipeline CI/CD
 
