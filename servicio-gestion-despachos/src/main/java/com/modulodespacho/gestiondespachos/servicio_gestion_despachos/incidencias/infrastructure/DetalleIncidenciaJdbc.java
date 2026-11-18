@@ -71,7 +71,9 @@ public class DetalleIncidenciaJdbc implements LectorDetalleIncidencia {
         var historial =
                 sql.sql(
                                 """
-                SELECT h.*, m.etiqueta AS motivo_etiqueta FROM historial_estados_despacho h
+                SELECT h.*, COALESCE(m.etiqueta, CASE WHEN h.tipo_operacion = 'ANULACION_REGISTRADA'
+                    AND h.motivo_codigo = 'PEDIDO_ANULADO' THEN 'Pedido anulado' END) AS motivo_etiqueta
+                FROM historial_estados_despacho h
                 LEFT JOIN motivos_fallo m ON m.codigo = h.motivo_codigo
                 WHERE h.despacho_id::text = :id ORDER BY h.registrado_en, h.id
                 """)

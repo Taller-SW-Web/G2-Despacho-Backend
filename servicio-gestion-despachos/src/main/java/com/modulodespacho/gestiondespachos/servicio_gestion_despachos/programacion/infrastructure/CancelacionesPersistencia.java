@@ -202,7 +202,7 @@ public class CancelacionesPersistencia implements AlmacenCancelaciones {
                             """
                     INSERT INTO historial_estados_despacho(despacho_id,tipo_operacion,estado_anterior,estado_nuevo,funcionalidad_origen,
                         ejecutor_tipo,ejecutor_id,origen,motivo_codigo,observaciones,datos,registrado_en)
-                    VALUES (:id,'CANCELACION_POR_ANULACION',:anterior,:nuevo,'F-02','SERVICIO',:actor,'AUTOMATICO',:motivo,:observacion,CAST(:datos AS jsonb),:ahora)
+                    VALUES (:id,'ANULACION_REGISTRADA',:anterior,:nuevo,'F-02','SERVICIO',:actor,'AUTOMATICO',:motivo,:observacion,CAST(:datos AS jsonb),:ahora)
                     """)
                     .param("id", intencion.idDespacho())
                     .param("anterior", actual.estado())
