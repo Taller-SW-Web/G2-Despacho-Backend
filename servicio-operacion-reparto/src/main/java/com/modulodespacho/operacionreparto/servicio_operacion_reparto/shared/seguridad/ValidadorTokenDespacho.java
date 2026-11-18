@@ -41,9 +41,11 @@ public final class ValidadorTokenDespacho implements OAuth2TokenValidator<Jwt> {
                                 && roles instanceof List<?> lista
                                 && lista.stream().allMatch(String.class::isInstance)
                         : true;
+        // G7 incluye jti en los tokens de acceso, no en los de servicio (client_credentials).
         boolean identificadorValido =
-                token.getClaims().get("jti") instanceof String identificador
-                        && !identificador.isBlank();
+                !"acceso".equals(tipo)
+                        || token.getClaims().get("jti") instanceof String identificador
+                                && !identificador.isBlank();
         if (identidadValida
                 && tipoValido
                 && audienciaValida
