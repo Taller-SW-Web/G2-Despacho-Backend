@@ -30,7 +30,13 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** API y PostgreSQL reales; identidad, Productos y reloj controlados, sin bases persistentes. */
 @Import({TestcontainersConfiguration.class, DistritosHttpTests.RelojPruebas.class})
-@SpringBootTest(properties = {"SEGURIDAD_URL=http://localhost:9999", "spring.flyway.enabled=true"})
+@SpringBootTest(
+        properties = {
+            "SEGURIDAD_URL=http://localhost:9999",
+            "spring.flyway.enabled=true",
+            // El procesador de liberaciones consulta tablas que preparar() trunca en cascada.
+            "despacho.recepcion.procesador-habilitado=false"
+        })
 @AutoConfigureMockMvc
 class DistritosHttpTests {
     @Autowired MockMvc http;
