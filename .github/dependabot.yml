@@ -1,0 +1,51 @@
+# Actualizaciones automáticas de dependencias (OWASP Top 10:2025 A03).
+# Dependabot abre PR contra develop; cada PR pasa por el mismo pipeline,
+# incluida la revisión de seguridad, antes de poder integrarse.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directories:
+      - /api-gateway
+      - /servicio-gestion-despachos
+      - /servicio-operacion-reparto
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    groups:
+      maven-menores:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: docker
+    directories:
+      - /api-gateway
+      - /servicio-gestion-despachos
+      - /servicio-operacion-reparto
+      - /seguridad-local
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Lima
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: build(docker)
+
+  # Mantiene actualizados los SHA fijados de las actions sin perder el pin.
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Lima
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci(deps)
