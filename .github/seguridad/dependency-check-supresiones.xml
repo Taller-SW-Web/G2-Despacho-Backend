@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Falsos positivos aceptados de OWASP Dependency-Check.
+  Cada supresión debe indicar en <notes> el CVE, por qué no aplica y quién la revisó.
+  No suprimir una vulnerabilidad real para que el pipeline pase: actualizar la dependencia.
+  Formato: https://dependency-check.github.io/DependencyCheck/general/suppression.html
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>

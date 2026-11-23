@@ -1,6 +1,7 @@
 name: CI/CD backend
 
-# Cadena: compilar y probar -> construir imágenes -> compuerta -> desplegar -> verificar.
+# Cadena: compilar y probar + revisión de seguridad -> construir y escanear imágenes
+#         -> compuerta -> desplegar -> verificar.
 # El despliegue solo ocurre en main (push o ejecución manual) y únicamente si todo lo anterior salió bien.
 on:
   pull_request:
@@ -143,6 +144,148 @@ jobs:
             -cp "$RUNNER_TEMP/ventas-local-pruebas" VentasLocalPruebas
 
   # ---------------------------------------------------------------------------
+  # 1b. REVISIÓN DE SEGURIDAD: dependencias vulnerables
+  #     OWASP Top 10:2025 A03 (Software Supply Chain Failures).
+  #     Analiza las dependencias Maven de los servicios desplegables y falla si
+  #     alguna tiene una vulnerabilidad conocida con CVSS >= 7 (alta o crítica).
+  #     La base NVD se guarda en caché por día; NVD_API_KEY acelera su descarga.
+  # ---------------------------------------------------------------------------
+  dependencias:
+    name: Seguridad (dependencias Maven)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VERSION_DEPENDENCY_CHECK: '13.0.0'
+      DATOS_DEPENDENCY_CHECK: ${{ github.workspace }}/../dependency-check-datos
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Java 21 y la caché de Maven
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: '*/pom.xml'
+
+      - name: Calcular la clave diaria de la base de vulnerabilidades
+        id: fecha
+        run: echo "dia=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Recuperar la base de vulnerabilidades (NVD)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.DATOS_DEPENDENCY_CHECK }}
+          key: dependency-check-${{ env.VERSION_DEPENDENCY_CHECK }}-${{ steps.fecha.outputs.dia }}
+          restore-keys: dependency-check-${{ env.VERSION_DEPENDENCY_CHECK }}-
+
+      - name: Analizar las dependencias de cada servicio
+        shell: bash
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          SUPRESIONES: ${{ github.workspace }}/.github/seguridad/dependency-check-supresiones.xml
+        run: |
+          set -uo pipefail
+          argumentos=(
+            "org.owasp:dependency-check-maven:${VERSION_DEPENDENCY_CHECK}:check"
+            "-DdataDirectory=${DATOS_DEPENDENCY_CHECK}"
+            "-DsuppressionFile=${SUPRESIONES}"
+            "-DfailBuildOnCVSS=7"
+            "-Dformats=HTML,JSON"
+            "-DossindexAnalyzerEnabled=false"
+            "-DassemblyAnalyzerEnabled=false"
+          )
+          if [ -n "${NVD_API_KEY}" ]; then
+            argumentos+=("-DnvdApiKey=${NVD_API_KEY}")
+          else
+            echo "::warning::Falta el secreto NVD_API_KEY: la primera descarga de la base NVD puede tardar mucho."
+          fi
+
+          estado=0
+          for servicio in api-gateway servicio-gestion-despachos servicio-operacion-reparto; do
+            echo "::group::Dependencias de ${servicio}"
+            if (cd "${servicio}" && bash ./mvnw --batch-mode --no-transfer-progress "${argumentos[@]}"); then
+              echo "- ${servicio}: sin vulnerabilidades con CVSS >= 7" >> "$GITHUB_STEP_SUMMARY"
+            else
+              if ls "${servicio}"/target/dependency-check-report.json > /dev/null 2>&1; then
+                echo "::error::${servicio}: hay dependencias con vulnerabilidades CVSS >= 7 (ver el informe dependency-check)."
+                echo "- ${servicio}: **vulnerabilidades CVSS >= 7**" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "::error::${servicio}: Dependency-Check no pudo terminar el análisis (sin informe). Revisar el grupo del log; sin NVD_API_KEY la NVD suele rechazar la descarga."
+                echo "- ${servicio}: **análisis no completado** (error de Dependency-Check o de la base NVD)" >> "$GITHUB_STEP_SUMMARY"
+              fi
+              estado=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${estado}"
+
+      - name: Conservar los informes de dependencias
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-dependencias
+          path: '*/target/dependency-check-report.*'
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # 1c. REVISIÓN DE SEGURIDAD: secretos en el código y en el historial
+  #     OWASP Top 10:2025 A02 (Security Misconfiguration) y A08 (Integrity).
+  #     gitleaks revisa todos los commits; el informe se guarda con los valores
+  #     ocultos (--redact). El binario se descarga por versión fija y se verifica
+  #     su SHA-256 antes de ejecutarlo.
+  # ---------------------------------------------------------------------------
+  secretos:
+    name: Seguridad (secretos en el historial)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      VERSION_GITLEAKS: '8.30.1'
+      SHA256_GITLEAKS: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - name: Obtener el código con todo el historial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Instalar gitleaks verificado
+        shell: bash
+        run: |
+          set -euo pipefail
+          archivo="gitleaks_${VERSION_GITLEAKS}_linux_x64.tar.gz"
+          curl --silent --show-error --fail --location --output "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION_GITLEAKS}/${archivo}"
+          echo "${SHA256_GITLEAKS}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" gitleaks
+
+      - name: Buscar secretos en todos los commits
+        shell: bash
+        run: |
+          set -uo pipefail
+          if "${RUNNER_TEMP}/gitleaks" git --redact --no-banner --verbose \
+              --report-format json --report-path gitleaks-informe.json .; then
+            echo "gitleaks: no se encontraron secretos en el historial." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::gitleaks encontró posibles secretos. Revocar y rotar la credencial antes de limpiar el historial."
+            echo "gitleaks: **posibles secretos encontrados** (ver el informe)." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Conservar el informe de secretos (valores ocultos)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-secretos
+          path: gitleaks-informe.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.
@@ -151,7 +294,7 @@ jobs:
   # ---------------------------------------------------------------------------
   imagenes:
     name: Imagen Docker (${{ matrix.servicio }})
-    needs: [verificador-f02, servicios, seguridad-local, ventas-local]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -174,6 +317,10 @@ jobs:
     env:
       SERVICIO: ${{ matrix.servicio }}
       PUBLICAR: ${{ matrix.publicar && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+      # Trivy se descarga por versión fija y SHA-256: no se usa aquasecurity/trivy-action,
+      # cuyas etiquetas fueron reescritas con malware en marzo de 2026 (CVE-2026-33634).
+      VERSION_TRIVY: '0.76.2'
+      SHA256_TRIVY: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
     steps:
       - name: Obtener el código
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -194,6 +341,52 @@ jobs:
             "./${SERVICIO}"
           docker image inspect "${imagen}:${GITHUB_SHA}" --format 'Imagen {{.RepoTags}} · {{.Size}} bytes'
 
+      # Revisión de seguridad de la imagen (OWASP Top 10:2025 A03): paquetes del
+      # sistema operativo base y bibliotecas del JAR. Una imagen con vulnerabilidades
+      # CRITICAL o HIGH que ya tienen corrección no se publica ni se despliega.
+      - name: Instalar Trivy verificado
+        run: |
+          set -euo pipefail
+          archivo="trivy_${VERSION_TRIVY}_Linux-64bit.tar.gz"
+          curl --silent --show-error --fail --location --output "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${VERSION_TRIVY}/${archivo}"
+          echo "${SHA256_TRIVY}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" trivy
+          "${RUNNER_TEMP}/trivy" --version
+
+      - name: Generar el SBOM de la imagen (CycloneDX)
+        run: |
+          set -euo pipefail
+          "${RUNNER_TEMP}/trivy" image --quiet --format cyclonedx \
+            --output "sbom-${SERVICIO}.cdx.json" "${IMAGEN}:${GITHUB_SHA}"
+          echo "SBOM generado: sbom-${SERVICIO}.cdx.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Escanear vulnerabilidades de la imagen (Trivy)
+        run: |
+          set -euo pipefail
+          if "${RUNNER_TEMP}/trivy" image --quiet --no-progress \
+              --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+              --format table --output "trivy-${SERVICIO}.txt" "${IMAGEN}:${GITHUB_SHA}"; then
+            echo "- Imagen ${SERVICIO}: sin vulnerabilidades CRITICAL/HIGH corregibles" >> "$GITHUB_STEP_SUMMARY"
+            cat "trivy-${SERVICIO}.txt"
+          else
+            cat "trivy-${SERVICIO}.txt"
+            echo "::error::La imagen ${SERVICIO} tiene vulnerabilidades CRITICAL/HIGH con corrección disponible."
+            echo "- Imagen ${SERVICIO}: **vulnerabilidades CRITICAL/HIGH**" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Conservar el SBOM y el informe de la imagen
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-imagen-${{ matrix.servicio }}
+          path: |
+            sbom-${{ matrix.servicio }}.cdx.json
+            trivy-${{ matrix.servicio }}.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Publicar la imagen en GHCR (solo main)
         if: env.PUBLICAR == 'true'
         env:
@@ -206,13 +399,14 @@ jobs:
           echo "Publicada ${IMAGEN}:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # 3. COMPUERTA: un único check que resume todo lo anterior.
+  # 3. COMPUERTA: un único check que resume todo lo anterior, incluida la
+  #    revisión de seguridad (dependencias, secretos e imágenes).
   #    Es el que conviene exigir en la protección de ramas (no depende de la matriz).
   # ---------------------------------------------------------------------------
   ci-ok:
     name: CI backend verde
     if: ${{ always() }}
-    needs: [verificador-f02, servicios, seguridad-local, imagenes]
+    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos, imagenes]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
