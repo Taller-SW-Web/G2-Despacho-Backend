@@ -55,7 +55,6 @@ La revisión de seguridad forma parte del pipeline y bloquea la integración y e
 | Secretos expuestos (A02, A08) | `Seguridad (secretos en el historial)` | gitleaks 8.30.1 | Hay una credencial en cualquier commit del historial. |
 | Imagen vulnerable (A03) | `Imagen Docker (<servicio>)` | Trivy 0.76.2 | La imagen tiene vulnerabilidades CRITICAL o HIGH que ya tienen corrección. La imagen no se publica en GHCR. |
 | Inventario de componentes (A03) | `Imagen Docker (<servicio>)` | Trivy (SBOM CycloneDX) | No falla; deja el SBOM como artefacto. |
-| Dependencias desactualizadas (A03) | Dependabot | `.github/dependabot.yml` | No falla; abre PR semanales hacia `develop`. |
 
 Los informes quedan 30 días como artefactos de la ejecución: `seguridad-dependencias`, `seguridad-secretos` y `seguridad-imagen-<servicio>`. El informe de gitleaks oculta los valores encontrados (`--redact`).
 
