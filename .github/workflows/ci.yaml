@@ -198,6 +198,59 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
+  # 1c. REVISIÓN DE SEGURIDAD: secretos en el código y en el historial
+  #     OWASP Top 10:2025 A02 (Security Misconfiguration) y A08 (Integrity).
+  #     gitleaks revisa todos los commits; el informe se guarda con los valores
+  #     ocultos (--redact). El binario se descarga por versión fija y se verifica
+  #     su SHA-256 antes de ejecutarlo.
+  # ---------------------------------------------------------------------------
+  secretos:
+    name: Seguridad (secretos en el historial)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      VERSION_GITLEAKS: '8.30.1'
+      SHA256_GITLEAKS: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - name: Obtener el código con todo el historial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Instalar gitleaks verificado
+        shell: bash
+        run: |
+          set -euo pipefail
+          archivo="gitleaks_${VERSION_GITLEAKS}_linux_x64.tar.gz"
+          curl --silent --show-error --fail --location --output "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION_GITLEAKS}/${archivo}"
+          echo "${SHA256_GITLEAKS}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" gitleaks
+
+      - name: Buscar secretos en todos los commits
+        shell: bash
+        run: |
+          set -uo pipefail
+          if "${RUNNER_TEMP}/gitleaks" git --redact --no-banner --verbose \
+              --report-format json --report-path gitleaks-informe.json .; then
+            echo "gitleaks: no se encontraron secretos en el historial." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::gitleaks encontró posibles secretos. Revocar y rotar la credencial antes de limpiar el historial."
+            echo "gitleaks: **posibles secretos encontrados** (ver el informe)." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Conservar el informe de secretos (valores ocultos)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-secretos
+          path: gitleaks-informe.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.

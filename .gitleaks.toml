@@ -1,0 +1,10 @@
+# Configuración de gitleaks para el job "Seguridad (secretos en el historial)".
+# Usa las reglas por defecto y solo excluye las plantillas sin valores reales.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Plantillas de variables sin valores reales"
+paths = [
+  '''(^|/)\.env\.example$''',
+]
