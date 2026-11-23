@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>4.1.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.modulodespacho.operacionreparto</groupId>
@@ -133,6 +133,18 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<dependencyManagement>
+		<dependencies>
+			<!-- springdoc 3.1.1 trae swagger-ui 5.32.14, que incluye DOMPurify 3.4.13 con XSS
+			     (CVE-2026-116803, CVE-2026-116804). swagger-ui 5.35.1 incluye DOMPurify 3.4.17,
+			     que los corrige. Retirar al actualizar springdoc a una versión que ya lo traiga. -->
+			<dependency>
+				<groupId>org.webjars</groupId>
+				<artifactId>swagger-ui</artifactId>
+				<version>5.35.1</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>

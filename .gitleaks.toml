@@ -1,0 +1,20 @@
+# Configuración de gitleaks para el job "Seguridad (secretos en el historial)".
+# Usa las reglas por defecto y excluye solo rutas revisadas que no contienen credenciales.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Plantillas sin valores reales y cachés de herramientas sin credenciales"
+paths = [
+  '''(^|/)\.env\.example$''',
+  # Caché de Graphify (ya no versionada desde d29c89f). Contiene hashes SHA-256
+  # del contenido de cada archivo, no credenciales: gitleaks los confunde con
+  # claves por su entropía. Revisado en el commit d854faa.
+  '''(^|/)graphify-out/''',
+]
+# Valores ficticios de pruebas revisados uno por uno. Se lista el valor exacto,
+# no la carpeta de pruebas, para que un secreto real en un test sí se detecte.
+regexes = [
+  # Token del doble HTTP de G6 en CotizacionG6HttpTests (commit 2107fb2 y posteriores).
+  '''^credencial-propia-g6$''',
+]
