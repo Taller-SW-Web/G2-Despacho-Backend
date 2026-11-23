@@ -114,6 +114,90 @@ jobs:
             -cp "$RUNNER_TEMP/seguridad-local-pruebas" EmisorSeguridadLocalPruebas
 
   # ---------------------------------------------------------------------------
+  # 1b. REVISIÓN DE SEGURIDAD: dependencias vulnerables
+  #     OWASP Top 10:2025 A03 (Software Supply Chain Failures).
+  #     Analiza las dependencias Maven de los servicios desplegables y falla si
+  #     alguna tiene una vulnerabilidad conocida con CVSS >= 7 (alta o crítica).
+  #     La base NVD se guarda en caché por día; NVD_API_KEY acelera su descarga.
+  # ---------------------------------------------------------------------------
+  dependencias:
+    name: Seguridad (dependencias Maven)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VERSION_DEPENDENCY_CHECK: '13.0.0'
+      DATOS_DEPENDENCY_CHECK: ${{ github.workspace }}/../dependency-check-datos
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Java 21 y la caché de Maven
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: '*/pom.xml'
+
+      - name: Calcular la clave diaria de la base de vulnerabilidades
+        id: fecha
+        run: echo "dia=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Recuperar la base de vulnerabilidades (NVD)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.DATOS_DEPENDENCY_CHECK }}
+          key: dependency-check-${{ env.VERSION_DEPENDENCY_CHECK }}-${{ steps.fecha.outputs.dia }}
+          restore-keys: dependency-check-${{ env.VERSION_DEPENDENCY_CHECK }}-
+
+      - name: Analizar las dependencias de cada servicio
+        shell: bash
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          SUPRESIONES: ${{ github.workspace }}/.github/seguridad/dependency-check-supresiones.xml
+        run: |
+          set -uo pipefail
+          argumentos=(
+            "org.owasp:dependency-check-maven:${VERSION_DEPENDENCY_CHECK}:check"
+            "-DdataDirectory=${DATOS_DEPENDENCY_CHECK}"
+            "-DsuppressionFile=${SUPRESIONES}"
+            "-DfailBuildOnCVSS=7"
+            "-Dformats=HTML,JSON"
+            "-DossindexAnalyzerEnabled=false"
+            "-DassemblyAnalyzerEnabled=false"
+          )
+          if [ -n "${NVD_API_KEY}" ]; then
+            argumentos+=("-DnvdApiKey=${NVD_API_KEY}")
+          else
+            echo "::warning::Falta el secreto NVD_API_KEY: la primera descarga de la base NVD puede tardar mucho."
+          fi
+
+          estado=0
+          for servicio in api-gateway servicio-gestion-despachos servicio-operacion-reparto; do
+            echo "::group::Dependencias de ${servicio}"
+            if (cd "${servicio}" && bash ./mvnw --batch-mode --no-transfer-progress "${argumentos[@]}"); then
+              echo "- ${servicio}: sin vulnerabilidades con CVSS >= 7" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::${servicio}: hay dependencias con vulnerabilidades CVSS >= 7 (ver el informe dependency-check)."
+              echo "- ${servicio}: **vulnerabilidades CVSS >= 7**" >> "$GITHUB_STEP_SUMMARY"
+              estado=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${estado}"
+
+      - name: Conservar los informes de dependencias
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-dependencias
+          path: '*/target/dependency-check-report.*'
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.
