@@ -139,6 +139,49 @@ public final class EmisorSeguridadLocalPruebas {
             comprobar(
                     enviar(cliente, rutaToken, scopeInterno).statusCode() == 403,
                     "Los scopes internos ya no se conceden");
+            comprobar(
+                    !claimsTecnico.contains("ventas:")
+                            && claimsTecnico.contains("\"aud\":[\"api-despacho\"]"),
+                    "El token tecnico sin scopes no habilita Ventas");
+            var ventas =
+                    enviar(
+                            cliente,
+                            rutaToken,
+                            formulario(
+                                    Map.of(
+                                            "grant_type",
+                                            "client_credentials",
+                                            "client_id",
+                                            "modulo-despacho",
+                                            "client_secret",
+                                            "despacho-local-no-produccion",
+                                            "scope",
+                                            "ventas:pedidos:estado")));
+            comprobar(ventas.statusCode() == 200, "modulo-despacho obtiene token para Ventas");
+            String claimsVentas =
+                    decodificar(extraer(ventas.body(), "accessToken").split("\\.")[1]);
+            comprobar(
+                    claimsVentas.contains("\"aud\":[\"api-ventas\"]")
+                            && claimsVentas.contains("\"scope\":\"ventas:pedidos:estado\"")
+                            && claimsVentas.contains("\"sub\":\"modulo-despacho\""),
+                    "El token para Ventas lleva su audiencia y scope (§7.3)");
+            var ventasDesdeOtro =
+                    enviar(
+                            cliente,
+                            rutaToken,
+                            formulario(
+                                    Map.of(
+                                            "grant_type",
+                                            "client_credentials",
+                                            "client_id",
+                                            "modulo-marketplace",
+                                            "client_secret",
+                                            "despacho-local-no-produccion",
+                                            "scope",
+                                            "ventas:pedidos:estado")));
+            comprobar(
+                    ventasDesdeOtro.statusCode() == 403,
+                    "Solo modulo-despacho notifica a Ventas");
             String credencialesIncorrectas =
                     formulario(
                             Map.of(
