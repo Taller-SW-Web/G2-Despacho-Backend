@@ -1,6 +1,7 @@
 name: CI/CD backend
 
-# Cadena: compilar y probar -> construir imágenes -> compuerta -> desplegar -> verificar.
+# Cadena: compilar y probar + revisión de seguridad -> construir y escanear imágenes
+#         -> compuerta -> desplegar -> verificar.
 # El despliegue solo ocurre en main (push o ejecución manual) y únicamente si todo lo anterior salió bien.
 on:
   pull_request:
@@ -259,7 +260,7 @@ jobs:
   # ---------------------------------------------------------------------------
   imagenes:
     name: Imagen Docker (${{ matrix.servicio }})
-    needs: [verificador-f02, servicios, seguridad-local]
+    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -362,13 +363,14 @@ jobs:
           echo "Publicada ${IMAGEN}:${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # 3. COMPUERTA: un único check que resume todo lo anterior.
+  # 3. COMPUERTA: un único check que resume todo lo anterior, incluida la
+  #    revisión de seguridad (dependencias, secretos e imágenes).
   #    Es el que conviene exigir en la protección de ramas (no depende de la matriz).
   # ---------------------------------------------------------------------------
   ci-ok:
     name: CI backend verde
     if: ${{ always() }}
-    needs: [verificador-f02, servicios, seguridad-local, imagenes]
+    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos, imagenes]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
