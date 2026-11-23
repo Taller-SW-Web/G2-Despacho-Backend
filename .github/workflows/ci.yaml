@@ -181,8 +181,13 @@ jobs:
             if (cd "${servicio}" && bash ./mvnw --batch-mode --no-transfer-progress "${argumentos[@]}"); then
               echo "- ${servicio}: sin vulnerabilidades con CVSS >= 7" >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "::error::${servicio}: hay dependencias con vulnerabilidades CVSS >= 7 (ver el informe dependency-check)."
-              echo "- ${servicio}: **vulnerabilidades CVSS >= 7**" >> "$GITHUB_STEP_SUMMARY"
+              if ls "${servicio}"/target/dependency-check-report.json > /dev/null 2>&1; then
+                echo "::error::${servicio}: hay dependencias con vulnerabilidades CVSS >= 7 (ver el informe dependency-check)."
+                echo "- ${servicio}: **vulnerabilidades CVSS >= 7**" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "::error::${servicio}: Dependency-Check no pudo terminar el análisis (sin informe). Revisar el grupo del log; sin NVD_API_KEY la NVD suele rechazar la descarga."
+                echo "- ${servicio}: **análisis no completado** (error de Dependency-Check o de la base NVD)" >> "$GITHUB_STEP_SUMMARY"
+              fi
               estado=1
             fi
             echo "::endgroup::"
