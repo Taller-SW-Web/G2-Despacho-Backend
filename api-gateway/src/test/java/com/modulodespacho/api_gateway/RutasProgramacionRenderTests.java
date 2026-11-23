@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono;
 /** El perfil publicado debe distinguir rutas de Gestión y contexto de Operación. */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "SEGURIDAD_URL=http://127.0.0.1:1")
+        properties = {"SEGURIDAD_URL=http://127.0.0.1:1", "INTERNO_SECRETO=secreto-interno"})
 @ActiveProfiles("render")
 class RutasProgramacionRenderTests {
     static final AtomicReference<String> RECIBIDO = new AtomicReference<>();
@@ -88,13 +88,16 @@ class RutasProgramacionRenderTests {
                 .header("Authorization", "Bearer gestor-rutas")
                 .header("If-Match", VERSION)
                 .header("Idempotency-Key", clave)
+                .header("X-Despacho-Interno", "falso")
                 .header("Content-Type", "application/json")
                 .bodyValue(cuerpo)
                 .exchange()
                 .expectStatus()
                 .isOk();
         assertThat(RECIBIDO.get())
-                .contains("GESTION PUT", VERSION, clave, cuerpo, "Bearer gestor-rutas");
+                .contains("GESTION PUT", VERSION, clave, cuerpo, "Bearer gestor-rutas")
+                .contains("interno=secreto-interno")
+                .doesNotContain("falso");
         cliente.post()
                 .uri("/api/v1/despachos/despacho/reasignacion")
                 .header("Authorization", "Bearer gestor-rutas")
@@ -114,6 +117,7 @@ class RutasProgramacionRenderTests {
                 .isOk()
                 .expectBody()
                 .json("{\"proveedor\":\"OPERACION\"}");
+        assertThat(RECIBIDO.get()).contains("OPERACION GET", "interno=secreto-interno");
         RECIBIDO.set(null);
         cliente.get()
                 .uri("/api/v1/jornadas/jornada/ruta")
@@ -153,6 +157,11 @@ class RutasProgramacionRenderTests {
                                         + h.getFirst("If-Match")
                                         + " "
                                         + h.getFirst("Idempotency-Key")
+                                        + " interno="
+                                        + String.join(
+                                                ",",
+                                                h.getOrDefault(
+                                                        "X-Despacho-Interno", java.util.List.of()))
                                         + " "
                                         + new String(
                                                 solicitud.getRequestBody().readAllBytes(),

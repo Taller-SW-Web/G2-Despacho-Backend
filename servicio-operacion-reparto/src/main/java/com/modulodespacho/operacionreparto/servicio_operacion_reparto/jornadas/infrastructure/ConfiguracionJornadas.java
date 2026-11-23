@@ -1,5 +1,6 @@
 package com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.infrastructure;
 
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.shared.seguridad.FiltroAccesoInterno;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Clock;
@@ -21,7 +22,9 @@ public class ConfiguracionJornadas {
     }
 
     @Bean
-    ConsultaZonaHttp consultaZona(@Value("${despacho.gestion.url}") String url) {
+    ConsultaZonaHttp consultaZona(
+            @Value("${despacho.gestion.url}") String url,
+            @Value("${despacho.interno.secreto:}") String secretoInterno) {
         URI origen = URI.create(url);
         Assert.isTrue(
                 ("https".equalsIgnoreCase(origen.getScheme())
@@ -39,10 +42,12 @@ public class ConfiguracionJornadas {
                                 .followRedirects(HttpClient.Redirect.NEVER)
                                 .build());
         peticiones.setReadTimeout(Duration.ofSeconds(5));
-        return new ConsultaZonaHttp(
-                RestClient.builder()
-                        .baseUrl(url.replaceAll("/+$", ""))
-                        .requestFactory(peticiones)
-                        .build());
+        var cliente =
+                RestClient.builder().baseUrl(url.replaceAll("/+$", "")).requestFactory(peticiones);
+        // GET /api/v1/zonas/{id} es una ruta de negocio: Gestión la bloquea sin el secreto interno.
+        if (secretoInterno != null && !secretoInterno.isBlank()) {
+            cliente.defaultHeader(FiltroAccesoInterno.ENCABEZADO, secretoInterno.trim());
+        }
+        return new ConsultaZonaHttp(cliente.build());
     }
 }
