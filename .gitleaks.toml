@@ -12,3 +12,9 @@ paths = [
   # claves por su entropía. Revisado en el commit d854faa.
   '''(^|/)graphify-out/''',
 ]
+# Valores ficticios de pruebas revisados uno por uno. Se lista el valor exacto,
+# no la carpeta de pruebas, para que un secreto real en un test sí se detecte.
+regexes = [
+  # Token del doble HTTP de G6 en CotizacionG6HttpTests (commit 2107fb2 y posteriores).
+  '''^credencial-propia-g6$''',
+]
