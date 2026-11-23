@@ -31,8 +31,10 @@ El [workflow](../.github/workflows/ci.yaml) valida PR y cambios de las ramas de 
 ```
 PR / push a develop o main
   1. Compilar y probar   verificador F-02 · Pruebas (api-gateway | gestión | operación) · seguridad-local
+     Seguridad           Seguridad (dependencias Maven) · Seguridad (secretos en el historial)
   2. Construir imágenes  Imagen Docker (api-gateway | gestión | operación | seguridad-local)
-  3. Compuerta           CI backend verde
+                         + SBOM CycloneDX y escaneo Trivy de cada imagen
+  3. Compuerta           CI backend verde (incluye toda la revisión de seguridad)
   4. Desplegar           solo push o ejecución manual en main  ->  Render (Operación, Gestión, Gateway)
   5. Verificar           /actuator/health de los tres servicios (herramientas/mantener_despacho_activo.py)
 ```
@@ -43,6 +45,33 @@ PR / push a develop o main
 - **Desplegar:** en `main`, con el entorno `produccion` de GitHub, se llama a los deploy hooks de Render con el SHA del commit (`&ref=<SHA>`), primero Operación y Gestión y al final el Gateway. Solo hay un despliegue a la vez (`concurrency`) y nunca se cancela uno en curso.
 - **Verificar:** tras una espera inicial, se reutiliza `herramientas/mantener_despacho_activo.py --una-vez` hasta que los tres servicios respondan `200` y `status=UP`, con reintentos de hasta unos 15 minutos. Esto acredita que los servicios están disponibles tras el despliegue; no identifica la versión (el endpoint de salud no la expone).
 
+### Revisión de seguridad
+
+La revisión de seguridad forma parte del pipeline y bloquea la integración y el despliegue. Cubre los riesgos A02, A03 y A08 del OWASP Top 10:2025.
+
+| Control | Job | Herramienta | Falla cuando |
+|---|---|---|---|
+| Dependencias vulnerables (A03) | `Seguridad (dependencias Maven)` | OWASP Dependency-Check 13.0.0 | Una dependencia de Gateway, Gestión u Operación tiene un CVE con CVSS >= 7. |
+| Secretos expuestos (A02, A08) | `Seguridad (secretos en el historial)` | gitleaks 8.30.1 | Hay una credencial en cualquier commit del historial. |
+| Imagen vulnerable (A03) | `Imagen Docker (<servicio>)` | Trivy 0.76.2 | La imagen tiene vulnerabilidades CRITICAL o HIGH que ya tienen corrección. La imagen no se publica en GHCR. |
+| Inventario de componentes (A03) | `Imagen Docker (<servicio>)` | Trivy (SBOM CycloneDX) | No falla; deja el SBOM como artefacto. |
+| Dependencias desactualizadas (A03) | Dependabot | `.github/dependabot.yml` | No falla; abre PR semanales hacia `develop`. |
+
+Los informes quedan 30 días como artefactos de la ejecución: `seguridad-dependencias`, `seguridad-secretos` y `seguridad-imagen-<servicio>`. El informe de gitleaks oculta los valores encontrados (`--redact`).
+
+Integridad del propio pipeline (A08):
+
+- Las actions se fijan por SHA de commit, no por etiqueta.
+- gitleaks y Trivy se descargan por versión fija y se verifica su SHA-256 antes de ejecutarlos. No se usa `aquasecurity/trivy-action`, cuyas etiquetas fueron reescritas con malware en marzo de 2026 (CVE-2026-33634).
+- El token del workflow es de solo lectura (`contents: read`). Solo el job de imágenes puede escribir paquetes.
+- `persist-credentials: false` evita que el token quede guardado en el checkout.
+- Los secretos se leen desde GitHub Actions y nunca se escriben en el código.
+
+Si un control falla:
+
+- **Dependencia o imagen vulnerable:** actualizar la dependencia o la imagen base. Si es un falso positivo, agregar una supresión en `.github/seguridad/dependency-check-supresiones.xml` con el CVE y el motivo.
+- **Secreto encontrado:** primero revocar y rotar la credencial; después limpiar el historial. Borrar el archivo no basta, porque el historial conserva el valor.
+
 ### Despliegue continuo
 
 El despliegue no funciona hasta configurar esto en GitHub y Render (Settings > Secrets and variables > Actions). Mientras falten los secretos, el job `Desplegar en Render y verificar` falla en `main` con un mensaje que indica cuál falta.
@@ -52,6 +81,7 @@ El despliegue no funciona hasta configurar esto en GitHub y Render (Settings > S
 | `RENDER_DEPLOY_HOOK_OPERACION` | Deploy hook de `taller-servicio-operacion-reparto` (Render > servicio > Settings > Deploy Hook) |
 | `RENDER_DEPLOY_HOOK_GESTION` | Deploy hook de `taller-servicio-gestion-despachos` |
 | `RENDER_DEPLOY_HOOK_GATEWAY` | Deploy hook de `taller-api-gateway` |
+| `NVD_API_KEY` | Clave gratuita de la API de NVD (https://nvd.nist.gov/developers/request-an-api-key). Sin ella, Dependency-Check descarga la base de vulnerabilidades muy lentamente. |
 
 1. En Render, en cada servicio, poner **Auto-Deploy en `Off`**. Si queda en `On`, cada push despliega sin esperar a las pruebas y el job duplica el despliegue.
 2. Crear en GitHub el entorno `produccion` (Settings > Environments). Opcional: añadir *Required reviewers* para exigir aprobación manual antes de desplegar.
