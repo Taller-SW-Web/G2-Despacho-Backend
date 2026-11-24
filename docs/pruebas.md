@@ -31,6 +31,38 @@ Get-Content -Raw pruebas/cargar_seguimientos_local.sql | docker compose exec -T 
 
 Los ejemplos no crean eventos ni acreditan el ciclo operativo de Ventas o de reparto.
 
+### Eventos hacia Ventas con ventas-local
+
+`ventas-local` es un doble temporal de Ventas y Postventa: no es el módulo real. Recibe `POST /api/v1/integraciones/despachos/eventos` con el token de servicio de `modulo-despacho` (`aud=api-ventas`, scope `ventas:pedidos:estado`), deduplica por `idEvento`, aplica el efecto comercial de §7.3 sin retroceder ante eventos atrasados y guarda todo en memoria.
+
+Los despachos simulados no generan eventos, y crear un despacho real exige Productos. Para probar con la app del repartidor:
+
+1. Seguir los pasos 1 a 3 del [recorrido local](#recorrido-local-desde-las-apps) y generar un pedido de prueba en **Programación**, sin asignarlo.
+2. Habilitar sus eventos con el pedido `PED-SIM-...` mostrado:
+
+   ```powershell
+   Get-Content -Raw pruebas/habilitar_eventos_despacho_prueba_local.sql | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -v pedido=PED-SIM-XXXX -U despacho_local -d despacho_gestion
+   ```
+
+3. Asignarlo a la jornada y, desde la PWA, iniciar el traslado y entregar o registrar el fallo. Cerrar la jornada con un pendiente produce `DESPACHO_FALLIDO` con motivo `NO_INTENTADO`.
+4. Revisar lo recibido:
+
+   ```powershell
+   Invoke-RestMethod http://localhost:8084/control/eventos | ConvertTo-Json -Depth 6
+   Invoke-RestMethod http://localhost:8084/control/pedidos/PED-SIM-XXXX | ConvertTo-Json -Depth 6
+   ```
+
+Cada evento muestra su `resultado`: `APLICADO`, `HITO_REGISTRADO`, `SIN_CAMBIO`, `DUPLICADO` o `ATRASADO`. El envío es asíncrono; esperar unos segundos tras cada acción.
+
+Para comprobar los reintentos, simular caídas antes de una acción. Despacho reintenta con el mismo `idEvento`; tras seis intentos sin `2xx` el evento queda en `ENVIO_FALLIDO` y se reenvía desde Administración.
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:8084/control/fallos -ContentType 'application/json' -Body '{"cantidad":2}'
+Invoke-RestMethod -Method Post http://localhost:8084/control/reinicio
+```
+
+Las rutas `/control` no requieren token y solo se publican en `127.0.0.1`. Ejecutar las pruebas del doble con `docker build --target pruebas ventas-local`.
+
 
 ## Formato del código
 

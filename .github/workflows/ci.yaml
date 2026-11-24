@@ -114,6 +114,35 @@ jobs:
           java --add-modules jdk.httpserver \
             -cp "$RUNNER_TEMP/seguridad-local-pruebas" EmisorSeguridadLocalPruebas
 
+  ventas-local:
+    name: Pruebas (ventas-local)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar Java 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compilar y probar el doble de Ventas
+        run: |
+          mkdir -p "$RUNNER_TEMP/ventas-local-pruebas"
+          javac --add-modules jdk.httpserver -encoding UTF-8 \
+            -d "$RUNNER_TEMP/ventas-local-pruebas" \
+            ventas-local/src/VentasLocal.java \
+            ventas-local/pruebas/VentasLocalPruebas.java
+          java --add-modules jdk.httpserver \
+            -cp "$RUNNER_TEMP/ventas-local-pruebas" VentasLocalPruebas
+
   # ---------------------------------------------------------------------------
   # 1b. REVISIÓN DE SEGURIDAD: dependencias vulnerables
   #     OWASP Top 10:2025 A03 (Software Supply Chain Failures).
@@ -260,12 +289,12 @@ jobs:
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.
-  #    seguridad-local se construye pero nunca se publica ni se despliega: es un
-  #    emisor de pruebas que no debe usarse en un despliegue público.
+  #    seguridad-local y ventas-local se construyen pero nunca se publican ni se
+  #    despliegan: son dobles de prueba que no deben usarse en un despliegue público.
   # ---------------------------------------------------------------------------
   imagenes:
     name: Imagen Docker (${{ matrix.servicio }})
-    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -282,6 +311,8 @@ jobs:
           - servicio: servicio-operacion-reparto
             publicar: true
           - servicio: seguridad-local
+            publicar: false
+          - servicio: ventas-local
             publicar: false
     env:
       SERVICIO: ${{ matrix.servicio }}
