@@ -23,7 +23,9 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
 /** El proxy publicado expone únicamente el acceso humano; /me conserva autenticación JWT. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "INTERNO_SECRETO=secreto-interno")
 @ActiveProfiles("render")
 class RutasSesionRenderTests {
     private static final String[] ORIGENES = {
@@ -48,11 +50,14 @@ class RutasSesionRenderTests {
             cliente.post()
                     .uri("/api/v1/auth/" + ruta)
                     .header("Content-Type", "application/json")
+                    .header("X-Despacho-Interno", "falso")
                     .bodyValue("{\"prueba\":\"valor\"}")
                     .exchange()
                     .expectStatus()
                     .isOk();
-            assertThat(RECIBIDO.get()).contains("POST /api/v1/auth/" + ruta, "valor");
+            // Seguridad (G7) nunca recibe la cabecera interna, ni la del cliente ni el secreto.
+            assertThat(RECIBIDO.get())
+                    .contains("POST /api/v1/auth/" + ruta, "valor", "interno=null");
         }
         RECIBIDO.set(null);
         cliente.get().uri("/api/v1/auth/me").exchange().expectStatus().isUnauthorized();
@@ -168,6 +173,10 @@ class RutasSesionRenderTests {
                                         + solicitud.getRequestURI()
                                         + " "
                                         + solicitud.getRequestHeaders().getFirst("Authorization")
+                                        + " interno="
+                                        + solicitud
+                                                .getRequestHeaders()
+                                                .getFirst("X-Despacho-Interno")
                                         + " "
                                         + new String(
                                                 solicitud.getRequestBody().readAllBytes(),

@@ -23,6 +23,38 @@ El ciclo de recuperación revisa la bandeja cada 30 segundos mientras Gestión e
 
 Un gestor puede devolver ese evento a la cola con `POST /api/v1/despachos/{idDespacho}/eventos-ventas/{idEvento}/reenvio`. Requiere el rol `GESTOR_DESPACHO` y responde `202` con `estadoEnvio=PENDIENTE`. El contenido y el `idEvento` no cambian, de modo que Ventas sigue deduplicando. Responde `404 DESP_ERROR_EVENTO_NO_ENCONTRADO` si el evento no pertenece a ese despacho o no va dirigido a Ventas, y `409 DESP_ERROR_EVENTO_NO_REENVIABLE` con `estadoActual` si no está en `ENVIO_FALLIDO`. Los identificadores de los eventos aparecen en las comunicaciones del detalle de la incidencia.
 
+### Acceso solo por el Gateway en Render Free
+
+Render Free no ofrece Private Services, así que Gestión y Operación conservan una URL pública. Para que el Gateway sea la única entrada utilizable, el Gateway añade la cabecera `X-Despacho-Interno` con un secreto compartido en las rutas `/api/v1/**`. Gestión y Operación responden `404 DESP_ERROR_RUTA_NO_ENCONTRADA` a cualquier llamada directa a `/api/v1/**` que no la traiga o la traiga con otro valor. El filtro se ejecuta antes que la autenticación, de modo que la respuesta no revela si la ruta existe.
+
+| Variable | Servicio | Valor |
+|---|---|---|
+| `INTERNO_SECRETO` | Gateway, Gestión y Operación | El mismo valor en los tres, por ejemplo el resultado de `openssl rand -hex 32`. Vacío desactiva la simulación. |
+| `INTERNO_REQUERIDO` | Gestión y Operación | `false` por defecto. Con `true` se bloquean las llamadas directas; exige `INTERNO_SECRETO` no vacío o el servicio no arranca. |
+
+No se bloquean `/actuator/**` (health check de Render y `herramientas/mantener_despacho_activo.py`), `/internal/v1/**` (protegido por el token de servicio), `/api/v1/auth/**` ni las solicitudes `OPTIONS` de CORS. El Gateway descarta la cabecera que envíe el cliente y nunca la reenvía a Seguridad. La única llamada entre servicios a una ruta `/api/v1/**` es la consulta de zona de Operación a Gestión (`GET /api/v1/zonas/{id}`), que también envía el secreto.
+
+Activar en dos fases, sin mezclar este cambio con una rotación del secreto:
+
+1. **Preparar sin bloquear.** Configurar `INTERNO_SECRETO` en los tres servicios e `INTERNO_REQUERIDO=false` en Gestión y Operación. Desplegar y comprobar que los frontends y los módulos externos siguen funcionando a través del Gateway.
+2. **Bloquear.** Antes, confirmar con los equipos externos que ninguno llama directamente a las URLs `onrender.com` de Gestión u Operación. Poner `INTERNO_REQUERIDO=true` en Gestión y Operación y redesplegar ambos.
+
+Para verificar, sustituyendo `<secreto>` por el valor configurado:
+
+```bash
+curl -i https://taller-api-gateway.onrender.com/api/v1/zonas                  # 401: el Gateway exige JWT
+curl -i https://taller-servicio-gestion-despachos.onrender.com/api/v1/zonas   # 404: acceso directo bloqueado
+curl -i -H "X-Despacho-Interno: <secreto>" \
+  https://taller-servicio-gestion-despachos.onrender.com/api/v1/zonas         # 401: pasa el filtro, falta el JWT
+curl -i https://taller-servicio-gestion-despachos.onrender.com/actuator/health  # 200
+```
+
+Comprobar además el login por el Gateway, la apertura de una jornada (Operación consulta la zona en Gestión) y la asignación o liberación de capacidad. Si al abrir una jornada aparece «La zona no existe.» con una zona válida, Operación no tiene el mismo `INTERNO_SECRETO` que Gestión.
+
+**Rollback:** poner `INTERNO_REQUERIDO=false` en Gestión y Operación y redesplegarlos. El Gateway puede seguir enviando la cabecera sin efecto. Si el problema era un consumidor externo que llamaba directo, migrarlo al Gateway antes de volver a activar el bloqueo.
+
+**Límites:** no es un enmascaramiento real. Las URLs públicas siguen existiendo, `/actuator/health` sigue visible y `/internal/v1/**` depende solo del token de servicio. Si el secreto se filtra, se puede saltar el Gateway, por lo que debe rotarse en los tres servicios a la vez. El aislamiento real requiere Private Services (plan de pago) o un túnel o WAF delante de los servicios.
+
 
 ## Pipeline CI/CD
 

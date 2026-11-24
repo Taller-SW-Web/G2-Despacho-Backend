@@ -49,3 +49,6 @@ despacho:
   solicitudes:
     maximo-bytes: ${SOLICITUD_MAXIMO_BYTES:1048576}
     geometrias-maximo-bytes: ${GEOMETRIAS_MAXIMO_BYTES:5242880}
+  interno:
+    # Secreto que el Gateway añade en X-Despacho-Interno; vacío desactiva la marca.
+    secreto: ${INTERNO_SECRETO:}

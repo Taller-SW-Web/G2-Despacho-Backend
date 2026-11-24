@@ -38,6 +38,10 @@ despacho:
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+  interno:
+    # Secreto que el Gateway envía en X-Despacho-Interno. Con requerido=true, /api/v1/** sin él da 404.
+    secreto: ${INTERNO_SECRETO:}
+    requerido: ${INTERNO_REQUERIDO:false}
   recepcion:
     procesador-habilitado: ${RECEPCION_PROCESADOR_HABILITADO:true}
     intervalo-procesador-ms: ${RECEPCION_INTERVALO_PROCESADOR_MS:1000}
