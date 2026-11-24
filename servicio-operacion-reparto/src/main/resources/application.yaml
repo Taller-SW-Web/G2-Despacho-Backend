@@ -43,6 +43,11 @@ despacho:
     token-servicio: ${GESTION_TOKEN_SERVICIO:}
     cliente-id: ${GESTION_CLIENT_ID:modulo-despacho}
     cliente-secreto: ${GESTION_CLIENT_SECRET:}
+  interno:
+    # Secreto que el Gateway envía en X-Despacho-Interno. Con requerido=true, /api/v1/** sin él da 404.
+    # Operación también lo envía al consultar zonas en Gestión (/api/v1/zonas/{id}).
+    secreto: ${INTERNO_SECRETO:}
+    requerido: ${INTERNO_REQUERIDO:false}
   demo:
     sin-autenticacion: ${DEMO_SIN_AUTENTICACION:false}
     usuario-id: ${DEMO_USUARIO_ID:00000000-0000-4000-8000-000000000001}
