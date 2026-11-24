@@ -232,7 +232,8 @@ public class ConfiguracionSeguridad {
                                             "/api/v1/auth/otp/solicitar",
                                             "/api/v1/auth/otp/verificar",
                                             "/api/v1/auth/refresh",
-                                            "/api/v1/auth/logout")
+                                            "/api/v1/auth/logout",
+                                            "/api/v1/password/recuperar")
                                     .permitAll();
                             if (modoDemo) reglas.pathMatchers("/api/v1/**").permitAll();
                             else reglas.pathMatchers("/api/v1/**").authenticated();

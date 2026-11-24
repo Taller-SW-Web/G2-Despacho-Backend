@@ -25,7 +25,10 @@ public class RutasAccesoSeguridad {
                                             "/api/v1/auth/otp/verificar",
                                             "/api/v1/auth/refresh",
                                             "/api/v1/auth/logout",
-                                            "/api/v1/auth/me")
+                                            "/api/v1/auth/me",
+                                            // ES-F03-09: G7 envía el enlace; el
+                                            // restablecimiento ocurre en su propia página.
+                                            "/api/v1/password/recuperar")
                                     // Seguridad puede publicar el mismo CORS que ya añadió el
                                     // Gateway.
                                     .filters(

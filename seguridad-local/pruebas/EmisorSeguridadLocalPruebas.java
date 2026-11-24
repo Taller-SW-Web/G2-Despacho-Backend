@@ -327,8 +327,36 @@ public final class EmisorSeguridadLocalPruebas {
                     enviar(cliente, rutaToken, "client_id=uno&client_id=otro").statusCode() == 400,
                     "Rechazar parámetros ambiguos");
             comprobarSesionHumana(cliente, origen);
+            comprobarRecuperacion(cliente, origen);
             System.out.println("Pruebas del emisor local completadas");
         }
+    }
+
+    /** POST /password/recuperar de G7 1.2.0: 202 neutro, 429 tras tres por correo y hora. */
+    private static void comprobarRecuperacion(HttpClient cliente, String origen) throws Exception {
+        String ruta = origen + "/api/v1/password/recuperar";
+        for (String correo : new String[] {"gerardo@despacho.pe", "nadie@despacho.pe"}) {
+            for (int intento = 1; intento <= 3; intento++) {
+                var respuesta = enviarJson(cliente, ruta, Map.of("correo", correo));
+                comprobar(
+                        respuesta.statusCode() == 202 && respuesta.body().isEmpty(),
+                        "Recuperación neutra " + intento + " para " + correo);
+            }
+            var limite = enviarJson(cliente, ruta, Map.of("correo", correo));
+            comprobar(
+                    limite.statusCode() == 429
+                            && limite.body().contains("DEMASIADAS_SOLICITUDES")
+                            && limite.headers().firstValue("Retry-After").isPresent(),
+                    "Cuarta solicitud en una hora para " + correo + ": 429");
+        }
+        comprobar(
+                enviarJson(cliente, ruta, Map.of("correo", "gerardo")).statusCode() == 400,
+                "Recuperación con correo inválido: 400");
+        comprobar(
+                enviarJson(cliente, ruta, Map.of("correo", "kevin@despacho.pe", "canalOrigen", "X"))
+                                .statusCode()
+                        == 400,
+                "canalOrigen fuera del enum de G7: 400");
     }
 
     /** Doble local del contrato G7, incluyendo uso único y revocación por familia. */

@@ -80,6 +80,36 @@ class RutasSesionRenderTests {
     }
 
     @Test
+    void publicaSoloLaSolicitudDeRecuperacionDeContrasena() {
+        var cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
+        RECIBIDO.set(null);
+        cliente.post()
+                .uri("/api/v1/password/recuperar?estadoPrueba=202")
+                .header("Origin", ORIGENES[1])
+                .header("Content-Type", "application/json")
+                .bodyValue("{\"correo\":\"gerardo@despacho.pe\"}")
+                .exchange()
+                .expectStatus()
+                .isAccepted()
+                .expectHeader()
+                .valueEquals("Access-Control-Allow-Origin", ORIGENES[1]);
+        assertThat(RECIBIDO.get())
+                .contains("POST /api/v1/password/recuperar", "gerardo@despacho.pe");
+        // El restablecimiento y el cambio autenticado pertenecen a la página de G7.
+        for (String ruta : new String[] {"restablecer", "cambiar"}) {
+            RECIBIDO.set(null);
+            cliente.post()
+                    .uri("/api/v1/password/" + ruta)
+                    .header("Content-Type", "application/json")
+                    .bodyValue("{}")
+                    .exchange()
+                    .expectStatus()
+                    .isUnauthorized();
+            assertThat(RECIBIDO.get()).isNull();
+        }
+    }
+
+    @Test
     void conservaUnSoloOrigenCorsCuandoSeguridadTambienLoPublica() {
         var cliente = WebTestClient.bindToServer().baseUrl("http://127.0.0.1:" + puerto).build();
         for (String origen : ORIGENES) {
@@ -159,8 +189,7 @@ class RutasSesionRenderTests {
     private static HttpServer servidor() {
         try {
             var servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-            servidor.createContext(
-                    "/api/v1/auth",
+            com.sun.net.httpserver.HttpHandler atender =
                     solicitud -> {
                         RECIBIDO.set(
                                 solicitud.getRequestMethod()
@@ -193,7 +222,9 @@ class RutasSesionRenderTests {
                                 salida.write(respuesta);
                             }
                         solicitud.close();
-                    });
+                    };
+            servidor.createContext("/api/v1/auth", atender);
+            servidor.createContext("/api/v1/password", atender);
             servidor.start();
             return servidor;
         } catch (IOException error) {
