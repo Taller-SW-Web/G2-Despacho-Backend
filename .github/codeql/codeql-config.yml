@@ -1,0 +1,25 @@
+# Configuración del análisis estático de seguridad (SAST) con CodeQL.
+# La usa el job "Seguridad (código ...)" de .github/workflows/ci.yaml.
+#
+# Suite security-extended: solo reglas de seguridad (sin reglas de calidad de código).
+# El job bloquea los hallazgos con security-severity >= 7, el mismo umbral (CVSS >= 7)
+# que Dependency-Check.
+name: Revisión de código del backend de Despacho
+
+paths-ignore:
+  # Pruebas automatizadas: no se despliegan.
+  - '**/src/test/**'
+  # Dobles de prueba (emisor de tokens y Ventas simulados): se construyen en CI,
+  # pero nunca se publican ni se despliegan.
+  - seguridad-local
+  - ventas-local
+  # Scripts de pruebas y de mantenimiento fuera de los servicios.
+  - pruebas
+  - herramientas
+  - '**/target/**'
+
+# Excepciones justificadas, como las supresiones de Dependency-Check.
+# Cada exclusión debe indicar la regla, el motivo y quién la revisó.
+# query-filters:
+#   - exclude:
+#       id: java/<regla>   # motivo
