@@ -75,7 +75,7 @@ V12 incorpora metadatos, propuestas temporales e histórico geográfico; no carg
 
 ## Pipeline CI/CD
 
-El [workflow](./.github/workflows/ci.yaml) ejecuta pruebas, la revisión de seguridad (dependencias, secretos, imágenes y SBOM) y construye imágenes. En `main`, la compuerta `CI backend verde` habilita el despliegue en Render y su verificación de salud cuando los deploy hooks están configurados. La [guía de despliegue](./docs/despliegue.md) reúne variables, protección de ramas y diagnóstico.
+El [workflow](./.github/workflows/ci.yaml) ejecuta pruebas, la revisión de seguridad (dependencias, secretos, código con CodeQL, imágenes y SBOM) y construye imágenes. En `main`, la compuerta `CI backend verde` habilita el despliegue en Render y su verificación (salud, commit desplegado y seguridad activa) cuando los deploy hooks están configurados. La [guía de despliegue](./docs/despliegue.md) reúne variables, protección de ramas y diagnóstico.
 
 ## Contribuciones
 
