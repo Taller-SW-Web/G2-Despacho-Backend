@@ -29,6 +29,9 @@ server:
     include-stacktrace: never
 
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -52,3 +55,9 @@ despacho:
   interno:
     # Secreto que el Gateway añade en X-Despacho-Interno; vacío desactiva la marca.
     secreto: ${INTERNO_SECRETO:}
+
+# Commit desplegado, expuesto en /actuator/info. Render define RENDER_GIT_COMMIT en
+# cada despliegue; el pipeline lo compara con el commit que acaba de desplegar.
+info:
+  despliegue:
+    commit: ${RENDER_GIT_COMMIT:local}

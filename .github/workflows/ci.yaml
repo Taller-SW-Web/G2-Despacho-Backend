@@ -286,6 +286,94 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
+  # 1d. REVISIÓN DE SEGURIDAD: código propio (SAST) con CodeQL
+  #     OWASP Top 10:2025 A05 (Injection), A07 (Authentication Failures),
+  #     A04 (Cryptographic Failures), A02 (errores detallados) y, con el
+  #     lenguaje "actions", A08 (integridad del propio pipeline).
+  #     Dependency-Check y Trivy revisan las bibliotecas; gitleaks, los secretos;
+  #     CodeQL revisa el código que escribe el equipo. Se analiza sin compilar
+  #     (build-mode none) y falla con hallazgos de security-severity >= 7, el mismo
+  #     umbral que Dependency-Check. Todos los hallazgos se publican en
+  #     Security > Code scanning. Configuración: .github/codeql/codeql-config.yml.
+  # ---------------------------------------------------------------------------
+  codigo:
+    name: Seguridad (código ${{ matrix.lenguaje }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: [java-kotlin, actions]
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: none
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Analizar el código (SAST)
+        uses: github/codeql-action/analyze@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          category: /language:${{ matrix.lenguaje }}
+          output: codeql-resultados
+
+      # Las reglas pueden venir en tool.driver o en tool.extensions (paquetes de
+      # consultas): se leen ambas para no perder la severidad de ningún hallazgo.
+      - name: Bloquear hallazgos con severidad alta o crítica (>= 7)
+        env:
+          LENGUAJE: ${{ matrix.lenguaje }}
+        run: |
+          set -euo pipefail
+          sarif="$(find codeql-resultados -name '*.sarif' | head -n 1)"
+          if [ -z "${sarif}" ]; then
+            echo "::error::CodeQL no generó el informe SARIF para ${LENGUAJE}."
+            exit 1
+          fi
+          jq -r '
+            .runs[]
+            | ([.tool.driver.rules[]?, .tool.extensions[]?.rules[]?]
+               | map({key: .id, value: (.properties["security-severity"] // "0" | tonumber)})
+               | from_entries) as $severidad
+            | .results[]
+            | select((.suppressions // []) | length == 0)
+            | ($severidad[.ruleId] // 0) as $s
+            | select($s >= 7)
+            | "\($s)\t\(.ruleId)\t\(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"
+          ' "${sarif}" > codeql-bloqueantes.tsv
+          total="$(jq '[.runs[].results[]] | length' "${sarif}")"
+          bloqueantes="$(wc -l < codeql-bloqueantes.tsv)"
+          {
+            echo "### CodeQL · ${LENGUAJE}"
+            echo "Hallazgos: ${total} · Bloqueantes (security-severity >= 7): ${bloqueantes}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${bloqueantes}" -gt 0 ]; then
+            { echo '```'; cat codeql-bloqueantes.tsv; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::CodeQL encontró ${bloqueantes} hallazgo(s) con security-severity >= 7 en ${LENGUAJE} (ver el resumen y Security > Code scanning)."
+            exit 1
+          fi
+
+      - name: Conservar el informe SARIF
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-codigo-${{ matrix.lenguaje }}
+          path: |
+            codeql-resultados/
+            codeql-bloqueantes.tsv
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.
@@ -294,7 +382,7 @@ jobs:
   # ---------------------------------------------------------------------------
   imagenes:
     name: Imagen Docker (${{ matrix.servicio }})
-    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos, codigo]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -400,13 +488,13 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # 3. COMPUERTA: un único check que resume todo lo anterior, incluida la
-  #    revisión de seguridad (dependencias, secretos e imágenes).
+  #    revisión de seguridad (dependencias, secretos, código e imágenes).
   #    Es el que conviene exigir en la protección de ramas (no depende de la matriz).
   # ---------------------------------------------------------------------------
   ci-ok:
     name: CI backend verde
     if: ${{ always() }}
-    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos, imagenes]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos, codigo, imagenes]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -496,3 +584,79 @@ jobs:
           done
           echo "::error::Los servicios no quedaron UP tras el despliegue. Revisar los logs en Render."
           exit 1
+
+      # El health check puede responder UP con la versión anterior mientras Render
+      # termina de desplegar. Aquí se espera a que cada servicio informe en
+      # /actuator/info el mismo commit que este pipeline acaba de desplegar.
+      - name: Verificar que se desplegó este commit
+        env:
+          URL_GATEWAY: https://taller-api-gateway.onrender.com
+          URL_GESTION: https://taller-servicio-gestion-despachos.onrender.com
+          URL_OPERACION: https://taller-servicio-operacion-reparto.onrender.com
+        run: |
+          set -uo pipefail
+          pendientes="Gateway Gestión Operación"
+          sin_dato=""
+          for intento in $(seq 1 20); do
+            siguen=""
+            for nombre in ${pendientes}; do
+              case "${nombre}" in
+                Gateway) url="${URL_GATEWAY}" ;;
+                Gestión) url="${URL_GESTION}" ;;
+                Operación) url="${URL_OPERACION}" ;;
+              esac
+              commit="$(curl --silent --max-time 60 "${url}/actuator/info" | jq -r '.despliegue.commit // empty' 2>/dev/null || true)"
+              if [ "${commit}" = "${GITHUB_SHA}" ]; then
+                echo "${nombre}: ejecuta el commit ${commit}"
+              elif [ "${commit}" = "local" ]; then
+                echo "::warning::${nombre}: Render no informó RENDER_GIT_COMMIT; no se puede comprobar la versión."
+                sin_dato="${sin_dato} ${nombre}"
+              else
+                echo "${nombre}: aún informa '${commit:-sin respuesta}', se espera ${GITHUB_SHA}"
+                siguen="${siguen} ${nombre}"
+              fi
+            done
+            pendientes="${siguen}"
+            if [ -z "${pendientes// /}" ]; then
+              if [ -z "${sin_dato}" ]; then
+                echo "Gateway, Gestión y Operación ejecutan el commit \`${GITHUB_SHA}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+              else
+                echo "Versión sin comprobar en:${sin_dato} (sin RENDER_GIT_COMMIT); el resto ejecuta \`${GITHUB_SHA}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Siguen sin ejecutar ${GITHUB_SHA}:${pendientes}. Revisar el despliegue en Render."
+          exit 1
+
+      # Smoke test de seguridad en producción: autenticación en el Gateway y
+      # enmascaramiento de las URL directas de los servicios (X-Despacho-Interno).
+      - name: Verificar la seguridad activa en producción
+        env:
+          URL_GATEWAY: https://taller-api-gateway.onrender.com
+          URL_GESTION: https://taller-servicio-gestion-despachos.onrender.com
+          URL_OPERACION: https://taller-servicio-operacion-reparto.onrender.com
+        run: |
+          set -uo pipefail
+          fallos=0
+          comprobar() {
+            local descripcion="$1" url="$2" esperado="$3" codigo=""
+            for intento in 1 2 3; do
+              codigo="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 60 "${url}")"
+              case "${codigo}" in 000|5??) sleep 15 ;; *) break ;; esac
+            done
+            if [ "${codigo}" = "${esperado}" ]; then
+              echo "- ${descripcion}: HTTP ${codigo}" >> "$GITHUB_STEP_SUMMARY"
+              echo "OK ${descripcion}: HTTP ${codigo}"
+            else
+              echo "::error::${descripcion}: se esperaba HTTP ${esperado} y se obtuvo ${codigo}."
+              echo "- ${descripcion}: **HTTP ${codigo}** (se esperaba ${esperado})" >> "$GITHUB_STEP_SUMMARY"
+              fallos=1
+            fi
+          }
+          echo "### Seguridad activa en producción" >> "$GITHUB_STEP_SUMMARY"
+          comprobar "Gateway sin token, GET /api/v1/zonas" "${URL_GATEWAY}/api/v1/zonas" 401
+          comprobar "Gestión directo, GET /api/v1/zonas" "${URL_GESTION}/api/v1/zonas" 404
+          comprobar "Operación directo, GET /api/v1/jornadas" "${URL_OPERACION}/api/v1/jornadas" 404
+          exit "${fallos}"
