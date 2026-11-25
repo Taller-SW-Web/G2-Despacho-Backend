@@ -27,18 +27,29 @@ public final class EntornoCompose implements AutoCloseable {
     private final List<String> compose;
     private final ClienteApi cliente = new ClienteApi();
 
-    private EntornoCompose(Path raiz, Path envVacio) {
+    private EntornoCompose(Path raiz, Path envVacio, List<Path> adicionales) {
         this.raiz = raiz;
         this.informes = Path.of("target", "informes");
         String proyecto = "hito5-it-" + UUID.randomUUID().toString().substring(0, 12);
-        this.compose =
-                List.of(
-                        "docker", "compose", "--env-file", envVacio.toString(), "-p", proyecto,
-                        "-f", raiz.resolve("pruebas/compose.f02.yaml").toString());
+        var comando =
+                new ArrayList<>(
+                        List.of(
+                                "docker", "compose", "--env-file", envVacio.toString(), "-p",
+                                proyecto, "-f", raiz.resolve("pruebas/compose.f02.yaml").toString()));
+        for (Path adicional : adicionales) comando.addAll(List.of("-f", adicional.toString()));
+        this.compose = List.copyOf(comando);
     }
 
     /** Valida los JAR, levanta los contenedores y espera a que todos respondan. */
     public static EntornoCompose iniciar() throws Exception {
+        return iniciar(List.of());
+    }
+
+    /**
+     * Igual que {@link #iniciar()}, superponiendo archivos Compose propios de un caso (por
+     * ejemplo, para interponer un intermediario de prueba entre dos servicios).
+     */
+    public static EntornoCompose iniciar(List<Path> adicionales) throws Exception {
         Path raiz = raizBackend();
         for (String servicio : SERVICIOS) {
             Path jar = raiz.resolve(servicio).resolve("target/" + servicio + "-0.0.1-SNAPSHOT.jar");
@@ -49,7 +60,7 @@ public final class EntornoCompose implements AutoCloseable {
         // Sustituye --env-file /dev/null del verificador Python y funciona también en Windows.
         Path envVacio = Files.createTempFile("hito5-env-", ".env");
         envVacio.toFile().deleteOnExit();
-        var entorno = new EntornoCompose(raiz, envVacio);
+        var entorno = new EntornoCompose(raiz, envVacio, adicionales);
         try {
             entorno.ejecutar(null, "up", "--build", "-d");
             entorno.esperarHttp(SEGURIDAD + "/actuator/health");
@@ -79,6 +90,16 @@ public final class EntornoCompose implements AutoCloseable {
                 sentencia,
                 "exec", "-T", "postgres", "psql", "-v", "ON_ERROR_STOP=1", "-U", "prueba", "-d",
                 base);
+    }
+
+    /** Consulta de solo lectura para la evidencia; devuelve filas separadas por '|'. */
+    public List<String> consultar(String base, String sentencia) throws Exception {
+        String salida =
+                ejecutar(
+                        sentencia,
+                        "exec", "-T", "postgres", "psql", "-v", "ON_ERROR_STOP=1", "-At", "-U",
+                        "prueba", "-d", base);
+        return salida.lines().filter(linea -> !linea.isBlank()).toList();
     }
 
     /** Conserva los últimos registros de los servicios si la prueba falla. Nunca contienen tokens. */
@@ -136,7 +157,7 @@ public final class EntornoCompose implements AutoCloseable {
         throw new IllegalStateException("No inició " + servicio);
     }
 
-    private void ejecutar(String entrada, String... argumentos) throws Exception {
+    private String ejecutar(String entrada, String... argumentos) throws Exception {
         var constructor = new ProcessBuilder(concatenar(argumentos)).directory(raiz.toFile());
         constructor.redirectErrorStream(true);
         Process proceso = constructor.start();
@@ -149,6 +170,7 @@ public final class EntornoCompose implements AutoCloseable {
         if (!proceso.waitFor(10, TimeUnit.MINUTES) || proceso.exitValue() != 0)
             throw new IllegalStateException(
                     "Falló docker compose " + String.join(" ", argumentos) + ":\n" + recortar(salida));
+        return salida;
     }
 
     private List<String> concatenar(String... argumentos) {

@@ -43,8 +43,17 @@ public final class ClienteApi {
     }
 
     public Respuesta postJson(String url, Object cuerpo, String token, String claveIdempotencia) {
+        return postJsonConCabeceras(
+                url,
+                cuerpo,
+                token,
+                claveIdempotencia == null ? Map.of() : Map.of("Idempotency-Key", claveIdempotencia));
+    }
+
+    public Respuesta postJsonConCabeceras(
+            String url, Object cuerpo, String token, Map<String, String> cabeceras) {
         var solicitud = base(url, token).header("Content-Type", "application/json");
-        if (claveIdempotencia != null) solicitud.header("Idempotency-Key", claveIdempotencia);
+        cabeceras.forEach(solicitud::header);
         try {
             solicitud.POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(cuerpo)));
         } catch (IOException error) {

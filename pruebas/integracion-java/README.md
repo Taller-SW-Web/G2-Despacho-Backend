@@ -4,7 +4,7 @@ Verificador Java 25 LTS + JUnit Jupiter con `java.net.http.HttpClient`. Levanta 
 
 ## Ejecutar
 
-Requisitos: Docker en ejecución, puertos `18080` y `18090` libres y los tres JAR construidos.
+Requisitos: Docker en ejecución, JDK 25 en `JAVA_HOME`, puertos `18080`, `18082` y `18090` libres, y los tres JAR construidos. INT-09 publica Operación en `127.0.0.1:18082`.
 
 ```powershell
 # Desde la raíz del backend, una vez por cambio de código
@@ -22,8 +22,10 @@ En Linux o WSL se usa `./mvnw` en lugar de `.\mvnw.cmd`.
 Salidas en `target/`:
 
 - `surefire-reports/`: informe JUnit (XML y TXT).
-- `informes/int-02-int-08.json`: IDs sintéticos y cada aserción por caso. No contiene tokens.
-- `informes/servicios-compose.log`: solo se genera si algo falla.
+- `informes/int-02-int-08.json` e `informes/int-09.json`: IDs sintéticos y cada aserción por caso. No contienen tokens.
+- `informes/servicios-compose.log`: registros de los servicios. INT-02 e INT-08 lo generan solo si algo falla; INT-09 siempre, como evidencia.
+
+Para ejecutar un solo caso: `-Dtest=RutasRepartidorF02Test` (INT-02 e INT-08) o `-Dtest=ReasignacionRecuperacionF02Test` (INT-09).
 
 ## Escenario y servicios
 
@@ -58,3 +60,21 @@ Aserciones añadidas respecto de Python:
 - **INT-08:** controles de que A ve su detalle y de que B ve el suyo. El cuerpo del `404` no contiene el destinatario, el teléfono, la dirección ni el código de rastreo, que se leen del detalle de A. Tampoco incluye campos del detalle. Un ID inexistente responde igual que uno ajeno.
 
 Fuera de alcance: `verificar_anulacion_fallido` (anulación de un fallido, recepción y cierre F-04). Sigue cubierto por el script Python.
+
+## INT-09 · Reasignación con respuesta perdida
+
+`ReasignacionRecuperacionF02Test` no tiene equivalente en Python. Reutiliza el escenario anterior y reasigna a B el despacho bajo prueba de A.
+
+**Intermediario.** `IntermediarioCorte` es un servidor HTTP dentro del JVM de la prueba. Una superposición Compose hace que Gestión llame a Operación a través de él (`host.docker.internal`). Reenvía todo sin cambios, salvo la primera transferencia después de armarlo: la entrega a Operación, espera su respuesta completa y cierra la conexión hacia Gestión sin responder.
+
+**Comprobaciones:**
+
+1. La primera solicitud recibe `503`.
+2. Operación respondió `200 TRANSFERIDA` antes del corte. La transferencia ya es durable: la reserva original queda `LIBERADA` y la nueva de B `ACTIVA`.
+3. El reintento con la misma identidad, clave, `If-Match` y cuerpo devuelve `200` con la reserva confirmada. Una repetición más devuelve la misma respuesta.
+4. Existe una única reserva activa del despacho, en B, y Operación guarda una sola transferencia por clave.
+5. Al converger, el despacho aparece solo en la ruta administrativa y en Mi Ruta de B. La carga pasa de la ocupación de A a la de B.
+
+Si es necesario, la escucha del intermediario se cambia con `-Dintermediario.escucha=0.0.0.0`. Por defecto escucha en `127.0.0.1`, que en Docker Desktop alcanza a los contenedores.
+
+**Limitación.** El ciclo periódico de recuperación de Gestión (500 ms en `compose.f02.yaml`) también entrega los eventos de proyección, así que no se desactiva. Por eso la transferencia pendiente puede reenviarla ese ciclo o el reintento del cliente. El informe registra cuándo se observó el reenvío.
