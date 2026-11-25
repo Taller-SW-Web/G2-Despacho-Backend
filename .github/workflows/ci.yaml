@@ -584,3 +584,79 @@ jobs:
           done
           echo "::error::Los servicios no quedaron UP tras el despliegue. Revisar los logs en Render."
           exit 1
+
+      # El health check puede responder UP con la versión anterior mientras Render
+      # termina de desplegar. Aquí se espera a que cada servicio informe en
+      # /actuator/info el mismo commit que este pipeline acaba de desplegar.
+      - name: Verificar que se desplegó este commit
+        env:
+          URL_GATEWAY: https://taller-api-gateway.onrender.com
+          URL_GESTION: https://taller-servicio-gestion-despachos.onrender.com
+          URL_OPERACION: https://taller-servicio-operacion-reparto.onrender.com
+        run: |
+          set -uo pipefail
+          pendientes="Gateway Gestión Operación"
+          sin_dato=""
+          for intento in $(seq 1 20); do
+            siguen=""
+            for nombre in ${pendientes}; do
+              case "${nombre}" in
+                Gateway) url="${URL_GATEWAY}" ;;
+                Gestión) url="${URL_GESTION}" ;;
+                Operación) url="${URL_OPERACION}" ;;
+              esac
+              commit="$(curl --silent --max-time 60 "${url}/actuator/info" | jq -r '.despliegue.commit // empty' 2>/dev/null || true)"
+              if [ "${commit}" = "${GITHUB_SHA}" ]; then
+                echo "${nombre}: ejecuta el commit ${commit}"
+              elif [ "${commit}" = "local" ]; then
+                echo "::warning::${nombre}: Render no informó RENDER_GIT_COMMIT; no se puede comprobar la versión."
+                sin_dato="${sin_dato} ${nombre}"
+              else
+                echo "${nombre}: aún informa '${commit:-sin respuesta}', se espera ${GITHUB_SHA}"
+                siguen="${siguen} ${nombre}"
+              fi
+            done
+            pendientes="${siguen}"
+            if [ -z "${pendientes// /}" ]; then
+              if [ -z "${sin_dato}" ]; then
+                echo "Gateway, Gestión y Operación ejecutan el commit \`${GITHUB_SHA}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+              else
+                echo "Versión sin comprobar en:${sin_dato} (sin RENDER_GIT_COMMIT); el resto ejecuta \`${GITHUB_SHA}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Siguen sin ejecutar ${GITHUB_SHA}:${pendientes}. Revisar el despliegue en Render."
+          exit 1
+
+      # Smoke test de seguridad en producción: autenticación en el Gateway y
+      # enmascaramiento de las URL directas de los servicios (X-Despacho-Interno).
+      - name: Verificar la seguridad activa en producción
+        env:
+          URL_GATEWAY: https://taller-api-gateway.onrender.com
+          URL_GESTION: https://taller-servicio-gestion-despachos.onrender.com
+          URL_OPERACION: https://taller-servicio-operacion-reparto.onrender.com
+        run: |
+          set -uo pipefail
+          fallos=0
+          comprobar() {
+            local descripcion="$1" url="$2" esperado="$3" codigo=""
+            for intento in 1 2 3; do
+              codigo="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 60 "${url}")"
+              case "${codigo}" in 000|5??) sleep 15 ;; *) break ;; esac
+            done
+            if [ "${codigo}" = "${esperado}" ]; then
+              echo "- ${descripcion}: HTTP ${codigo}" >> "$GITHUB_STEP_SUMMARY"
+              echo "OK ${descripcion}: HTTP ${codigo}"
+            else
+              echo "::error::${descripcion}: se esperaba HTTP ${esperado} y se obtuvo ${codigo}."
+              echo "- ${descripcion}: **HTTP ${codigo}** (se esperaba ${esperado})" >> "$GITHUB_STEP_SUMMARY"
+              fallos=1
+            fi
+          }
+          echo "### Seguridad activa en producción" >> "$GITHUB_STEP_SUMMARY"
+          comprobar "Gateway sin token, GET /api/v1/zonas" "${URL_GATEWAY}/api/v1/zonas" 401
+          comprobar "Gestión directo, GET /api/v1/zonas" "${URL_GESTION}/api/v1/zonas" 404
+          comprobar "Operación directo, GET /api/v1/jornadas" "${URL_OPERACION}/api/v1/jornadas" 404
+          exit "${fallos}"
