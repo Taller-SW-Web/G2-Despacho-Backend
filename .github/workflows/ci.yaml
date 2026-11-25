@@ -286,6 +286,94 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
+  # 1d. REVISIÓN DE SEGURIDAD: código propio (SAST) con CodeQL
+  #     OWASP Top 10:2025 A05 (Injection), A07 (Authentication Failures),
+  #     A04 (Cryptographic Failures), A02 (errores detallados) y, con el
+  #     lenguaje "actions", A08 (integridad del propio pipeline).
+  #     Dependency-Check y Trivy revisan las bibliotecas; gitleaks, los secretos;
+  #     CodeQL revisa el código que escribe el equipo. Se analiza sin compilar
+  #     (build-mode none) y falla con hallazgos de security-severity >= 7, el mismo
+  #     umbral que Dependency-Check. Todos los hallazgos se publican en
+  #     Security > Code scanning. Configuración: .github/codeql/codeql-config.yml.
+  # ---------------------------------------------------------------------------
+  codigo:
+    name: Seguridad (código ${{ matrix.lenguaje }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: [java-kotlin, actions]
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: none
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Analizar el código (SAST)
+        uses: github/codeql-action/analyze@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          category: /language:${{ matrix.lenguaje }}
+          output: codeql-resultados
+
+      # Las reglas pueden venir en tool.driver o en tool.extensions (paquetes de
+      # consultas): se leen ambas para no perder la severidad de ningún hallazgo.
+      - name: Bloquear hallazgos con severidad alta o crítica (>= 7)
+        env:
+          LENGUAJE: ${{ matrix.lenguaje }}
+        run: |
+          set -euo pipefail
+          sarif="$(find codeql-resultados -name '*.sarif' | head -n 1)"
+          if [ -z "${sarif}" ]; then
+            echo "::error::CodeQL no generó el informe SARIF para ${LENGUAJE}."
+            exit 1
+          fi
+          jq -r '
+            .runs[]
+            | ([.tool.driver.rules[]?, .tool.extensions[]?.rules[]?]
+               | map({key: .id, value: (.properties["security-severity"] // "0" | tonumber)})
+               | from_entries) as $severidad
+            | .results[]
+            | select((.suppressions // []) | length == 0)
+            | ($severidad[.ruleId] // 0) as $s
+            | select($s >= 7)
+            | "\($s)\t\(.ruleId)\t\(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"
+          ' "${sarif}" > codeql-bloqueantes.tsv
+          total="$(jq '[.runs[].results[]] | length' "${sarif}")"
+          bloqueantes="$(wc -l < codeql-bloqueantes.tsv)"
+          {
+            echo "### CodeQL · ${LENGUAJE}"
+            echo "Hallazgos: ${total} · Bloqueantes (security-severity >= 7): ${bloqueantes}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${bloqueantes}" -gt 0 ]; then
+            { echo '```'; cat codeql-bloqueantes.tsv; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::CodeQL encontró ${bloqueantes} hallazgo(s) con security-severity >= 7 en ${LENGUAJE} (ver el resumen y Security > Code scanning)."
+            exit 1
+          fi
+
+      - name: Conservar el informe SARIF
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: seguridad-codigo-${{ matrix.lenguaje }}
+          path: |
+            codeql-resultados/
+            codeql-bloqueantes.tsv
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
   # 2. CONSTRUIR (empaquetar) LAS IMÁGENES DOCKER
   #    En PR y en develop solo se verifica que cada Dockerfile construye.
   #    En main, además, se publica la imagen versionada por commit en GHCR.
@@ -294,7 +382,7 @@ jobs:
   # ---------------------------------------------------------------------------
   imagenes:
     name: Imagen Docker (${{ matrix.servicio }})
-    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos, codigo]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -400,13 +488,13 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # 3. COMPUERTA: un único check que resume todo lo anterior, incluida la
-  #    revisión de seguridad (dependencias, secretos e imágenes).
+  #    revisión de seguridad (dependencias, secretos, código e imágenes).
   #    Es el que conviene exigir en la protección de ramas (no depende de la matriz).
   # ---------------------------------------------------------------------------
   ci-ok:
     name: CI backend verde
     if: ${{ always() }}
-    needs: [verificador-f02, servicios, seguridad-local, dependencias, secretos, imagenes]
+    needs: [verificador-f02, servicios, seguridad-local, ventas-local, dependencias, secretos, codigo, imagenes]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
