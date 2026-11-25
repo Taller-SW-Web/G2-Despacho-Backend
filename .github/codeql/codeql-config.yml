@@ -1,0 +1,33 @@
+# Configuración del análisis estático de seguridad (SAST) con CodeQL.
+# La usa el job "Seguridad (código ...)" de .github/workflows/ci.yaml.
+#
+# Suite security-extended: solo reglas de seguridad (sin reglas de calidad de código).
+# El job bloquea los hallazgos con security-severity >= 7, el mismo umbral (CVSS >= 7)
+# que Dependency-Check.
+name: Revisión de código del backend de Despacho
+
+paths-ignore:
+  # Pruebas automatizadas: no se despliegan.
+  - '**/src/test/**'
+  # Dobles de prueba (emisor de tokens y Ventas simulados): se construyen en CI,
+  # pero nunca se publican ni se despliegan.
+  - seguridad-local
+  - ventas-local
+  # Scripts de pruebas y de mantenimiento fuera de los servicios.
+  - pruebas
+  - herramientas
+  - '**/target/**'
+
+# Excepciones justificadas, como las supresiones de Dependency-Check.
+# Cada exclusión debe indicar la regla, el motivo y cuándo deja de ser válida.
+query-filters:
+  # java/spring-disabled-csrf-protection (security-severity 8.8). Revisado en la
+  # primera ejecución de CodeQL: Gateway, Gestión y Operación desactivan CSRF.
+  # Falso positivo para esta arquitectura: CSRF solo aplica cuando el navegador
+  # envía la credencial por su cuenta (cookie de sesión). Aquí la autenticación es
+  # un JWT en la cabecera Authorization, sin sesión en el servidor (Gateway:
+  # NoOpServerSecurityContextRepository; Gestión y Operación: STATELESS), y los
+  # clientes no usan cookies ni credentials: 'include'.
+  # Revisar si alguna vez se guarda el token o el refresh token en una cookie.
+  - exclude:
+      id: java/spring-disabled-csrf-protection

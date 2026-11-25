@@ -22,6 +22,9 @@ server:
     include-stacktrace: never
 
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -65,3 +68,9 @@ despacho:
     algoritmo: ${SEGURIDAD_ALGORITMO:RS256}
   gateway:
     url-publica: ${GATEWAY_PUBLIC_URL:http://localhost:8080}
+
+# Commit desplegado, expuesto en /actuator/info. Render define RENDER_GIT_COMMIT en
+# cada despliegue; el pipeline lo compara con el commit que acaba de desplegar.
+info:
+  despliegue:
+    commit: ${RENDER_GIT_COMMIT:local}

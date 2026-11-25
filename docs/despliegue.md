@@ -64,22 +64,23 @@ El [workflow](../.github/workflows/ci.yaml) valida PR y cambios de las ramas de 
 PR / push a develop o main
   1. Compilar y probar   verificador F-02 · Pruebas (api-gateway | gestión | operación) · seguridad-local
      Seguridad           Seguridad (dependencias Maven) · Seguridad (secretos en el historial)
+                         · Seguridad (código java-kotlin | actions) con CodeQL
   2. Construir imágenes  Imagen Docker (api-gateway | gestión | operación | seguridad-local)
                          + SBOM CycloneDX y escaneo Trivy de cada imagen
   3. Compuerta           CI backend verde (incluye toda la revisión de seguridad)
   4. Desplegar           solo push o ejecución manual en main  ->  Render (Operación, Gestión, Gateway)
-  5. Verificar           /actuator/health de los tres servicios (herramientas/mantener_despacho_activo.py)
+  5. Verificar           /actuator/health · commit desplegado en /actuator/info · 401 y 404 de seguridad
 ```
 
 - **Compilar y probar:** `clean verify` por servicio, con PostgreSQL/PostGIS temporal (Testcontainers).
 - **Construir imágenes:** cada Dockerfile se construye con `docker build` en cada ejecución, de modo que un Dockerfile roto falla antes de integrar. En `main` las imágenes de Gateway, Gestión y Operación se publican en GHCR (`ghcr.io/<organización>/<repositorio>/<servicio>`) con las etiquetas del SHA del commit y `latest`. `seguridad-local` se construye pero nunca se publica ni se despliega: es un emisor de pruebas que no debe usarse en un despliegue público.
 - **Compuerta:** el job `CI backend verde` falla si cualquier etapa anterior no terminó en `success`. El despliegue depende únicamente de él.
 - **Desplegar:** en `main`, con el entorno `produccion` de GitHub, se llama a los deploy hooks de Render con el SHA del commit (`&ref=<SHA>`), primero Operación y Gestión y al final el Gateway. Solo hay un despliegue a la vez (`concurrency`) y nunca se cancela uno en curso.
-- **Verificar:** tras una espera inicial, se reutiliza `herramientas/mantener_despacho_activo.py --una-vez` hasta que los tres servicios respondan `200` y `status=UP`, con reintentos de hasta unos 15 minutos. Esto acredita que los servicios están disponibles tras el despliegue; no identifica la versión (el endpoint de salud no la expone).
+- **Verificar:** tras una espera inicial, se reutiliza `herramientas/mantener_despacho_activo.py --una-vez` hasta que los tres servicios respondan `200` y `status=UP`, con reintentos de hasta unos 15 minutos. Luego se espera, hasta unos 10 minutos más, a que cada servicio informe en `/actuator/info` (`despliegue.commit`, tomado de `RENDER_GIT_COMMIT`) el mismo SHA que se desplegó: así un `UP` de la versión anterior no da el despliegue por bueno. Si Render no informa la variable, se deja una advertencia. Por último, un smoke test de seguridad comprueba que el Gateway responde `401` a `/api/v1/zonas` sin token y que Gestión (`/api/v1/zonas`) y Operación (`/api/v1/jornadas`) responden `404` si se les llama directo, sin `X-Despacho-Interno`.
 
 ### Revisión de seguridad
 
-La revisión de seguridad forma parte del pipeline y bloquea la integración y el despliegue. Cubre los riesgos A02, A03 y A08 del OWASP Top 10:2025.
+La revisión de seguridad forma parte del pipeline y bloquea la integración y el despliegue. Cubre los riesgos A02, A03, A04, A05, A07 y A08 del OWASP Top 10:2025.
 
 | Control | Job | Herramienta | Falla cuando |
 |---|---|---|---|
@@ -87,8 +88,12 @@ La revisión de seguridad forma parte del pipeline y bloquea la integración y e
 | Secretos expuestos (A02, A08) | `Seguridad (secretos en el historial)` | gitleaks 8.30.1 | Hay una credencial en cualquier commit del historial. |
 | Imagen vulnerable (A03) | `Imagen Docker (<servicio>)` | Trivy 0.76.2 | La imagen tiene vulnerabilidades CRITICAL o HIGH que ya tienen corrección. La imagen no se publica en GHCR. |
 | Inventario de componentes (A03) | `Imagen Docker (<servicio>)` | Trivy (SBOM CycloneDX) | No falla; deja el SBOM como artefacto. |
+| Código propio vulnerable, SAST (A02, A04, A05, A07) | `Seguridad (código java-kotlin)` | CodeQL 4.39.5, suite `security-extended`, sin compilar | Un hallazgo del código de los servicios tiene `security-severity` >= 7 (por ejemplo, inyección SQL, JWT sin verificar, traza de error expuesta o credencial en el código). |
+| Pipeline inseguro (A08) | `Seguridad (código actions)` | CodeQL sobre `.github/workflows` | Un workflow tiene un hallazgo con `security-severity` >= 7 (por ejemplo, inyección de datos del evento en un `run:`). |
 
-Los informes quedan 30 días como artefactos de la ejecución: `seguridad-dependencias`, `seguridad-secretos` y `seguridad-imagen-<servicio>`. El informe de gitleaks oculta los valores encontrados (`--redact`).
+Los informes quedan 30 días como artefactos de la ejecución: `seguridad-dependencias`, `seguridad-secretos`, `seguridad-codigo-<lenguaje>` (SARIF) y `seguridad-imagen-<servicio>`. El informe de gitleaks oculta los valores encontrados (`--redact`). Los hallazgos de CodeQL, también los de severidad menor que 7 (que no bloquean), se publican en **Security > Code scanning**. CodeQL se configura en `.github/codeql/codeql-config.yml`, que excluye las pruebas y los dobles `seguridad-local` y `ventas-local` (no se despliegan).
+
+Requisito: en **Settings > Code security**, el *Default setup* de CodeQL debe estar desactivado. Este workflow usa la configuración avanzada y ambas no pueden convivir.
 
 Integridad del propio pipeline (A08):
 
@@ -102,6 +107,7 @@ Si un control falla:
 
 - **Dependencia o imagen vulnerable:** actualizar la dependencia o la imagen base. Si es un falso positivo, agregar una supresión en `.github/seguridad/dependency-check-supresiones.xml` con el CVE y el motivo.
 - **Secreto encontrado:** primero revocar y rotar la credencial; después limpiar el historial. Borrar el archivo no basta, porque el historial conserva el valor.
+- **Hallazgo de CodeQL:** abrir la alerta en Security > Code scanning, que muestra el recorrido del dato, y corregir el código (consultas parametrizadas, validación con allowlist, errores genéricos). Si es un falso positivo, descartarlo en la alerta con el motivo o excluir la regla en `query-filters` de `.github/codeql/codeql-config.yml` con un comentario que lo justifique.
 
 ### Despliegue continuo
 
