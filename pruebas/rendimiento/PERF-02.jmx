@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="PERF-02 Cola de pendientes">
+      <stringProp name="TestPlan.comments">PERF-02 (ES-F02-03 RN-05): GET /api/v1/despachos/pendientes?pagina=N&amp;tamanoPagina=100 por Gateway con 10.000 pendientes sembrados, alternando las páginas 1, 50 y 100 del CSV. Un grupo de 10 hilos; un temporizador JSR223 reparte turnos regulares globales según la fase. COLA-CALENTAMIENTO 5/s x 60 s (excluido) y COLA-CARGA 5/s x 300 s. Objetivo p95 &lt; 250 ms. Propiedad fases=ETIQUETA:segundos:tasa_por_s; si se cambia, ajustar duracionTotal.</stringProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="fases" elementType="Argument">
+            <stringProp name="Argument.name">fases</stringProp>
+            <stringProp name="Argument.value">${__P(fases,COLA-CALENTAMIENTO:60:5\,COLA-CARGA:300:5)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
+        <stringProp name="HTTPSampler.protocol">${__P(esquema,http)}</stringProp>
+        <stringProp name="HTTPSampler.domain">${__P(host,127.0.0.1)}</stringProp>
+        <stringProp name="HTTPSampler.port">${__P(puerto,18080)}</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">${__P(tiempoConexion,5000)}</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">${__P(tiempoRespuesta,10000)}</stringProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Accept</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Authorization</stringProp>
+            <stringProp name="Header.value">Bearer ${token}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Páginas esperadas">
+        <stringProp name="filename">${__P(paginas,datos/paginas-cola.csv)}</stringProp>
+        <stringProp name="fileEncoding">UTF-8</stringProp>
+        <stringProp name="variableNames"></stringProp>
+        <boolProp name="ignoreFirstLine">false</boolProp>
+        <stringProp name="delimiter">,</stringProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="SETUP-sesion">
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="SETUP-sesion">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// Fuera de la medición: sesión del gestor en la propiedad tokenGestor.
+import java.net.http.*
+import java.net.URI
+def emisor = props.getProperty('seguridad', 'http://127.0.0.1:18090')
+def solicitud = HttpRequest.newBuilder(URI.create(emisor + '/pruebas/token-usuario'))
+    .header('Content-Type', 'application/x-www-form-urlencoded')
+    .POST(HttpRequest.BodyPublishers.ofString('perfil=gestor')).build()
+def respuesta = HttpClient.newHttpClient().send(solicitud, HttpResponse.BodyHandlers.ofString())
+if (respuesta.statusCode() != 200) {
+    SampleResult.setSuccessful(false)
+    SampleResult.setResponseMessage('No se obtuvo la sesión del gestor: HTTP ' + respuesta.statusCode())
+    return
+}
+props.put('tokenGestor', new groovy.json.JsonSlurper().parseText(respuesta.body()).accessToken)
+SampleResult.setResponseMessage('Sesión del gestor preparada')</stringProp>
+</JSR223Sampler>
+<hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Gestores">
+        <stringProp name="ThreadGroup.num_threads">${__P(hilos,10)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampa,30)}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duracionTotal,360)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Sesión del gestor">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">vars.put('token', props.get('tokenGestor'))</stringProp>
+</JSR223PreProcessor>
+<hashTree/>
+        <JSR223Timer guiclass="TestBeanGUI" testclass="JSR223Timer" testname="Turnos globales por fase">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">def fases = props.get('colaFasesLista')
+if (fases == null) {
+    fases = []
+    long desde = 0
+    for (parte in vars.get('fases').split(',')) {
+        def campos = parte.trim().split(':')
+        long hasta = desde + (campos[1] as long) * 1000
+        fases &lt;&lt; [etiqueta: campos[0], desde: desde, hasta: hasta, intervalo: 1000.0d / (campos[2] as double)]
+        desde = hasta
+    }
+    props.putIfAbsent('colaFasesLista', fases)
+    fases = props.get('colaFasesLista')
+}
+long ahora = System.currentTimeMillis()
+props.putIfAbsent('colaInicio', ahora)
+long inicio = props.get('colaInicio') as long
+synchronized (fases) {
+    double siguiente = (props.get('colaSiguiente') ?: (double) inicio) as double
+    double turno = Math.max(siguiente, (double) ahora)
+    long transcurrido = (long) turno - inicio
+    def fase = fases.find { transcurrido &gt;= it.desde &amp;&amp; transcurrido &lt; it.hasta }
+    vars.put('faseCola', fase ? fase.etiqueta : 'COLA-EXCEDENTE')
+    props.put('colaSiguiente', turno + (fase ? fase.intervalo : 1000.0d))
+    return Math.max(0L, (long) turno - ahora)
+}</stringProp>
+</JSR223Timer>
+<hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="COLA">
+          <stringProp name="HTTPSampler.path">/api/v1/despachos/pendientes?pagina=${pagina}&amp;tamanoPagina=100</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Página completa y en orden">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// Página completa: totales del lote, 100 filas y los IDs esperados en su orden, sin duplicados.
+import groovy.json.JsonSlurper
+if (prev.getResponseCode() != '200') {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage('HTTP_' + prev.getResponseCode())
+    return
+}
+def pagina
+try {
+    pagina = new JsonSlurper().parseText(prev.getResponseDataAsString())
+} catch (Exception e) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage('RESPUESTA_INVALIDA')
+    return
+}
+def total = (props.getProperty('totalEsperado', '10000')) as long
+def fallos = []
+if (pagina.totalElementos != total) fallos &lt;&lt; 'TOTAL_ELEMENTOS'
+if (pagina.totalPaginas != total.intdiv(100)) fallos &lt;&lt; 'TOTAL_PAGINAS'
+def obtenidos = (pagina.contenido ?: []).collect { it.idDespacho }
+if (obtenidos.size() != 100) fallos &lt;&lt; 'PAGINA_INCOMPLETA'
+if (obtenidos.toSet().size() != obtenidos.size()) fallos &lt;&lt; 'IDS_DUPLICADOS'
+if (obtenidos != vars.get('ids').split(';').toList()) fallos &lt;&lt; 'IDS_INCORRECTOS'
+if (fallos) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(fallos.join(' '))
+}</stringProp>
+</JSR223Assertion>
+<hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Etiqueta de la fase">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">prev.setSampleLabel(vars.get('faseCola'))</stringProp>
+</JSR223PostProcessor>
+<hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

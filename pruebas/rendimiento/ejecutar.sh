@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-caso="${1:?Indica el caso: PERF-05 o PERF-06}"
+caso="${1:?Indica el caso: PERF-02, PERF-05 o PERF-06}"
 shift
 jmeter="${JMETER:-jmeter}"
 proyecto="${PROYECTO:-hito5-perf}"
@@ -12,6 +12,7 @@ salida="resultados/${caso}-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$salida"
 
 case "$caso" in
+  PERF-02) fases=(--fase COLA-CARGA:5:250) ;;
   PERF-05) fases=(--fase RUTA-CARGA:3:500) ;;
   PERF-06) fases=(--fase RUTA-BASE:3:500 --fase RUTA-PICO:10:1000 --fase RUTA-RECUPERACION:3
                   --fase RUTA-RECUPERACION@ultimos30:3:500) ;;
@@ -34,7 +35,7 @@ trap 'kill $monitor 2>/dev/null || true' EXIT
 # Solo las fases medidas entran al informe HTML; el calentamiento y las sesiones quedan en el JTL.
 "$jmeter" -n -t "${caso}.jmx" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
   -e -o "$salida/html" \
-  "-Jjmeter.reportgenerator.sample_filter=^RUTA-(BASE|PICO|RECUPERACION|CARGA)$" "$@"
+  "-Jjmeter.reportgenerator.sample_filter=^(RUTA-(BASE|PICO|RECUPERACION|CARGA)|COLA-CARGA)$" "$@"
 
 kill $monitor 2>/dev/null || true
 git rev-parse --short HEAD > "$salida/commit.txt" 2>/dev/null || true
