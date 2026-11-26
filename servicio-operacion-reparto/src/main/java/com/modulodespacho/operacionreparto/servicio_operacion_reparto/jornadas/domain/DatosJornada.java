@@ -153,6 +153,13 @@ public final class DatosJornada {
 
     public record Resumen(long disponible, long enRuta, long saturado, long fueraDeTurno) {}
 
+    public record JornadaAnteriorActiva(
+            UUID idJornada,
+            LocalDate fecha,
+            String nombreRepartidor,
+            String placa,
+            boolean pendientes) {}
+
     public record Monitoreo(
             List<FilaMonitoreo> contenido,
             int pagina,
@@ -160,7 +167,8 @@ public final class DatosJornada {
             long totalElementos,
             int totalPaginas,
             Resumen resumen,
-            Instant consultadoEn) {}
+            Instant consultadoEn,
+            List<JornadaAnteriorActiva> jornadasAnterioresActivas) {}
 
     public record Candidato(
             UUID idRepartidor,

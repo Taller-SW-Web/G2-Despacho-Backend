@@ -261,6 +261,56 @@ class JornadasPostgresTests {
     }
 
     @Test
+    void monitoreoIncluyeAntiguasActivasAunqueLaTablaEsteFiltrada() throws Exception {
+        UUID jornada = abrir(), despacho = UUID.randomUUID();
+        http.perform(get("/api/v1/flota/monitoreo").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jornadasAnterioresActivas").isEmpty());
+
+        var confirmacion = reservar(jornada, despacho, UUID.randomUUID(), "100", 1, 2);
+        UUID reserva = UUID.fromString(confirmacion.path("idReserva").asText());
+        sql.sql("UPDATE asignaciones_diarias SET fecha_jornada=DATE '2026-10-15' WHERE id=:id")
+                .param("id", jornada)
+                .update();
+
+        http.perform(get("/api/v1/flota/monitoreo").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].estadoOperativo").value("FUERA_DE_TURNO"))
+                .andExpect(
+                        jsonPath("$.jornadasAnterioresActivas[0].idJornada")
+                                .value(jornada.toString()))
+                .andExpect(jsonPath("$.jornadasAnterioresActivas[0].fecha").value("2026-10-15"))
+                .andExpect(jsonPath("$.jornadasAnterioresActivas[0].placa").value("TEST-01"))
+                .andExpect(
+                        jsonPath("$.jornadasAnterioresActivas[0].nombreRepartidor")
+                                .value("Jornada Prueba"))
+                .andExpect(jsonPath("$.jornadasAnterioresActivas[0].pendientes").value(true));
+
+        proyectar(jornada, reserva, despacho, "ENTREGADO", 1);
+        http.perform(
+                        get("/api/v1/flota/monitoreo")
+                                .param("fecha", "2026-10-10")
+                                .param("estadoOperativo", "EN_RUTA")
+                                .param("idZona", UUID.randomUUID().toString())
+                                .param("pagina", "2")
+                                .header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido").isEmpty())
+                .andExpect(
+                        jsonPath("$.jornadasAnterioresActivas[0].idJornada")
+                                .value(jornada.toString()))
+                .andExpect(jsonPath("$.jornadasAnterioresActivas[0].pendientes").value(false));
+
+        http.perform(
+                        post("/api/v1/jornadas/" + jornada + "/cierre")
+                                .header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk());
+        http.perform(get("/api/v1/flota/monitoreo").header("Authorization", "Bearer gestor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jornadasAnterioresActivas").isEmpty());
+    }
+
+    @Test
     void noAbreConPerfilPendienteNiConZonaInactivaOIndisponible() throws Exception {
         sql.sql("UPDATE repartidores SET estado_vinculacion='PENDIENTE',id_usuario_seguridad=NULL")
                 .update();

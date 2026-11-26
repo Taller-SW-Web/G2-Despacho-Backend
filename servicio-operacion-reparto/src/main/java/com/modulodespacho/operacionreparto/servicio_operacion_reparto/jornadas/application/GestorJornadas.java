@@ -79,10 +79,9 @@ public class GestorJornadas {
                     400,
                     "DESP_ERROR_CAMPOS_INVALIDOS",
                     "Revisa la paginación y el estado operativo.");
+        LocalDate hoy = obtenerFechaActual();
         var base =
-                repositorio
-                        .consultarMonitoreo(fecha == null ? obtenerFechaActual() : fecha)
-                        .stream()
+                repositorio.consultarMonitoreo(fecha == null ? hoy : fecha).stream()
                         .filter(
                                 fila ->
                                         zona == null
@@ -110,7 +109,8 @@ public class GestorJornadas {
                 filtradas.size(),
                 (int) Math.ceil((double) filtradas.size() / tamano),
                 resumen,
-                reloj.instant());
+                reloj.instant(),
+                repositorio.consultarJornadasAnterioresActivas(hoy));
     }
 
     private static long contar(List<FilaBase> filas, String estado) {

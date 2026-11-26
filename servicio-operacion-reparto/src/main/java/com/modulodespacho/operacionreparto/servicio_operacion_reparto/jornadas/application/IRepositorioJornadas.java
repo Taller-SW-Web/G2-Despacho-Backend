@@ -12,6 +12,8 @@ public interface IRepositorioJornadas {
 
     List<FilaBase> consultarMonitoreo(LocalDate fecha);
 
+    List<JornadaAnteriorActiva> consultarJornadasAnterioresActivas(LocalDate hoy);
+
     Perfil obtenerPerfil(UUID id);
 
     Optional<Perfil> buscarPerfilDeUsuario(UUID usuario);
