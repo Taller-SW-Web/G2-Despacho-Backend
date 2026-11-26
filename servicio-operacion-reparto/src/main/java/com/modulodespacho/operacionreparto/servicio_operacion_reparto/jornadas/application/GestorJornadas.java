@@ -41,10 +41,10 @@ public class GestorJornadas {
         if (!perfil.habilitado())
             throw ErrorJornada.noApto("El repartidor debe estar activo y vinculado.");
         Vehiculo vehiculo = repositorio.obtenerVehiculo(datos.idFurgoneta());
-        if (!"DISPONIBLE".equals(vehiculo.estado())
-                || repositorio.tieneRecursoOcupado(perfil.id(), vehiculo.id()))
-            throw ErrorJornada.conflicto(
-                    "Existe otra jornada activa o carga pendiente de los recursos.");
+        if (!"DISPONIBLE".equals(vehiculo.estado()))
+            throw ErrorJornada.conflicto("La furgoneta ya no está disponible.");
+        var bloqueos = repositorio.buscarJornadasBloqueantes(perfil.id(), vehiculo.id());
+        if (!bloqueos.isEmpty()) throw ErrorJornada.aperturaBloqueada(bloqueos);
         UUID id = repositorio.crear(datos, vehiculo.limites(), actor, reloj.instant());
         repositorio.auditar(id, "APERTURA_JORNADA", actor, null);
         return repositorio.obtenerJornada(id).vista();

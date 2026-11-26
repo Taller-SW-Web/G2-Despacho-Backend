@@ -210,18 +210,44 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
     }
 
     @Override
-    public boolean tieneRecursoOcupado(UUID repartidor, UUID furgoneta) {
+    public List<JornadaBloqueante> buscarJornadasBloqueantes(UUID repartidor, UUID furgoneta) {
         return sql.sql(
                         """
-            SELECT EXISTS(SELECT 1 FROM asignaciones_diarias j
-              WHERE (j.repartidor_id=:repartidor OR j.furgoneta_id=:furgoneta) AND
-                (j.estado='ACTIVA' OR EXISTS(SELECT 1 FROM reservas_capacidad r WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA')
-                 OR EXISTS(SELECT 1 FROM proyecciones_despacho p WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO'))))
+            SELECT j.id, j.fecha_jornada, j.estado, f.placa,
+              j.repartidor_id=:repartidor AS bloquea_repartidor,
+              j.furgoneta_id=:furgoneta AS bloquea_furgoneta,
+              carga.reservas_activas, COALESCE(proyeccion.despachos, ARRAY[]::text[]) AS despachos
+            FROM asignaciones_diarias j
+            JOIN furgonetas f ON f.id=j.furgoneta_id
+            CROSS JOIN LATERAL (
+              SELECT count(*) AS reservas_activas FROM reservas_capacidad r
+              WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA'
+            ) carga
+            CROSS JOIN LATERAL (
+              SELECT array_agg(
+                COALESCE(NULLIF(btrim(p.codigo_rastreo_interno), ''), p.despacho_id_externo::text)
+                ORDER BY p.codigo_rastreo_interno, p.despacho_id_externo) AS despachos
+              FROM proyecciones_despacho p
+              WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO')
+            ) proyeccion
+            WHERE (j.repartidor_id=:repartidor OR j.furgoneta_id=:furgoneta)
+              AND (j.estado='ACTIVA' OR carga.reservas_activas > 0 OR proyeccion.despachos IS NOT NULL)
+            ORDER BY (j.estado='ACTIVA') DESC, j.fecha_jornada DESC, j.id
             """)
                 .param("repartidor", repartidor)
                 .param("furgoneta", furgoneta)
-                .query(Boolean.class)
-                .single();
+                .query(
+                        (fila, indice) ->
+                                new JornadaBloqueante(
+                                        fila.getObject("id", UUID.class),
+                                        fila.getObject("fecha_jornada", LocalDate.class),
+                                        fila.getString("placa"),
+                                        fila.getString("estado"),
+                                        fila.getBoolean("bloquea_repartidor"),
+                                        fila.getBoolean("bloquea_furgoneta"),
+                                        List.of((String[]) fila.getArray("despachos").getArray()),
+                                        fila.getLong("reservas_activas")))
+                .list();
     }
 
     @Override

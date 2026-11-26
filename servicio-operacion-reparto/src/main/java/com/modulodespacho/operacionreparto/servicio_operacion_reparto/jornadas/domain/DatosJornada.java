@@ -51,6 +51,16 @@ public final class DatosJornada {
 
     public record Apertura(UUID idRepartidor, UUID idFurgoneta, UUID idZona, LocalDate fecha) {}
 
+    public record JornadaBloqueante(
+            UUID idJornada,
+            LocalDate fecha,
+            String placa,
+            String estado,
+            boolean bloqueaRepartidor,
+            boolean bloqueaFurgoneta,
+            List<String> despachosPendientes,
+            long reservasActivas) {}
+
     public record JornadaBase(
             UUID id,
             UUID repartidor,

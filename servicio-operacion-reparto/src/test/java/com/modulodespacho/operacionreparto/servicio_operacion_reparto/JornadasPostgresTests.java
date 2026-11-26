@@ -240,7 +240,15 @@ class JornadasPostgresTests {
                                 .header("Authorization", "Bearer gestor")
                                 .contentType("application/json")
                                 .content(apertura()))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].idJornada").value(jornada.toString()))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].fecha").value("2026-10-17"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].estado").value("ACTIVA"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].placa").value("TEST-01"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].bloqueaRepartidor").value(true))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].bloqueaFurgoneta").value(true))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].despachosPendientes").isEmpty())
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].reservasActivas").value(0));
         sql.sql("UPDATE furgonetas SET capacidad_max_kg=300").update();
         http.perform(get("/api/v1/jornadas/" + jornada).header("Authorization", "Bearer gestor"))
                 .andExpect(status().isOk())
@@ -307,6 +315,16 @@ class JornadasPostgresTests {
                 .andExpect(status().isConflict());
         proyectar(jornada, reserva, despacho, "ASIGNADO", 1);
         http.perform(
+                        post("/api/v1/jornadas")
+                                .header("Authorization", "Bearer gestor")
+                                .contentType("application/json")
+                                .content(apertura()))
+                .andExpect(status().isConflict())
+                .andExpect(
+                        jsonPath("$.jornadasBloqueantes[0].despachosPendientes[0]")
+                                .value("TRK-PRUEBA"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].reservasActivas").value(1));
+        http.perform(
                         post("/api/v1/jornadas/" + jornada + "/cierre")
                                 .header("Authorization", "Bearer gestor"))
                 .andExpect(status().isConflict());
@@ -338,7 +356,11 @@ class JornadasPostgresTests {
                                 .header("Authorization", "Bearer gestor")
                                 .contentType("application/json")
                                 .content(apertura()))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].idJornada").value(jornada.toString()))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].estado").value("CERRADA"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].despachosPendientes").isEmpty())
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].reservasActivas").value(1));
         String liberar =
                 json.writeValueAsString(
                         Map.of("idDespacho", despacho, "motivo", "RECEPCION_EN_CENTRO"));

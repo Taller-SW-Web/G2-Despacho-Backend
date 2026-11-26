@@ -187,6 +187,36 @@ class JornadasHttpTests {
     }
 
     @Test
+    void devuelveElContextoDeLaJornadaQueBloqueaLaApertura() throws Exception {
+        var bloqueo =
+                new JornadaBloqueante(
+                        id,
+                        hoy.minusDays(2),
+                        "TEST-01",
+                        "ACTIVA",
+                        true,
+                        false,
+                        List.of("TRK-001"),
+                        1);
+        when(gestor.abrir(any(), eq(actor)))
+                .thenThrow(ErrorJornada.aperturaBloqueada(List.of(bloqueo)));
+
+        http.perform(
+                        post("/api/v1/jornadas")
+                                .header("Authorization", "Bearer gestor")
+                                .contentType("application/json")
+                                .content(apertura()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_CONFLICTO_JORNADA"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].fecha").value("2026-10-15"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].placa").value("TEST-01"))
+                .andExpect(jsonPath("$.jornadasBloqueantes[0].bloqueaRepartidor").value(true))
+                .andExpect(
+                        jsonPath("$.jornadasBloqueantes[0].despachosPendientes[0]")
+                                .value("TRK-001"));
+    }
+
+    @Test
     void validaConsultaYCierreSinAceptarCamposAjenos() throws Exception {
 
         http.perform(
