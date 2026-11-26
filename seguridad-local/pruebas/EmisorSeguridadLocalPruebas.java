@@ -316,6 +316,7 @@ public final class EmisorSeguridadLocalPruebas {
                                     "sub")
                             .equals("44444444-4444-4444-8444-444444444444"),
                     "El perfil directo de Kevin conserva su identidad");
+            comprobarPerfilesDeCarga(cliente, origen);
 
             comprobar(
                     obtener(cliente, rutaToken).statusCode() == 405,
@@ -329,6 +330,39 @@ public final class EmisorSeguridadLocalPruebas {
             comprobarSesionHumana(cliente, origen);
             System.out.println("Pruebas del emisor local completadas");
         }
+    }
+
+    /** Perfiles repartidor-carga-NN de PERF-05/06: sujetos distintos y sin roles globales. */
+    private static void comprobarPerfilesDeCarga(HttpClient cliente, String origen)
+            throws Exception {
+        var sujetos = new java.util.HashSet<String>();
+        for (int indice = 1; indice <= 30; indice++) {
+            String perfil = "repartidor-carga-%02d".formatted(indice);
+            var respuesta =
+                    enviar(
+                            cliente,
+                            origen + "/pruebas/token-usuario",
+                            formulario(Map.of("perfil", perfil)));
+            comprobar(respuesta.statusCode() == 200, "Perfil de carga " + perfil);
+            String claims = decodificar(extraer(respuesta.body(), "accessToken").split("\\.")[1]);
+            String sujeto = extraer(claims, "sub");
+            comprobar(
+                    sujeto.equals("55555555-5555-4555-8555-%012d".formatted(indice))
+                            && claims.contains("\"roles\":[]"),
+                    "Sujeto determinista y sin roles para " + perfil);
+            sujetos.add(sujeto);
+        }
+        comprobar(sujetos.size() == 30, "Treinta identidades de carga distintas");
+        for (String invalido :
+                new String[] {"repartidor-carga-00", "repartidor-carga-31", "repartidor-carga-1"})
+            comprobar(
+                    enviar(
+                                            cliente,
+                                            origen + "/pruebas/token-usuario",
+                                            formulario(Map.of("perfil", invalido)))
+                                    .statusCode()
+                            == 400,
+                    "Rechazar el perfil de carga " + invalido);
     }
 
     /** Doble local del contrato G7, incluyendo uso único y revocación por familia. */

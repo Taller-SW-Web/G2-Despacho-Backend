@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="PERF-05 Mi Ruta carga sostenida">
+      <stringProp name="TestPlan.comments">GET /api/v1/repartidor/mi-ruta por Gateway con 30 identidades (repartidor-carga-NN). Un solo grupo de 30 hilos; un temporizador JSR223 reparte turnos regulares globales (1000/tasa ms) según la fase vigente y cada muestra se etiqueta con su fase. Propiedad fases=ETIQUETA:segundos:tasa_por_s,...; si se cambia, ajustar duracionTotal. RUTA-CALENTAMIENTO 3/s x 60 s (excluido) y RUTA-CARGA 3/s x 300 s. Objetivo p95 &lt; 500 ms.</stringProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="fases" elementType="Argument">
+            <stringProp name="Argument.name">fases</stringProp>
+            <stringProp name="Argument.value">${__P(fases,RUTA-CALENTAMIENTO:60:3\,RUTA-CARGA:300:3)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
+        <stringProp name="HTTPSampler.protocol">${__P(esquema,http)}</stringProp>
+        <stringProp name="HTTPSampler.domain">${__P(host,127.0.0.1)}</stringProp>
+        <stringProp name="HTTPSampler.port">${__P(puerto,18080)}</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">${__P(tiempoConexion,5000)}</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">${__P(tiempoRespuesta,10000)}</stringProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Accept</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Authorization</stringProp>
+            <stringProp name="Header.value">Bearer ${token}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Rutas esperadas">
+        <stringProp name="filename">${__P(rutas,datos/rutas-carga.csv)}</stringProp>
+        <stringProp name="fileEncoding">UTF-8</stringProp>
+        <stringProp name="variableNames"></stringProp>
+        <boolProp name="ignoreFirstLine">false</boolProp>
+        <stringProp name="delimiter">,</stringProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="SETUP-sesiones">
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="SETUP-sesiones">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// Fuera de la medición: una sesión por identidad de carga, en propiedades token_N.
+import java.net.http.*
+import java.net.URI
+def emisor = props.getProperty('seguridad', 'http://127.0.0.1:18090')
+def total = (props.getProperty('identidades', '30')) as int
+def cliente = HttpClient.newHttpClient()
+for (int i = 1; i &lt;= total; i++) {
+    def perfil = String.format('repartidor-carga-%02d', i)
+    def solicitud = HttpRequest.newBuilder(URI.create(emisor + '/pruebas/token-usuario'))
+        .header('Content-Type', 'application/x-www-form-urlencoded')
+        .POST(HttpRequest.BodyPublishers.ofString('perfil=' + perfil)).build()
+    def respuesta = cliente.send(solicitud, HttpResponse.BodyHandlers.ofString())
+    if (respuesta.statusCode() != 200) {
+        SampleResult.setSuccessful(false)
+        SampleResult.setResponseMessage('No se obtuvo la sesión de ' + perfil + ': HTTP ' + respuesta.statusCode())
+        return
+    }
+    props.put('token_' + i, new groovy.json.JsonSlurper().parseText(respuesta.body()).accessToken)
+}
+SampleResult.setResponseMessage('Sesiones preparadas: ' + total)</stringProp>
+</JSR223Sampler>
+<hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Repartidores">
+        <stringProp name="ThreadGroup.num_threads">${__P(hilos,30)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampa,30)}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duracionTotal,360)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">-1</intProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Sesión de la fila">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// Asocia la muestra con la identidad de la fila CSV actual.
+vars.put('token', props.get('token_' + vars.get('indice')))</stringProp>
+</JSR223PreProcessor>
+<hashTree/>
+        <JSR223Timer guiclass="TestBeanGUI" testclass="JSR223Timer" testname="Turnos globales por fase">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">def fases = props.get('rutaFasesLista')
+if (fases == null) {
+    fases = []
+    long desde = 0
+    for (parte in vars.get('fases').split(',')) {
+        def campos = parte.trim().split(':')
+        long hasta = desde + (campos[1] as long) * 1000
+        fases &lt;&lt; [etiqueta: campos[0], desde: desde, hasta: hasta, intervalo: 1000.0d / (campos[2] as double)]
+        desde = hasta
+    }
+    props.putIfAbsent('rutaFasesLista', fases)
+    fases = props.get('rutaFasesLista')
+}
+long ahora = System.currentTimeMillis()
+props.putIfAbsent('rutaInicio', ahora)
+long inicio = props.get('rutaInicio') as long
+synchronized (fases) {
+    double siguiente = (props.get('rutaSiguiente') ?: (double) inicio) as double
+    double turno = Math.max(siguiente, (double) ahora)
+    long transcurrido = (long) turno - inicio
+    def fase = fases.find { transcurrido &gt;= it.desde &amp;&amp; transcurrido &lt; it.hasta }
+    vars.put('faseRuta', fase ? fase.etiqueta : 'RUTA-EXCEDENTE')
+    props.put('rutaSiguiente', turno + (fase ? fase.intervalo : 1000.0d))
+    return Math.max(0L, (long) turno - ahora)
+}</stringProp>
+</JSR223Timer>
+<hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="RUTA">
+          <stringProp name="HTTPSampler.path">/api/v1/repartidor/mi-ruta</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Ruta de la identidad">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// Identidad: misma jornada, mismos despachos y misma secuencia que la fila CSV de la muestra.
+import groovy.json.JsonSlurper
+if (prev.getResponseCode() != '200') {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage('HTTP_' + prev.getResponseCode())
+    return
+}
+def fallos = []
+def ruta
+try {
+    ruta = new JsonSlurper().parseText(prev.getResponseDataAsString())
+} catch (Exception e) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage('RESPUESTA_INVALIDA')
+    return
+}
+if (ruta.idJornada != vars.get('idJornada')) fallos &lt;&lt; 'JORNADA_INCORRECTA'
+def esperado = vars.get('despachos').split(';').toList().sort()
+def obtenido = (ruta.despachos ?: []).collect { it.idDespacho + ':' + it.secuenciaRuta }.sort()
+if (obtenido != esperado) fallos &lt;&lt; 'RUTA_INCORRECTA'
+if (fallos) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage(fallos.join(' '))
+}</stringProp>
+</JSR223Assertion>
+<hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Etiqueta de la fase">
+  <stringProp name="scriptLanguage">groovy</stringProp>
+  <stringProp name="parameters"></stringProp>
+  <stringProp name="filename"></stringProp>
+  <stringProp name="cacheKey">true</stringProp>
+  <stringProp name="script">// La muestra se registra con la fase en la que salió.
+prev.setSampleLabel(vars.get('faseRuta'))</stringProp>
+</JSR223PostProcessor>
+<hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

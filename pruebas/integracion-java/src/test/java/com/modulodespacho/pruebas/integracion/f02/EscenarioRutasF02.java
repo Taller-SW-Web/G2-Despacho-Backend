@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 public final class EscenarioRutasF02 {
     static final String API = GATEWAY + "/api/v1";
-    private static final String ACTOR = "11111111-1111-4111-8111-111111111111";
+    static final String ACTOR = "11111111-1111-4111-8111-111111111111";
     private static final String USUARIO_A = "22222222-2222-4222-8222-222222222222";
     private static final String USUARIO_B = "33333333-3333-4333-8333-333333333333";
 
@@ -119,21 +119,21 @@ public final class EscenarioRutasF02 {
         return id;
     }
 
-    private static String tokenUsuario(ClienteApi cliente, String perfil) {
+    static String tokenUsuario(ClienteApi cliente, String perfil) {
         var respuesta =
                 cliente.postFormulario(
                         SEGURIDAD + "/pruebas/token-usuario", Map.of("perfil", perfil));
         return exigirExito(respuesta, "token " + perfil).path("accessToken").asText();
     }
 
-    private static JsonNode exigirExito(ClienteApi.Respuesta respuesta, String paso) {
+    static JsonNode exigirExito(ClienteApi.Respuesta respuesta, String paso) {
         if (respuesta.estado() / 100 != 2 || respuesta.json() == null)
             throw new IllegalStateException(
                     "Preparación fallida en '" + paso + "': HTTP " + respuesta.estado());
         return respuesta.json();
     }
 
-    private static String repartidor(
+    static String repartidor(
             String id,
             String nombre,
             String dni,
@@ -151,7 +151,7 @@ public final class EscenarioRutasF02 {
                 .formatted(id, nombre, dni, telefono, correo, brevete, usuario, ACTOR, ACTOR);
     }
 
-    private static String furgoneta(String id, String placa) {
+    static String furgoneta(String id, String placa) {
         return """
                 INSERT INTO furgonetas(id,placa,estado,capacidad_max_kg,capacidad_max_m3,
                     max_paquetes,creado_por,actualizado_por)

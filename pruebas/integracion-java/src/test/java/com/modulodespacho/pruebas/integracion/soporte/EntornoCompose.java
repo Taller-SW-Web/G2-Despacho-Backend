@@ -26,11 +26,15 @@ public final class EntornoCompose implements AutoCloseable {
     private final Path informes;
     private final List<String> compose;
     private final ClienteApi cliente = new ClienteApi();
+    private final String proyecto;
+    private final boolean conservar;
 
-    private EntornoCompose(Path raiz, Path envVacio, List<Path> adicionales) {
+    private EntornoCompose(
+            Path raiz, Path envVacio, List<Path> adicionales, String proyecto, boolean conservar) {
         this.raiz = raiz;
         this.informes = Path.of("target", "informes");
-        String proyecto = "hito5-it-" + UUID.randomUUID().toString().substring(0, 12);
+        this.proyecto = proyecto;
+        this.conservar = conservar;
         var comando =
                 new ArrayList<>(
                         List.of(
@@ -50,6 +54,20 @@ public final class EntornoCompose implements AutoCloseable {
      * ejemplo, para interponer un intermediario de prueba entre dos servicios).
      */
     public static EntornoCompose iniciar(List<Path> adicionales) throws Exception {
+        return iniciar(
+                adicionales, "hito5-it-" + UUID.randomUUID().toString().substring(0, 12), false);
+    }
+
+    /**
+     * Entorno para rendimiento: nombre fijo y contenedores que siguen activos al cerrar, para que
+     * JMeter mida después. Se retira con {@code docker compose -p <proyecto> down}.
+     */
+    public static EntornoCompose iniciarConservado(String proyecto) throws Exception {
+        return iniciar(List.of(), proyecto, true);
+    }
+
+    private static EntornoCompose iniciar(List<Path> adicionales, String proyecto, boolean conservar)
+            throws Exception {
         Path raiz = raizBackend();
         for (String servicio : SERVICIOS) {
             Path jar = raiz.resolve(servicio).resolve("target/" + servicio + "-0.0.1-SNAPSHOT.jar");
@@ -60,7 +78,7 @@ public final class EntornoCompose implements AutoCloseable {
         // Sustituye --env-file /dev/null del verificador Python y funciona también en Windows.
         Path envVacio = Files.createTempFile("hito5-env-", ".env");
         envVacio.toFile().deleteOnExit();
-        var entorno = new EntornoCompose(raiz, envVacio, adicionales);
+        var entorno = new EntornoCompose(raiz, envVacio, adicionales, proyecto, conservar);
         try {
             entorno.ejecutar(null, "up", "--build", "-d");
             entorno.esperarHttp(SEGURIDAD + "/actuator/health");
@@ -71,7 +89,7 @@ public final class EntornoCompose implements AutoCloseable {
             return entorno;
         } catch (Exception | AssertionError error) {
             entorno.guardarRegistros();
-            entorno.close();
+            entorno.retirar();
             throw error;
         }
     }
@@ -117,8 +135,16 @@ public final class EntornoCompose implements AutoCloseable {
         }
     }
 
+    public String proyecto() {
+        return proyecto;
+    }
+
     @Override
     public void close() {
+        if (!conservar) retirar();
+    }
+
+    private void retirar() {
         try {
             ejecutar(null, "down", "--remove-orphans", "--volumes");
         } catch (Exception error) {
