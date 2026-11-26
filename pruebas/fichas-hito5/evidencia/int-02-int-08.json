@@ -1,0 +1,104 @@
+{
+  "verificacion" : "Hito 5 · INT-02 e INT-08 · rutas F-02 y F-03",
+  "fechaUtc" : "2026-11-26T08:10:20.517411900Z",
+  "commitBackend" : "9372386",
+  "datosSinteticos" : {
+    "ids" : {
+      "idJornadaA" : "0da36989-34fa-4e74-b520-20afbf967a89",
+      "idJornadaB" : "0bace995-4d9f-421b-8fda-70f61e9a9c5c",
+      "idRepartidorA" : "f144bf2c-f36b-47ac-8676-6340b8d85b4d",
+      "idZona" : "4c61efda-5858-4592-b92c-584f0b365406",
+      "idRepartidorB" : "04015505-60a5-4966-a422-13db2411ba8f",
+      "despachoPropioB" : "fd52d106-6488-401a-9d8e-4559d860f127",
+      "idDespachoBajoPrueba" : "3468b58f-5d3d-4816-8041-05da3e34dd6f",
+      "otroDespachoA" : "9c2b29b4-27a8-4a96-bb04-367a2165faba"
+    },
+    "convergenciaProyeccionMs" : 678,
+    "codigoError404" : "DESP_ERROR_DESPACHO_NO_ENCONTRADO"
+  },
+  "casos" : {
+    "INT-08" : [ {
+      "comprobacion" : "despacho_ajeno_404",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cuerpo_sin_destinatario",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cuerpo_sin_telefono",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cuerpo_sin_direccion",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cuerpo_sin_codigo_rastreo",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cuerpo_sin_campos_de_detalle",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ajeno_indistinguible_de_inexistente",
+      "correcto" : true
+    }, {
+      "comprobacion" : "control_b_ve_su_despacho",
+      "correcto" : true
+    }, {
+      "comprobacion" : "control_dueno_ve_datos_personales",
+      "correcto" : true
+    } ],
+    "INT-02" : [ {
+      "comprobacion" : "salud_gateway",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cola_sin_token_401",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ruta_sin_token_401",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ruta_gestion_estructura",
+      "correcto" : true
+    }, {
+      "comprobacion" : "mi_ruta_jornada_propia",
+      "correcto" : true
+    }, {
+      "comprobacion" : "aparece_una_vez_en_cada_ruta",
+      "correcto" : true
+    }, {
+      "comprobacion" : "estado_asignado_en_ambas",
+      "correcto" : true
+    }, {
+      "comprobacion" : "misma_secuencia",
+      "correcto" : true
+    }, {
+      "comprobacion" : "mismo_repartidor_de_la_jornada",
+      "correcto" : true
+    }, {
+      "comprobacion" : "cola_autorizada_estructura",
+      "correcto" : true
+    }, {
+      "comprobacion" : "despacho_asignado_fuera_de_cola",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ocupacion_jornada_estructura",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_volumenM3",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ocupacion_igual_suma_ruta_volumenM3",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_pesoKg",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ocupacion_igual_suma_ruta_pesoKg",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_paquetes",
+      "correcto" : true
+    }, {
+      "comprobacion" : "ocupacion_igual_suma_ruta_paquetes",
+      "correcto" : true
+    } ]
+  }
+}

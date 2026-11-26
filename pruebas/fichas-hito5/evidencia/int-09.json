@@ -1,0 +1,134 @@
+{
+  "verificacion" : "Hito 5 · INT-09 · reasignación y recuperación",
+  "fechaUtc" : "2026-11-26T08:09:52.352595600Z",
+  "commitBackend" : "9372386",
+  "datosSinteticos" : {
+    "ids" : {
+      "idJornadaA" : "b29d1ec2-4cee-4bed-846b-59505f58d5e9",
+      "idJornadaB" : "e2669bba-e491-4b79-8056-75ea2d7fa064",
+      "idRepartidorA" : "2a01f203-810a-4738-a457-eb0c14d25166",
+      "idZona" : "2221cd93-261e-4d35-80bc-79bcfcf55437",
+      "idRepartidorB" : "92832921-387f-4ab6-bdfd-ef9dbe4c377c",
+      "despachoPropioB" : "d4ea35d6-5194-44c9-82fa-7b6dfdb68b94",
+      "idDespachoBajoPrueba" : "2b6f8fbb-4619-4b55-bd2a-efbc8004836e",
+      "otroDespachoA" : "c980cc5c-9ed1-454a-a735-41fa455aa253"
+    },
+    "antes" : {
+      "rutaGestionA" : [ "c980cc5c-9ed1-454a-a735-41fa455aa253", "2b6f8fbb-4619-4b55-bd2a-efbc8004836e" ],
+      "rutaGestionB" : [ "d4ea35d6-5194-44c9-82fa-7b6dfdb68b94" ],
+      "miRutaA" : [ "c980cc5c-9ed1-454a-a735-41fa455aa253", "2b6f8fbb-4619-4b55-bd2a-efbc8004836e" ],
+      "miRutaB" : [ "d4ea35d6-5194-44c9-82fa-7b6dfdb68b94" ],
+      "ocupacionA" : {
+        "volumenM3" : 0.02,
+        "pesoKg" : 4.0,
+        "paquetes" : 2.0
+      },
+      "ocupacionB" : {
+        "volumenM3" : 0.01,
+        "pesoKg" : 2.0,
+        "paquetes" : 1.0
+      }
+    },
+    "reservasAntes" : [ "fe2856b3-670e-4ac0-9b26-fc4ea7373a07|b29d1ec2-4cee-4bed-846b-59505f58d5e9|ACTIVA" ],
+    "primeraRespuesta" : {
+      "http" : 503,
+      "code" : "DESP_ERROR_OPERACION_NO_DISPONIBLE"
+    },
+    "reservasTrasCorte" : [ "fe2856b3-670e-4ac0-9b26-fc4ea7373a07|b29d1ec2-4cee-4bed-846b-59505f58d5e9|LIBERADA", "22b4db80-2106-44c6-8fc7-3b2fe793b1a6|e2669bba-e491-4b79-8056-75ea2d7fa064|ACTIVA" ],
+    "recuperacion" : {
+      "reenvioObservado" : "durante el reintento del cliente",
+      "transferenciasReenviadasPorCicloPeriodicoAntesDelReintento" : 0,
+      "transferenciasReenviadasDuranteElReintento" : 1
+    },
+    "reservasDespues" : [ "fe2856b3-670e-4ac0-9b26-fc4ea7373a07|b29d1ec2-4cee-4bed-846b-59505f58d5e9|LIBERADA", "22b4db80-2106-44c6-8fc7-3b2fe793b1a6|e2669bba-e491-4b79-8056-75ea2d7fa064|ACTIVA" ],
+    "despues" : {
+      "rutaGestionA" : [ "c980cc5c-9ed1-454a-a735-41fa455aa253" ],
+      "rutaGestionB" : [ "d4ea35d6-5194-44c9-82fa-7b6dfdb68b94", "2b6f8fbb-4619-4b55-bd2a-efbc8004836e" ],
+      "miRutaA" : [ "c980cc5c-9ed1-454a-a735-41fa455aa253" ],
+      "miRutaB" : [ "d4ea35d6-5194-44c9-82fa-7b6dfdb68b94", "2b6f8fbb-4619-4b55-bd2a-efbc8004836e" ],
+      "ocupacionA" : {
+        "volumenM3" : 0.01,
+        "pesoKg" : 2.0,
+        "paquetes" : 1.0
+      },
+      "ocupacionB" : {
+        "volumenM3" : 0.02,
+        "pesoKg" : 4.0,
+        "paquetes" : 2.0
+      }
+    },
+    "transferenciasVistasPorIntermediario" : [ {
+      "numero" : 1,
+      "recibida" : "2026-11-26T08:09:51.552259400Z",
+      "estadoOperacion" : 200,
+      "estadoTransferencia" : "TRANSFERIDA",
+      "idNuevaReserva" : "22b4db80-2106-44c6-8fc7-3b2fe793b1a6",
+      "respuestaOperacion" : "2026-11-26T08:09:51.574189800Z",
+      "cortada" : true,
+      "corte" : "2026-11-26T08:09:51.576763Z"
+    }, {
+      "numero" : 2,
+      "recibida" : "2026-11-26T08:09:51.804976700Z",
+      "estadoOperacion" : 200,
+      "estadoTransferencia" : "TRANSFERIDA",
+      "idNuevaReserva" : "22b4db80-2106-44c6-8fc7-3b2fe793b1a6",
+      "respuestaOperacion" : "2026-11-26T08:09:51.817544600Z",
+      "cortada" : false,
+      "corte" : null
+    } ]
+  },
+  "casos" : {
+    "INT-09" : [ {
+      "comprobacion" : "inicio_una_reserva_activa_en_a",
+      "correcto" : true
+    }, {
+      "comprobacion" : "primera_respuesta_503_recuperable",
+      "correcto" : true
+    }, {
+      "comprobacion" : "solo_la_primera_transferencia_cortada",
+      "correcto" : true
+    }, {
+      "comprobacion" : "operacion_confirmo_antes_del_corte",
+      "correcto" : true
+    }, {
+      "comprobacion" : "transferencia_durable_en_operacion_tras_corte",
+      "correcto" : true
+    }, {
+      "comprobacion" : "reenvios_devuelven_la_misma_transferencia",
+      "correcto" : true
+    }, {
+      "comprobacion" : "reintento_200",
+      "correcto" : true
+    }, {
+      "comprobacion" : "reintento_devuelve_la_reasignacion",
+      "correcto" : true
+    }, {
+      "comprobacion" : "reintento_usa_la_reserva_confirmada",
+      "correcto" : true
+    }, {
+      "comprobacion" : "repeticion_devuelve_la_misma_respuesta",
+      "correcto" : true
+    }, {
+      "comprobacion" : "reserva_original_liberada",
+      "correcto" : true
+    }, {
+      "comprobacion" : "una_sola_reserva_activa_en_b",
+      "correcto" : true
+    }, {
+      "comprobacion" : "operacion_guarda_una_transferencia_por_clave",
+      "correcto" : true
+    }, {
+      "comprobacion" : "solo_en_rutas_de_b",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_transferida_volumenM3",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_transferida_pesoKg",
+      "correcto" : true
+    }, {
+      "comprobacion" : "capacidad_transferida_paquetes",
+      "correcto" : true
+    } ]
+  }
+}

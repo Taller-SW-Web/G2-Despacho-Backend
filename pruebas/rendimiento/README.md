@@ -97,3 +97,12 @@ Otras propiedades (`-J`): `esquema`, `host`, `puerto` (18080), `seguridad`, `hil
 - El p95 de `elapsed` se calcula sobre todas las muestras de la fase y debe quedar por debajo del umbral.
 
 Los errores se separan en negocio, `429`, `5xx`, otros `4xx` y red o tiempo agotado. El intervalo `ETIQUETA@ultimosN` filtra los últimos N segundos de una fase.
+
+`grafica_fases.py` genera, sin dependencias, un SVG con la tasa real y el p95 por ventana de 5 s, en dos gráficas con el mismo eje de tiempo y con las fases y los umbrales marcados:
+
+```bash
+python grafica_fases.py resultados/<corrida>/PERF-06.jtl salida.svg \
+  --fase RUTA-BASE:500 --fase RUTA-PICO:1000 --fase RUTA-RECUPERACION:500 --titulo "PERF-06 · Mi Ruta"
+```
+
+Las fichas por corrida y las gráficas están en [`../fichas-hito5`](../fichas-hito5/README.md).
