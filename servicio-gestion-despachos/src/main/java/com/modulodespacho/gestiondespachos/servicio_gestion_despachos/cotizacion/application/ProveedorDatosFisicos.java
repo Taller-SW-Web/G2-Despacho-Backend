@@ -4,7 +4,7 @@ import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacion
 import java.util.Collection;
 import java.util.Map;
 
-/** Puerto hacia Productos y Ofertas para obtener el peso y las dimensiones vigentes. */
+/** Puerto para obtener el peso y las dimensiones de los SKU solicitados. */
 public interface ProveedorDatosFisicos {
 
     /**

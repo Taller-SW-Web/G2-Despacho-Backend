@@ -2,6 +2,7 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacio
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -73,6 +74,28 @@ class ServicioCotizacionDoblesTests {
                             DIMENSION_CM,
                             "INACTIVO",
                             AHORA));
+
+    @Test
+    void guardaComoSimuladaLaCotizacionConDatosFisicosTemporales() {
+        var provisional =
+                new DatosFisicos(
+                        BigDecimal.ONE,
+                        BigDecimal.valueOf(20),
+                        BigDecimal.valueOf(15),
+                        BigDecimal.TEN,
+                        "ACTIVO",
+                        Instant.EPOCH,
+                        true);
+        var registro = new RegistroEnMemoria();
+        var servicio = crearServicioManual(skus -> Map.of(SKU, provisional), registro);
+
+        var cotizacion = servicio.cotizar(solicitud(2));
+
+        assertEquals(BigDecimal.valueOf(2), cotizacion.pesoTotalKg());
+        assertEquals(new BigDecimal("0.006"), cotizacion.volumenTotalM3());
+        assertEquals(1, registro.guardadas.size());
+        assertTrue(registro.guardadas.getFirst().simulado());
+    }
 
     @Nested
     class DoblesManuales {

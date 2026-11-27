@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
@@ -35,12 +36,24 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
                                     .USE_BIG_DECIMAL_FOR_FLOATS)
                     .build();
     private static final Set<String> ESTADOS = Set.of("ACTIVO", "INACTIVO", "BORRADOR");
+    private static final DatosFisicos PERFIL_TEMPORAL =
+            new DatosFisicos(
+                    BigDecimal.ONE,
+                    BigDecimal.valueOf(20),
+                    BigDecimal.valueOf(15),
+                    BigDecimal.TEN,
+                    "ACTIVO",
+                    Instant.EPOCH,
+                    true);
     private final RestClient cliente;
     private final Supplier<String> token;
+    private final boolean respaldoTemporalHabilitado;
 
-    public ClienteDatosFisicosHttp(RestClient cliente, Supplier<String> token) {
+    public ClienteDatosFisicosHttp(
+            RestClient cliente, Supplier<String> token, boolean respaldoTemporalHabilitado) {
         this.cliente = cliente;
         this.token = token;
+        this.respaldoTemporalHabilitado = respaldoTemporalHabilitado;
     }
 
     @Override
@@ -65,6 +78,21 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
                 registrarFallo(correlacion, "token_de_despacho_no_disponible", null, inicio);
                 throw noDisponible();
             }
+            return consultar(solicitados, credencial, correlacion, inicio);
+        } catch (ErrorDeNegocio error) {
+            throw error;
+        } catch (RestClientException error) {
+            registrarFallo(correlacion, motivoFalloHttp(error), null, inicio);
+            throw noDisponible();
+        } catch (RuntimeException error) {
+            registrarFallo(correlacion, "consulta_fallida", null, inicio);
+            throw noDisponible();
+        }
+    }
+
+    private Map<String, DatosFisicos> consultar(
+            List<String> solicitados, String credencial, String correlacion, long inicio) {
+        try {
             return cliente.post()
                     .uri("/api/v1/productos/datos-fisicos/consulta")
                     .headers(
@@ -85,6 +113,12 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
                                                     : "error_del_proveedor",
                                             estado,
                                             inicio);
+                                    if (estado >= 500 && respaldoTemporalHabilitado) {
+                                        return completarConRespaldo(
+                                                new LinkedHashMap<>(),
+                                                solicitados,
+                                                "error_del_proveedor");
+                                    }
                                     throw noDisponible();
                                 }
                                 if (estado != 200 && estado != 422) throw invalida();
@@ -98,21 +132,16 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
                                 if (estado == 422) throw traducirProblema(cuerpo, solicitados);
                                 return validarLote(cuerpo, solicitados);
                             });
-        } catch (ErrorDeNegocio error) {
-            throw error;
-        } catch (RestClientException error) {
-            registrarFallo(
-                    correlacion,
-                    DiagnosticoJwt.tiempoAgotado(error)
-                            ? "tiempo_agotado"
-                            : "consulta_http_fallida",
-                    null,
-                    inicio);
-            throw noDisponible();
-        } catch (RuntimeException error) {
-            registrarFallo(correlacion, "consulta_fallida", null, inicio);
-            throw noDisponible();
+        } catch (ResourceAccessException error) {
+            if (!respaldoTemporalHabilitado) throw error;
+            String motivo = motivoFalloHttp(error);
+            registrarFallo(correlacion, motivo, null, inicio);
+            return completarConRespaldo(new LinkedHashMap<>(), solicitados, motivo);
         }
+    }
+
+    private static String motivoFalloHttp(RestClientException error) {
+        return DiagnosticoJwt.tiempoAgotado(error) ? "tiempo_agotado" : "consulta_http_fallida";
     }
 
     private void registrarFallo(String correlacion, String motivo, Integer estado, long inicio) {
@@ -160,15 +189,29 @@ public final class ClienteDatosFisicosHttp implements ProveedorDatosFisicos {
         }
         if (clasificados.size() != solicitados.size()) throw invalida();
         if (!ausentes.isEmpty()) {
-            throw ErrorDeNegocio.de(
-                            422,
-                            CodigosError.PRODUCTO_NO_ENCONTRADO,
-                            "Uno o más productos no existen en el catálogo")
-                    .conSkusAfectados(solicitados.stream().filter(ausentes::contains).toList());
+            if (!respaldoTemporalHabilitado) {
+                throw ErrorDeNegocio.de(
+                                422,
+                                CodigosError.PRODUCTO_NO_ENCONTRADO,
+                                "Uno o más productos no existen en el catálogo")
+                        .conSkusAfectados(solicitados.stream().filter(ausentes::contains).toList());
+            }
+            completarConRespaldo(datos, ausentes, "sku_no_encontrado");
         }
         Map<String, DatosFisicos> ordenados = new LinkedHashMap<>();
         solicitados.forEach(sku -> ordenados.put(sku, datos.get(sku)));
         return ordenados;
+    }
+
+    private static Map<String, DatosFisicos> completarConRespaldo(
+            Map<String, DatosFisicos> datos, Collection<String> skus, String motivo) {
+        skus.forEach(sku -> datos.put(sku, PERFIL_TEMPORAL));
+        LOG.warn(
+                "Se usaron datos físicos temporales. correlacion={} motivo={} cantidad_skus={}",
+                FiltroCorrelacion.correlacionActual(),
+                motivo,
+                skus.size());
+        return datos;
     }
 
     private ErrorDeNegocio traducirProblema(JsonNode problema, List<String> solicitados) {

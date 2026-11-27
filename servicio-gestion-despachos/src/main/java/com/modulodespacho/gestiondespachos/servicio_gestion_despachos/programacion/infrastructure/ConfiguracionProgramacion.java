@@ -33,11 +33,17 @@ public class ConfiguracionProgramacion {
                         entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1"),
                         Duration.ofMillis(
                                 entorno.getProperty(
-                                        "despacho.productos.timeout-conexion-ms", Long.class, 3000L)),
+                                        "despacho.productos.timeout-conexion-ms",
+                                        Long.class,
+                                        3000L)),
                         Duration.ofMillis(
                                 entorno.getProperty(
-                                        "despacho.productos.timeout-lectura-ms", Long.class, 6000L))),
-                credenciales(entorno, "productos", "productos:fisicos:leer", reloj));
+                                        "despacho.productos.timeout-lectura-ms",
+                                        Long.class,
+                                        6000L))),
+                credenciales(entorno, "productos", "productos:fisicos:leer", reloj),
+                entorno.getProperty(
+                        "despacho.productos.respaldo-temporal-habilitado", Boolean.class, false));
     }
 
     @Bean
