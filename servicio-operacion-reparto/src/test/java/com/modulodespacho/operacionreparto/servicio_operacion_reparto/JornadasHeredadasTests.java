@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 /** Ejecuta los archivos operativos sobre una copia estructural aislada, nunca en Supabase. */
 @SpringBootTest(properties = "SEGURIDAD_URL=http://127.0.0.1:1")
@@ -31,6 +33,11 @@ class JornadasHeredadasTests {
     @Autowired JdbcClient sql;
     @Autowired GestorFlota flota;
     @Autowired GestorJornadas jornadas;
+
+    @DynamicPropertySource
+    static void sinMigracionesSobreElEsquemaHeredado(DynamicPropertyRegistry propiedades) {
+        propiedades.add("spring.flyway.enabled", () -> false);
+    }
 
     @BeforeAll
     void preparar() throws Exception {

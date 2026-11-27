@@ -1,6 +1,7 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.infrastructure;
 
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.incidencias.application.*;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.mensajeria.application.PublicadorInterno;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.ProveedorTokenServicio;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -9,6 +10,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
@@ -27,7 +29,13 @@ public class ConfiguracionRecepcion {
     }
 
     @Bean
-    LiberadorCapacidad liberadorCapacidad(Environment entorno, Clock reloj) {
+    LiberadorCapacidad liberadorCapacidad(
+            Environment entorno,
+            Clock reloj,
+            tools.jackson.databind.json.JsonMapper json,
+            ObjectProvider<PublicadorInterno> publicador) {
+        var publicacion = publicador.getIfAvailable();
+        if (publicacion != null) return new LiberadorCapacidadRabbit(publicacion, json, reloj);
         var token =
                 new ProveedorTokenServicio(
                         cliente(entorno.getRequiredProperty("despacho.seguridad.url")),

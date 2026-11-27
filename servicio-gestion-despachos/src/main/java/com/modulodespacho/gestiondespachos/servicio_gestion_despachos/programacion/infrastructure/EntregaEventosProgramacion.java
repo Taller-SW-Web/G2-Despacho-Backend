@@ -1,5 +1,7 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.mensajeria.application.PublicadorInterno;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.http.MediaType;
@@ -16,6 +18,7 @@ public final class EntregaEventosProgramacion {
     private final RestClient operacion;
     private final Supplier<String> tokenOperacion;
     private final boolean operacionSinAutenticacion;
+    private final PublicadorInterno publicador;
 
     public EntregaEventosProgramacion(
             JdbcClient sql,
@@ -24,7 +27,7 @@ public final class EntregaEventosProgramacion {
             Supplier<String> tokenVentas,
             RestClient operacion,
             Supplier<String> tokenOperacion) {
-        this(sql, json, ventas, tokenVentas, operacion, tokenOperacion, false);
+        this(sql, json, ventas, tokenVentas, operacion, tokenOperacion, false, null);
     }
 
     public EntregaEventosProgramacion(
@@ -35,6 +38,26 @@ public final class EntregaEventosProgramacion {
             RestClient operacion,
             Supplier<String> tokenOperacion,
             boolean operacionSinAutenticacion) {
+        this(
+                sql,
+                json,
+                ventas,
+                tokenVentas,
+                operacion,
+                tokenOperacion,
+                operacionSinAutenticacion,
+                null);
+    }
+
+    public EntregaEventosProgramacion(
+            JdbcClient sql,
+            JsonMapper json,
+            RestClient ventas,
+            Supplier<String> tokenVentas,
+            RestClient operacion,
+            Supplier<String> tokenOperacion,
+            boolean operacionSinAutenticacion,
+            PublicadorInterno publicador) {
         this.sql = sql;
         this.json = json;
         this.ventas = ventas;
@@ -42,6 +65,7 @@ public final class EntregaEventosProgramacion {
         this.operacion = operacion;
         this.tokenOperacion = tokenOperacion;
         this.operacionSinAutenticacion = operacionSinAutenticacion;
+        this.publicador = publicador;
     }
 
     public void ejecutar() {
@@ -77,13 +101,22 @@ public final class EntregaEventosProgramacion {
         if (reclamada.isEmpty()) return;
         Evento evento = reclamada.get();
         try {
+            var datos = json.readTree(evento.payload());
             boolean haciaVentas = "VENTAS".equals(evento.destino());
+            if (publicador != null && !haciaVentas) {
+                String tipo =
+                        "OPERACION_LIBERACION".equals(evento.destino())
+                                ? "LIBERACION_CAPACIDAD"
+                                : "PROYECCION_DESPACHO";
+                publicador.publicar(id, tipo, datos, Instant.now());
+                confirmar(id, bloqueo);
+                return;
+            }
             boolean requiereCredencial = haciaVentas || !operacionSinAutenticacion;
             String credencial =
                     requiereCredencial ? (haciaVentas ? tokenVentas : tokenOperacion).get() : null;
             if (requiereCredencial && (credencial == null || credencial.isBlank()))
                 throw new IllegalStateException("Credencial de servicio no disponible");
-            var datos = json.readTree(evento.payload());
             boolean liberacion = "OPERACION_LIBERACION".equals(evento.destino());
             String ruta =
                     haciaVentas
@@ -117,15 +150,7 @@ public final class EntregaEventosProgramacion {
                             .toBodilessEntity();
             if (!respuesta.getStatusCode().is2xxSuccessful())
                 throw new IllegalStateException("El servicio no confirmó la entrega");
-            sql.sql(
-                            """
-                    UPDATE eventos_salientes SET estado_envio = 'ENVIADO', enviado_en = now(), intentos_envio = intentos_envio + 1,
-                        bloqueada_hasta = NULL, bloqueo_id = NULL, ultimo_error = NULL, actualizado_en = now()
-                    WHERE id = :id AND bloqueo_id = :bloqueo
-                    """)
-                    .param("id", id)
-                    .param("bloqueo", bloqueo)
-                    .update();
+            confirmar(id, bloqueo);
         } catch (RuntimeException error) {
             int intentos = evento.intentos() + 1;
             // Ventas: un envío inicial y hasta cinco reintentos. Proyección y liberación internas:
@@ -145,6 +170,18 @@ public final class EntregaEventosProgramacion {
                     .param("espera", Math.min(3600, 30L << Math.min(intentos - 1, 7)))
                     .update();
         }
+    }
+
+    private void confirmar(UUID id, UUID bloqueo) {
+        sql.sql(
+                        """
+                UPDATE eventos_salientes SET estado_envio = 'ENVIADO', enviado_en = now(), intentos_envio = intentos_envio + 1,
+                    bloqueada_hasta = NULL, bloqueo_id = NULL, ultimo_error = NULL, actualizado_en = now()
+                WHERE id = :id AND bloqueo_id = :bloqueo
+                """)
+                .param("id", id)
+                .param("bloqueo", bloqueo)
+                .update();
     }
 
     private record Evento(String destino, String payload, int intentos) {}
