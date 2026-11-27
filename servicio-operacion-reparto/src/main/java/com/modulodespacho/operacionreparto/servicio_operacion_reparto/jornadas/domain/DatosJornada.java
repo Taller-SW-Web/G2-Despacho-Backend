@@ -185,6 +185,9 @@ public final class DatosJornada {
 
     public record DespachoResumen(UUID idDespacho, String estado, Integer secuenciaRuta) {}
 
+    public record PendienteRegularizacion(
+            UUID idDespacho, String codigoRastreoInterno, LocalDate fecha, String estado) {}
+
     public record Detalle(
             UUID idJornada,
             UUID idRepartidor,

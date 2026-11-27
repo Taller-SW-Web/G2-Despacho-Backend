@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.AlmacenCampo;
+import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.CorteJornadas;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.OperacionCampo;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.application.PuertoGestion;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.campo.domain.ModelosCampo.*;
@@ -14,8 +15,10 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.evidencias
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.application.GestorJornadas;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.*;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.ErrorJornada;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -254,6 +257,44 @@ class OperacionCampoTests {
                             assertThat(s.idEvidencia()).isNull();
                         });
         verify(jornadas, times(2)).cerrarPropia(usuario, jornada);
+    }
+
+    @Test
+    void elCorteRecuperaJornadasAnterioresYRespetaLaHoraParaHoy() {
+        var hoy = LocalDate.of(2026, 10, 17);
+        var otro = UUID.randomUUID();
+        when(jornadas.consultarJornadasParaCorte(hoy.minusDays(1)))
+                .thenReturn(List.of(jornada, otro));
+        when(jornadas.pendientesParaCorte(jornada)).thenReturn(List.of(enRuta("ASIGNADO")));
+        when(gestion.transicionar(eq(despacho), any(), any()))
+                .thenThrow(ErrorJornada.noDisponible())
+                .thenReturn(
+                        new RespuestaTransicion(
+                                despacho.toString(),
+                                "ASIGNADO",
+                                "FALLIDO",
+                                4,
+                                0,
+                                "NO_INTENTADO",
+                                new Hitos(ahora, null, null, ahora),
+                                ahora));
+        var previo =
+                new CorteJornadas(jornadas, campo, Clock.fixed(ahora, ZoneOffset.UTC), "18:00");
+        previo.ejecutar();
+        verify(jornadas, never()).cerrar(eq(jornada), any(), anyString());
+        verify(jornadas).cerrar(eq(otro), any(), eq("CORTE_AUTOMATICO"));
+        previo.ejecutar();
+        var claves = ArgumentCaptor.forClass(UUID.class);
+        var solicitudes = ArgumentCaptor.forClass(SolicitudTransicion.class);
+        verify(gestion, times(2))
+                .transicionar(eq(despacho), claves.capture(), solicitudes.capture());
+        assertThat(claves.getAllValues().getFirst()).isEqualTo(claves.getAllValues().getLast());
+        assertThat(solicitudes.getValue().origen()).isEqualTo("AUTOMATICO");
+        assertThat(solicitudes.getValue().ejecutor()).isEqualTo("corte-jornada");
+        verify(jornadas).cerrar(eq(jornada), any(), eq("CORTE_AUTOMATICO"));
+
+        new CorteJornadas(jornadas, campo, Clock.fixed(ahora, ZoneOffset.UTC), "10:41").ejecutar();
+        verify(jornadas).consultarJornadasParaCorte(hoy);
     }
 
     @Test

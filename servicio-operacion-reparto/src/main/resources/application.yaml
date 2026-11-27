@@ -38,6 +38,10 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  corte-jornada:
+    habilitado: ${CORTE_JORNADA_HABILITADO:false}
+    hora: ${CORTE_JORNADA_HORA:23:59}
+    intervalo-ms: ${CORTE_JORNADA_INTERVALO_MS:60000}
   gestion:
     url: ${GESTION_DESPACHOS_URL:http://localhost:8081}
     token-servicio: ${GESTION_TOKEN_SERVICIO:}

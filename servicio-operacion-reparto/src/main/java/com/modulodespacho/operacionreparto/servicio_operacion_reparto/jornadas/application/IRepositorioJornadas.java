@@ -14,6 +14,10 @@ public interface IRepositorioJornadas {
 
     List<JornadaAnteriorActiva> consultarJornadasAnterioresActivas(LocalDate hoy);
 
+    List<UUID> listarJornadasParaCorte(LocalDate hasta);
+
+    List<PendienteRegularizacion> listarPendientesAnteriores(UUID repartidor, LocalDate hoy);
+
     Perfil obtenerPerfil(UUID id);
 
     Optional<Perfil> buscarPerfilDeUsuario(UUID usuario);

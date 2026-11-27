@@ -100,6 +100,43 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
     }
 
     @Override
+    public List<UUID> listarJornadasParaCorte(LocalDate hasta) {
+        return sql.sql(
+                        """
+            SELECT id FROM asignaciones_diarias WHERE estado='ACTIVA' AND fecha_jornada <= :hasta
+            ORDER BY fecha_jornada, id
+            """)
+                .param("hasta", hasta)
+                .query(UUID.class)
+                .list();
+    }
+
+    @Override
+    public List<PendienteRegularizacion> listarPendientesAnteriores(
+            UUID repartidor, LocalDate hoy) {
+        return sql.sql(
+                        """
+            SELECT p.despacho_id_externo,
+              COALESCE(NULLIF(btrim(p.codigo_rastreo_interno), ''), p.despacho_id_externo::text) AS codigo,
+              j.fecha_jornada, p.estado
+            FROM asignaciones_diarias j JOIN proyecciones_despacho p ON p.asignacion_diaria_id=j.id
+            WHERE j.repartidor_id=:repartidor AND j.estado='ACTIVA' AND j.fecha_jornada < :hoy
+              AND p.estado IN ('ASIGNADO','EN_CAMINO')
+            ORDER BY j.fecha_jornada, p.secuencia_ruta NULLS LAST, p.despacho_id_externo
+            """)
+                .param("repartidor", repartidor)
+                .param("hoy", hoy)
+                .query(
+                        (fila, indice) ->
+                                new PendienteRegularizacion(
+                                        fila.getObject("despacho_id_externo", UUID.class),
+                                        fila.getString("codigo"),
+                                        fila.getObject("fecha_jornada", LocalDate.class),
+                                        fila.getString("estado")))
+                .list();
+    }
+
+    @Override
     public JornadaBase obtenerJornada(UUID id) {
         return sql.sql(
                         CAMPOS
