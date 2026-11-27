@@ -39,8 +39,11 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
                     "modulo-ventas",
                             List.of("despachos:crear", "despachos:cancelar", "seguimientos:leer"),
                     // Las rutas internas de Despacho no usan scopes: modulo-despacho se identifica
-                    // solo por su token de servicio.
-                    "modulo-despacho", List.of());
+                    // solo por su token de servicio. Solo pide un scope para notificar a Ventas.
+                    "modulo-despacho", List.of(EmisorSeguridadLocal.SCOPE_VENTAS));
+    // Un scope de otra API cambia la audiencia del token (§7.3: aud=api-ventas) y no se
+    // concede por omisión ni junto con scopes de Despacho.
+    static final String SCOPE_VENTAS = "ventas:pedidos:estado";
     private static final Map<String, Perfil> PERFILES =
             Map.of(
                     "gestor",
@@ -272,14 +275,19 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
         String scope = formulario.getOrDefault("scope", "").trim();
         List<String> solicitados =
                 scope.isEmpty()
-                        ? permitidos
+                        ? permitidos.stream().filter(s -> !SCOPE_VENTAS.equals(s)).toList()
                         : List.copyOf(new LinkedHashSet<>(Arrays.asList(scope.split("\\s+"))));
         if (!permitidos.containsAll(solicitados)) {
             throw new SolicitudInvalida(
                     403, "SCOPE_INSUFICIENTE", "El cliente local no tiene esos scopes de prueba");
         }
+        boolean haciaVentas = solicitados.contains(SCOPE_VENTAS);
+        if (haciaVentas && solicitados.size() > 1) {
+            throw new SolicitudInvalida(
+                    400, "SOLICITUD_INVALIDA", "Pedir el scope de Ventas en un token separado");
+        }
         Map<String, Object> claims = claims(cliente, "servicio", 3600);
-        claims.put("aud", List.of("api-despacho"));
+        claims.put("aud", List.of(haciaVentas ? "api-ventas" : "api-despacho"));
         claims.put("scope", String.join(" ", solicitados));
         responder(
                 intercambio,

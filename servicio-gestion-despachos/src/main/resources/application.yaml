@@ -11,6 +11,9 @@ server:
     include-stacktrace: never
 
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -79,3 +82,9 @@ despacho:
           largo-cm: 20
           ancho-cm: 20
           alto-cm: 40
+
+# Commit desplegado, expuesto en /actuator/info. Render define RENDER_GIT_COMMIT en
+# cada despliegue; el pipeline lo compara con el commit que acaba de desplegar.
+info:
+  despliegue:
+    commit: ${RENDER_GIT_COMMIT:local}

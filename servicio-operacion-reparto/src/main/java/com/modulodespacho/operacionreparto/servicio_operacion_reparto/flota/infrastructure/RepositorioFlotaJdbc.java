@@ -14,6 +14,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 @Profile("!integracion-local")
 public class RepositorioFlotaJdbc implements IRepositorioFlota {
+    /** Igual que {@code @Max(100)} en los controladores de repartidores y furgonetas. */
+    private static final int TAMANO_MAXIMO_PAGINA = 100;
+
     private static final RowMapper<Repartidor> MAPEAR_REPARTIDOR =
             (fila, numero) ->
                     new Repartidor(
@@ -43,6 +46,21 @@ public class RepositorioFlotaJdbc implements IRepositorioFlota {
         this.sql = sql;
     }
 
+    /**
+     * Filas que se saltan para llegar a la página pedida (OFFSET).
+     *
+     * <p>Los controladores ya validan {@code pagina >= 1} y {@code 1 <= tamano <= 100}; se
+     * vuelve a comprobar aquí porque es donde se hace la cuenta. Antes, {@code pagina - 1} se
+     * calculaba en {@code int} y podía desbordarse con una página fuera de rango (CodeQL
+     * java/tainted-arithmetic). Ahora la resta y la multiplicación se hacen en {@code long}.
+     */
+    static long desplazamiento(int pagina, int tamano) {
+        if (pagina < 1 || tamano < 1 || tamano > TAMANO_MAXIMO_PAGINA) {
+            throw new IllegalArgumentException("Página o tamaño de página fuera de rango");
+        }
+        return (pagina - 1L) * tamano;
+    }
+
     public Pagina<Repartidor> listarRepartidores(
             int pagina, int tamano, EstadoRegistro registro, Vinculacion vinculacion, Turno turno) {
         String filtro =
@@ -69,7 +87,7 @@ public class RepositorioFlotaJdbc implements IRepositorioFlota {
                                         + " ORDER BY creado_en DESC, id LIMIT :tamano OFFSET :inicio")
                         .params(parametros)
                         .param("tamano", tamano)
-                        .param("inicio", (long) (pagina - 1) * tamano)
+                        .param("inicio", desplazamiento(pagina, tamano))
                         .query(MAPEAR_REPARTIDOR)
                         .list();
         return new Pagina<>(contenido, pagina, tamano, total);
@@ -98,7 +116,7 @@ public class RepositorioFlotaJdbc implements IRepositorioFlota {
                                         + " ORDER BY creado_en DESC, id LIMIT :tamano OFFSET :inicio")
                         .params(parametros)
                         .param("tamano", tamano)
-                        .param("inicio", (long) (pagina - 1) * tamano)
+                        .param("inicio", desplazamiento(pagina, tamano))
                         .query(MAPEAR_FURGONETA)
                         .list();
         return new Pagina<>(contenido, pagina, tamano, total);

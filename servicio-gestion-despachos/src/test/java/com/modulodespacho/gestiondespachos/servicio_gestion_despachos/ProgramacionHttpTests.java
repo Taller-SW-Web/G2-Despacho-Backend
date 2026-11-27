@@ -61,6 +61,11 @@ class ProgramacionHttpTests {
     @Autowired AsignarDespacho asignacion;
     @Autowired EntregaEventosProgramacion eventos;
 
+    @Autowired
+    com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application
+                    .AdelantarDespacho
+            adelanto;
+
     @TestConfiguration(proxyBeanMethods = false)
     static class RelojPruebas {
         @Bean
@@ -891,6 +896,294 @@ class ProgramacionHttpTests {
         assertThat(sql.sql("SELECT estado FROM despachos").query(String.class).single())
                 .isEqualTo("ASIGNADO");
         assertThat(EVENTOS_VENTAS).hasSize(1);
+    }
+
+    @Test
+    void adelantoAuditaSinCambiarEstadoNiProgresoYAsignacionPosteriorPublicaFechaActualizada()
+            throws Exception {
+        var creada =
+                recibir("PED-ADELANTO", UUID.randomUUID().toString())
+                        .andExpect(status().isCreated());
+        UUID id =
+                UUID.fromString(
+                        JSON.readTree(creada.andReturn().getResponse().getContentAsString())
+                                .path("idDespacho")
+                                .asText());
+        String espera =
+                sql.sql("SELECT en_cola_desde::text FROM despachos WHERE id=:id")
+                        .param("id", id)
+                        .query(String.class)
+                        .single();
+        long eventosAntes = contar("eventos_salientes");
+        String clave = UUID.randomUUID().toString();
+        String original =
+                adelantar(id, clave, 1, "Disponibilidad inmediata")
+                        .andExpect(status().isOk())
+                        .andExpect(header().string("Cache-Control", "no-store"))
+                        .andExpect(jsonPath("$.estado").value("PENDIENTE_ASIGNACION"))
+                        .andExpect(jsonPath("$.fechaProgramada").value("2026-10-16"))
+                        .andExpect(jsonPath("$.versionDespacho").value(2))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertThat(contar("eventos_salientes")).isEqualTo(eventosAntes);
+        assertThat(LLAMADAS_RESERVA).isEmpty();
+        assertThat(
+                        sql.sql("SELECT en_cola_desde::text FROM despachos WHERE id=:id")
+                                .param("id", id)
+                                .query(String.class)
+                                .single())
+                .isEqualTo(espera);
+        assertThat(
+                        sql.sql("SELECT numero_intentos FROM despachos WHERE id=:id")
+                                .param("id", id)
+                                .query(Integer.class)
+                                .single())
+                .isZero();
+        assertThat(
+                        sql.sql(
+                                        "SELECT datos->>'fechaProgramadaAnterior' FROM historial_estados_despacho WHERE despacho_id=:id AND tipo_operacion='ADELANTO_PROGRAMACION'")
+                                .param("id", id)
+                                .query(String.class)
+                                .single())
+                .isEqualTo(JSON.readTree(original).path("fechaProgramadaAnterior").asText());
+        adelantar(id, clave, 1, "Disponibilidad inmediata")
+                .andExpect(status().isOk())
+                .andExpect(content().json(original));
+        adelantar(id, clave, 1, "Otro motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_OPERACION_REUTILIZADA"));
+        pendientes("pagina", "1")
+                .andExpect(jsonPath("$.contenido[0].asignable").value(true))
+                .andExpect(jsonPath("$.contenido[0].reintento").value(false));
+        asignar(id, "REP-0012")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.versionDespacho").value(3));
+        // Recuperar el resultado no vuelve a cambiar fecha ni estado tras una asignación.
+        adelantar(id, clave, 1, "Disponibilidad inmediata")
+                .andExpect(status().isOk())
+                .andExpect(content().json(original));
+        assertThat(
+                        sql.sql(
+                                        "SELECT count(*) FROM historial_estados_despacho WHERE tipo_operacion='ADELANTO_PROGRAMACION'")
+                                .query(Long.class)
+                                .single())
+                .isEqualTo(1);
+        assertThat(
+                        sql.sql(
+                                        "SELECT payload->'datos'->>'fechaProgramada' FROM eventos_salientes WHERE tipo_evento='DESPACHO_ASIGNADO'")
+                                .query(String.class)
+                                .single())
+                .isEqualTo("2026-10-16");
+        assertThat(
+                        sql.sql(
+                                        "SELECT payload->>'fechaProgramada' FROM eventos_salientes WHERE tipo_evento='PROYECCION_DESPACHO'")
+                                .query(String.class)
+                                .single())
+                .isEqualTo("2026-10-16");
+    }
+
+    @Test
+    void adelantoRechazaVersionFechaEstadoYCancelacionPendienteSinEfectos() throws Exception {
+        UUID id = simulacionId();
+        adelantar(id, UUID.randomUUID().toString(), 1, "Motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_ADELANTO_NO_APLICABLE"));
+        sql.sql("UPDATE despachos SET fecha_programada='2026-10-20' WHERE id=:id")
+                .param("id", id)
+                .update();
+        adelantar(id, UUID.randomUUID().toString(), 2, "Motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_DESPACHO_DESACTUALIZADO"));
+        sql.sql("UPDATE despachos SET estado='ASIGNADO' WHERE id=:id").param("id", id).update();
+        adelantar(id, UUID.randomUUID().toString(), 1, "Motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_ESTADO_INCOMPATIBLE"));
+        sql.sql("UPDATE despachos SET estado='PENDIENTE_ASIGNACION' WHERE id=:id")
+                .param("id", id)
+                .update();
+        sql.sql(
+                        "INSERT INTO cancelaciones_despacho(id,despacho_id,ejecutor_id,clave,solicitud,intencion,estado) VALUES (:operacion,:id,'actor',:clave,'{}','{}','PENDIENTE')")
+                .param("operacion", UUID.randomUUID())
+                .param("id", id)
+                .param("clave", UUID.randomUUID())
+                .update();
+        adelantar(id, UUID.randomUUID().toString(), 1, "Motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_OPERACION_EN_PROCESO"));
+        assertThat(contar("historial_estados_despacho")).isEqualTo(1);
+        assertThat(contar("claves_idempotencia")).isZero();
+        assertThat(contar("eventos_salientes")).isZero();
+    }
+
+    @Test
+    void adelantoExigeIdentidadRolCabecerasYMotivoEstricto() throws Exception {
+        UUID id = simulacionId();
+        String ruta = "/api/v1/despachos/" + id + "/adelanto";
+        http.perform(post(ruta).contentType("application/json").content("{\"motivo\":\"Motivo\"}"))
+                .andExpect(status().isUnauthorized());
+        http.perform(
+                        post(ruta)
+                                .header("Authorization", "Bearer " + ventas())
+                                .contentType("application/json")
+                                .content("{\"motivo\":\"Motivo\"}"))
+                .andExpect(status().isForbidden());
+        for (String cuerpo :
+                List.of(
+                        "{}",
+                        "{\"motivo\":\"   \"}",
+                        "{\"motivo\":12}",
+                        "{\"motivo\":\"ok\",\"fechaProgramada\":\"2026-10-16\"}",
+                        "{\"motivo\":\"" + "x".repeat(501) + "\"}"))
+            http.perform(
+                            post(ruta)
+                                    .header("Authorization", "Bearer " + gestor())
+                                    .header("Idempotency-Key", UUID.randomUUID())
+                                    .header("If-Match", "\"1\"")
+                                    .contentType("application/json")
+                                    .content(cuerpo))
+                    .andExpect(status().isBadRequest());
+        http.perform(
+                        post(ruta)
+                                .header("Authorization", "Bearer " + gestor())
+                                .contentType("application/json")
+                                .content("{\"motivo\":\"Motivo\"}"))
+                .andExpect(status().isBadRequest());
+        assertThat(contar("historial_estados_despacho")).isEqualTo(1);
+    }
+
+    @Test
+    void adelantosConcurrentesSoloConfirmanUnaVersion() throws Exception {
+        UUID id = simulacionId();
+        sql.sql("UPDATE despachos SET fecha_programada='2026-10-20' WHERE id=:id")
+                .param("id", id)
+                .update();
+        try (var ejecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var a =
+                    ejecutor.submit(
+                            () ->
+                                    adelantar(id, UUID.randomUUID().toString(), 1, "Motivo A")
+                                            .andReturn()
+                                            .getResponse()
+                                            .getStatus());
+            var b =
+                    ejecutor.submit(
+                            () ->
+                                    adelantar(id, UUID.randomUUID().toString(), 1, "Motivo B")
+                                            .andReturn()
+                                            .getResponse()
+                                            .getStatus());
+            assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(200, 409);
+        }
+        assertThat(
+                        sql.sql(
+                                        "SELECT count(*) FROM historial_estados_despacho WHERE tipo_operacion='ADELANTO_PROGRAMACION'")
+                                .query(Long.class)
+                                .single())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void falloDeAuditoriaRevierteFechaVersionYRespuestaDeAdelanto() throws Exception {
+        UUID id = simulacionId();
+        sql.sql("UPDATE despachos SET fecha_programada='2026-10-20' WHERE id=:id")
+                .param("id", id)
+                .update();
+        bloquearHistorial();
+        assertThatThrownBy(
+                        () ->
+                                adelanto.ejecutar(
+                                        id,
+                                        UUID.randomUUID().toString(),
+                                        1,
+                                        new com.modulodespacho.gestiondespachos
+                                                .servicio_gestion_despachos.programacion.application
+                                                .ModelosAdelanto.Solicitud("Motivo"),
+                                        DISTRITO.toString()))
+                .isInstanceOf(RuntimeException.class);
+        assertThat(
+                        sql.sql("SELECT fecha_programada::text FROM despachos WHERE id=:id")
+                                .param("id", id)
+                                .query(String.class)
+                                .single())
+                .isEqualTo("2026-10-20");
+        assertThat(
+                        sql.sql("SELECT version FROM despachos WHERE id=:id")
+                                .param("id", id)
+                                .query(Integer.class)
+                                .single())
+                .isEqualTo(1);
+        assertThat(contar("historial_estados_despacho")).isEqualTo(1);
+        assertThat(contar("claves_idempotencia")).isZero();
+        assertThat(contar("eventos_salientes")).isZero();
+    }
+
+    @Test
+    void mismaClaveConcurrenteRecuperaElResultadoSinDuplicarAuditoria() throws Exception {
+        UUID id = simulacionId();
+        sql.sql("UPDATE despachos SET fecha_programada='2026-10-20' WHERE id=:id")
+                .param("id", id)
+                .update();
+        String clave = UUID.randomUUID().toString();
+        try (var ejecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var a =
+                    ejecutor.submit(
+                            () ->
+                                    adelantar(id, clave, 1, "Motivo")
+                                            .andExpect(status().isOk())
+                                            .andReturn()
+                                            .getResponse()
+                                            .getContentAsString());
+            var b =
+                    ejecutor.submit(
+                            () ->
+                                    adelantar(id, clave, 1, "Motivo")
+                                            .andExpect(status().isOk())
+                                            .andReturn()
+                                            .getResponse()
+                                            .getContentAsString());
+            assertThat(a.get()).isEqualTo(b.get());
+        }
+        assertThat(
+                        sql.sql(
+                                        "SELECT count(*) FROM historial_estados_despacho WHERE tipo_operacion='ADELANTO_PROGRAMACION'")
+                                .query(Long.class)
+                                .single())
+                .isEqualTo(1);
+        assertThat(contar("claves_idempotencia")).isEqualTo(1);
+    }
+
+    @Test
+    void adelantoRechazaUnaIntencionDeAsignacionPendienteSinReservar() throws Exception {
+        UUID id = simulacionId();
+        sql.sql("UPDATE despachos SET fecha_programada='2026-10-20' WHERE id=:id")
+                .param("id", id)
+                .update();
+        sql.sql(
+                        """
+                INSERT INTO asignaciones_despacho(id,despacho_id,version_origen,ejecutor_id,id_repartidor,id_jornada,
+                    peso_requerido,volumen_requerido,paquetes_requeridos,estado)
+                VALUES (:operacion,:id,1,'gestor','REP-0012','JOR-0012',1,1,1,'PENDIENTE')
+                """)
+                .param("operacion", UUID.randomUUID())
+                .param("id", id)
+                .update();
+        adelantar(id, UUID.randomUUID().toString(), 1, "Motivo")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DESP_ERROR_OPERACION_EN_PROCESO"));
+        assertThat(contar("historial_estados_despacho")).isEqualTo(1);
+        assertThat(LLAMADAS_RESERVA).isEmpty();
+    }
+
+    private ResultActions adelantar(UUID id, String clave, int version, String motivo)
+            throws Exception {
+        return http.perform(
+                post("/api/v1/despachos/" + id + "/adelanto")
+                        .header("Authorization", "Bearer " + gestor())
+                        .header("Idempotency-Key", clave)
+                        .header("If-Match", "\"" + version + "\"")
+                        .contentType("application/json")
+                        .content(JSON.writeValueAsString(Map.of("motivo", motivo))));
     }
 
     private void bloquearHistorial() {

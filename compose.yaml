@@ -1,6 +1,6 @@
 name: g2-despacho
 
-# Entorno local: los tres backends, Seguridad temporal y PostgreSQL.
+# Entorno local: los tres backends, Seguridad y Ventas temporales y PostgreSQL.
 # Arranque manual: docker compose up --build
 x-seguridad: &seguridad
   SEGURIDAD_URL: http://seguridad-local:8090
@@ -50,6 +50,20 @@ services:
     ports:
       - "127.0.0.1:${SEGURIDAD_LOCAL_PORT:-8090}:8090"
 
+  # Doble de Ventas: recibe el webhook de §7.3 y expone /control para verificarlo.
+  ventas-local:
+    build: ./ventas-local
+    environment:
+      HABILITAR_VENTAS_LOCAL: "true"
+      DIRECCION_ESCUCHA: 0.0.0.0
+      PORT: "8084"
+      SEGURIDAD_URL: http://seguridad-local:8090
+    ports:
+      - "127.0.0.1:${VENTAS_LOCAL_PORT:-8084}:8084"
+    depends_on:
+      seguridad-local:
+        condition: service_healthy
+
   servicio-gestion-despachos:
     build: ./servicio-gestion-despachos
     environment:
@@ -65,9 +79,9 @@ services:
       PRODUCTOS_TOKEN_SERVICIO: ${PRODUCTOS_TOKEN_SERVICIO:-}
       LIMITE_COTIZACIONES_POR_MINUTO: ${LIMITE_COTIZACIONES_POR_MINUTO:-60}
       GEOMETRIAS_MAXIMO_BYTES: ${GEOMETRIAS_MAXIMO_BYTES:-5242880}
-      VENTAS_URL: ${VENTAS_URL:-http://host.docker.internal:8084}
+      VENTAS_URL: ${VENTAS_URL:-http://ventas-local:8084}
       VENTAS_CLIENT_ID: ${VENTAS_CLIENT_ID:-modulo-despacho}
-      VENTAS_CLIENT_SECRET: ${VENTAS_CLIENT_SECRET:-}
+      VENTAS_CLIENT_SECRET: ${VENTAS_CLIENT_SECRET:-despacho-local-no-produccion}
       VENTAS_TOKEN_SERVICIO: ${VENTAS_TOKEN_SERVICIO:-}
     ports:
       - "127.0.0.1:${GESTION_DESPACHOS_PORT:-8081}:8081"
@@ -75,6 +89,8 @@ services:
       postgres:
         condition: service_healthy
       seguridad-local:
+        condition: service_healthy
+      ventas-local:
         condition: service_healthy
 
   servicio-operacion-reparto:
