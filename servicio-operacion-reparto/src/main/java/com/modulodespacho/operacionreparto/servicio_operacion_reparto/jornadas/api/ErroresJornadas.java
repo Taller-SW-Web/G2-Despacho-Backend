@@ -26,6 +26,8 @@ public class ErroresJornadas {
     @ExceptionHandler(ErrorJornada.class)
     public ProblemDetail negocio(ErrorJornada error) {
         ProblemDetail problema = problema(error.estado(), error.codigo(), error.getMessage());
+        if (!error.jornadasBloqueantes().isEmpty())
+            problema.setProperty("jornadasBloqueantes", error.jornadasBloqueantes());
         if ("DESP_ERROR_CAPACIDAD_EXCEDIDA".equals(error.codigo()))
             problema.setProperty(
                     "errores",

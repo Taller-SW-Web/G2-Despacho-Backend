@@ -51,6 +51,16 @@ public final class DatosJornada {
 
     public record Apertura(UUID idRepartidor, UUID idFurgoneta, UUID idZona, LocalDate fecha) {}
 
+    public record JornadaBloqueante(
+            UUID idJornada,
+            LocalDate fecha,
+            String placa,
+            String estado,
+            boolean bloqueaRepartidor,
+            boolean bloqueaFurgoneta,
+            List<String> despachosPendientes,
+            long reservasActivas) {}
+
     public record JornadaBase(
             UUID id,
             UUID repartidor,
@@ -143,6 +153,13 @@ public final class DatosJornada {
 
     public record Resumen(long disponible, long enRuta, long saturado, long fueraDeTurno) {}
 
+    public record JornadaAnteriorActiva(
+            UUID idJornada,
+            LocalDate fecha,
+            String nombreRepartidor,
+            String placa,
+            boolean pendientes) {}
+
     public record Monitoreo(
             List<FilaMonitoreo> contenido,
             int pagina,
@@ -150,7 +167,8 @@ public final class DatosJornada {
             long totalElementos,
             int totalPaginas,
             Resumen resumen,
-            Instant consultadoEn) {}
+            Instant consultadoEn,
+            List<JornadaAnteriorActiva> jornadasAnterioresActivas) {}
 
     public record Candidato(
             UUID idRepartidor,
@@ -166,6 +184,9 @@ public final class DatosJornada {
             Porcentajes porcentajeOcupacion) {}
 
     public record DespachoResumen(UUID idDespacho, String estado, Integer secuenciaRuta) {}
+
+    public record PendienteRegularizacion(
+            UUID idDespacho, String codigoRastreoInterno, LocalDate fecha, String estado) {}
 
     public record Detalle(
             UUID idJornada,
