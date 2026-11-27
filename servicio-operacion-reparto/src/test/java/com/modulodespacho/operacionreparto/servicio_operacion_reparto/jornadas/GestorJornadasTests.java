@@ -62,10 +62,24 @@ class GestorJornadasTests {
                         ErrorJornada.class, e -> assertThat(e.estado()).isEqualTo(422));
         when(repositorio.obtenerPerfil(perfil)).thenReturn(habilitado);
         when(repositorio.obtenerVehiculo(vehiculo)).thenReturn(disponible);
-        when(repositorio.tieneRecursoOcupado(perfil, vehiculo)).thenReturn(true);
+        var anterior =
+                new JornadaBloqueante(
+                        id,
+                        hoy.minusDays(1),
+                        "TEST-02",
+                        "ACTIVA",
+                        true,
+                        false,
+                        List.of("TRK-PRUEBA"),
+                        1);
+        when(repositorio.buscarJornadasBloqueantes(perfil, vehiculo)).thenReturn(List.of(anterior));
         assertThatThrownBy(() -> gestor.abrir(new Apertura(perfil, vehiculo, zona, hoy), actor))
                 .isInstanceOfSatisfying(
-                        ErrorJornada.class, e -> assertThat(e.estado()).isEqualTo(409));
+                        ErrorJornada.class,
+                        e -> {
+                            assertThat(e.estado()).isEqualTo(409);
+                            assertThat(e.jornadasBloqueantes()).containsExactly(anterior);
+                        });
         verify(repositorio, never()).crear(any(), any(), any(), any());
     }
 

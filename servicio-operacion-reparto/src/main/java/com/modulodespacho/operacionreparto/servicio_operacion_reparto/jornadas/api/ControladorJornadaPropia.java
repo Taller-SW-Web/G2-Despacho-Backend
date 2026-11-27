@@ -5,6 +5,7 @@ import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.a
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.DatosJornada.*;
 import com.modulodespacho.operacionreparto.servicio_operacion_reparto.jornadas.domain.ErrorJornada;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
@@ -40,6 +41,12 @@ public class ControladorJornadaPropia {
             @PathVariable UUID idDespacho, @AuthenticationPrincipal Jwt token) {
         return sinCache(
                 gestor.consultarDespachoPropio(ControladorJornadas.actor(token), idDespacho));
+    }
+
+    @GetMapping("/api/v1/repartidor/pendientes-regularizacion")
+    public ResponseEntity<List<PendienteRegularizacion>> pendientes(
+            @AuthenticationPrincipal Jwt token) {
+        return sinCache(gestor.consultarPendientesAnteriores(ControladorJornadas.actor(token)));
     }
 
     @GetMapping("/api/v1/repartidor/jornada/resumen")

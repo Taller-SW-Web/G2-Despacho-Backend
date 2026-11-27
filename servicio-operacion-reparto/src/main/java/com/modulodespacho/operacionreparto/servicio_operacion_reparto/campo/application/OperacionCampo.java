@@ -26,6 +26,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @Profile("!integracion-local")
 public class OperacionCampo {
+    private static final String EJECUTOR_CORTE = "corte-jornada";
+    private static final UUID ACTOR_CORTE =
+            UUID.nameUUIDFromBytes(EJECUTOR_CORTE.getBytes(StandardCharsets.UTF_8));
     private final GestorJornadas jornadas;
     private final AlmacenCampo almacen;
     private final PuertoGestion gestion;
@@ -169,27 +172,44 @@ public class OperacionCampo {
                 Map.of("idJornada", idJornada),
                 Jornada.class,
                 nuevo -> {
-                    for (DespachoEnRuta d : jornadas.pendientesPropios(usuario, idJornada)) {
-                        UUID derivada =
-                                UUID.nameUUIDFromBytes(
-                                        (clave + ":" + d.despacho().idDespacho())
-                                                .getBytes(StandardCharsets.UTF_8));
-                        aplicar(
-                                d,
-                                gestion.transicionar(
-                                        d.despacho().idDespacho(),
-                                        derivada,
-                                        solicitud(
-                                                d,
-                                                "FALLIDO",
-                                                null,
-                                                null,
-                                                "NO_INTENTADO",
-                                                null,
-                                                usuario)));
-                    }
+                    resolverPendientes(
+                            jornadas.pendientesPropios(usuario, idJornada),
+                            clave,
+                            usuario.toString(),
+                            "MANUAL");
                     return jornadas.cerrarPropia(usuario, idJornada);
                 });
+    }
+
+    public void cortarJornada(UUID idJornada) {
+        UUID clave =
+                UUID.nameUUIDFromBytes(
+                        (EJECUTOR_CORTE + ":" + idJornada).getBytes(StandardCharsets.UTF_8));
+        resolverPendientes(
+                jornadas.pendientesParaCorte(idJornada), clave, EJECUTOR_CORTE, "AUTOMATICO");
+        jornadas.cerrar(idJornada, ACTOR_CORTE, "CORTE_AUTOMATICO");
+    }
+
+    private void resolverPendientes(
+            List<DespachoEnRuta> pendientes, UUID clave, String ejecutor, String origen) {
+        for (DespachoEnRuta d : pendientes) {
+            UUID derivada =
+                    UUID.nameUUIDFromBytes(
+                            (clave + ":" + d.despacho().idDespacho())
+                                    .getBytes(StandardCharsets.UTF_8));
+            var solicitud =
+                    new SolicitudTransicion(
+                            "FALLIDO",
+                            d.idRepartidor().toString(),
+                            d.idJornada().toString(),
+                            null,
+                            null,
+                            "NO_INTENTADO",
+                            null,
+                            ejecutor,
+                            origen);
+            aplicar(d, gestion.transicionar(d.despacho().idDespacho(), derivada, solicitud));
+        }
     }
 
     public List<Motivo> motivosDeCampo() {

@@ -61,6 +61,8 @@ El emisor local usa cuentas ficticias y firma JWT de prueba. El gestor `gestor@d
 
 Con Java 21, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
 
+El corte de F-03 se activa en Operación con `CORTE_JORNADA_HABILITADO=true`. La hora local en America/Bogota se configura con `CORTE_JORNADA_HORA` (por defecto `23:59`) y el intervalo con `CORTE_JORNADA_INTERVALO_MS` (por defecto `60000`). Las jornadas activas de fechas anteriores se revisan en el primer ciclo, incluso antes de la hora de hoy. Para una prueba manual, activar el corte en una base local con datos ficticios de ambos servicios y consultar las jornadas y Entregas fallidas después del ciclo.
+
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
 
 La administración de distritos de F-01 dispone de un [recorrido aislado por Gateway y navegador](./docs/pruebas.md#administración-de-distritos-navegador-y-gateway-aislados), con base desechable, Seguridad temporal y Productos simulados.

@@ -32,6 +32,17 @@ public class GestorJornadas {
         return LocalDate.now(reloj.withZone(ZoneId.of("America/Bogota")));
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> consultarJornadasParaCorte(LocalDate hasta) {
+        return repositorio.listarJornadasParaCorte(hasta);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<PendienteRegularizacion> consultarPendientesAnteriores(UUID usuario) {
+        return repositorio.listarPendientesAnteriores(
+                perfilPropio(usuario).id(), obtenerFechaActual());
+    }
+
     public Jornada abrir(Apertura datos, UUID actor) {
         if (!obtenerFechaActual().equals(datos.fecha()))
             throw ErrorJornada.noApto("La jornada debe abrirse para hoy en America/Bogota.");
@@ -41,10 +52,10 @@ public class GestorJornadas {
         if (!perfil.habilitado())
             throw ErrorJornada.noApto("El repartidor debe estar activo y vinculado.");
         Vehiculo vehiculo = repositorio.obtenerVehiculo(datos.idFurgoneta());
-        if (!"DISPONIBLE".equals(vehiculo.estado())
-                || repositorio.tieneRecursoOcupado(perfil.id(), vehiculo.id()))
-            throw ErrorJornada.conflicto(
-                    "Existe otra jornada activa o carga pendiente de los recursos.");
+        if (!"DISPONIBLE".equals(vehiculo.estado()))
+            throw ErrorJornada.conflicto("La furgoneta ya no está disponible.");
+        var bloqueos = repositorio.buscarJornadasBloqueantes(perfil.id(), vehiculo.id());
+        if (!bloqueos.isEmpty()) throw ErrorJornada.aperturaBloqueada(bloqueos);
         UUID id = repositorio.crear(datos, vehiculo.limites(), actor, reloj.instant());
         repositorio.auditar(id, "APERTURA_JORNADA", actor, null);
         return repositorio.obtenerJornada(id).vista();
@@ -79,10 +90,9 @@ public class GestorJornadas {
                     400,
                     "DESP_ERROR_CAMPOS_INVALIDOS",
                     "Revisa la paginación y el estado operativo.");
+        LocalDate hoy = obtenerFechaActual();
         var base =
-                repositorio
-                        .consultarMonitoreo(fecha == null ? obtenerFechaActual() : fecha)
-                        .stream()
+                repositorio.consultarMonitoreo(fecha == null ? hoy : fecha).stream()
                         .filter(
                                 fila ->
                                         zona == null
@@ -110,7 +120,8 @@ public class GestorJornadas {
                 filtradas.size(),
                 (int) Math.ceil((double) filtradas.size() / tamano),
                 resumen,
-                reloj.instant());
+                reloj.instant(),
+                repositorio.consultarJornadasAnterioresActivas(hoy));
     }
 
     private static long contar(List<FilaBase> filas, String estado) {
@@ -287,10 +298,19 @@ public class GestorJornadas {
         if (!jornada.repartidor().equals(perfil.id()))
             throw new ErrorJornada(
                     403, "DESP_ERROR_SCOPE_INSUFICIENTE", "La jornada no pertenece a tu perfil.");
+        return pendientes(jornada);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<DespachoEnRuta> pendientesParaCorte(UUID idJornada) {
+        return pendientes(repositorio.obtenerJornada(idJornada));
+    }
+
+    private List<DespachoEnRuta> pendientes(JornadaBase jornada) {
         if (!jornada.activa()) return List.of();
         return repositorio.listarProyecciones(jornada.id()).stream()
                 .filter(d -> "ASIGNADO".equals(d.estado()) || "EN_CAMINO".equals(d.estado()))
-                .map(d -> new DespachoEnRuta(perfil.id(), jornada.id(), d))
+                .map(d -> new DespachoEnRuta(jornada.repartidor(), jornada.id(), d))
                 .toList();
     }
 
