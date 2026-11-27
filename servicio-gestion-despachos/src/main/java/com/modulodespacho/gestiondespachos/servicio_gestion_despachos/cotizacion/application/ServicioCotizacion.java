@@ -137,7 +137,7 @@ public class ServicioCotizacion {
                         costo.subtract(costoExacto),
                         resultado,
                         usuario.identificador(),
-                        simulado));
+                        simulado || lineas.stream().anyMatch(linea -> linea.perfil().simulado())));
         return resultado;
     }
 

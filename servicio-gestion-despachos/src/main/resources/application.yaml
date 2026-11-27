@@ -70,6 +70,7 @@ despacho:
     cliente-secreto: ${PRODUCTOS_CLIENT_SECRET:}
     timeout-conexion-ms: ${PRODUCTOS_TIMEOUT_CONEXION_MS:3000}
     timeout-lectura-ms: ${PRODUCTOS_TIMEOUT_LECTURA_MS:6000}
+    respaldo-temporal-habilitado: ${PRODUCTOS_RESPALDO_TEMPORAL_HABILITADO:false}
     stub:
       catalogo:
         POL-NEG-M:
