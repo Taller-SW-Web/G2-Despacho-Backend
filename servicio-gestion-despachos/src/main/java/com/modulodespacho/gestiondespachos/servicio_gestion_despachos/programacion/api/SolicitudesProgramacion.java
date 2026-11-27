@@ -124,6 +124,17 @@ public class SolicitudesProgramacion {
                         texto(cuerpo, "motivo"), observacion(cuerpo, "observacion")));
     }
 
+    public com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application
+                    .ModelosAdelanto.Solicitud
+            adelanto(JsonNode cuerpo) {
+        objeto(cuerpo, "solicitud", "motivo");
+        String motivo = texto(cuerpo, "motivo");
+        if (motivo == null || motivo.isBlank() || motivo.codePointCount(0, motivo.length()) > 500)
+            throw invalido("motivo", "Indica un motivo de entre 1 y 500 caracteres");
+        return new com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion
+                .application.ModelosAdelanto.Solicitud(motivo);
+    }
+
     public String clave(String clave) {
         if (clave == null
                 || clave.length() > 128

@@ -251,6 +251,8 @@ public class DetalleIncidenciaJdbc implements LectorDetalleIncidencia {
                                     "idNuevoRepartidor",
                                     "idNuevaJornada");
                     case "REORDENAMIENTO" -> List.of("despachos");
+                    case "ADELANTO_PROGRAMACION" ->
+                            List.of("fechaProgramadaAnterior", "fechaProgramada");
                     case "TRANSICION" ->
                             switch (estadoNuevo) {
                                 case "FALLIDO" ->
