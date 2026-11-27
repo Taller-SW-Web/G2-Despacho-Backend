@@ -101,7 +101,7 @@ Cada backend tiene su propio Maven Wrapper y sus pruebas. Para ejecutarlas manua
 .\mvnw.cmd clean test
 ```
 
-Para las suites completas, ejecutar `.\mvnw.cmd clean verify` en Windows o `./mvnw clean verify` en Linux con Java 21. Las integraciones requieren Docker y usan PostgreSQL desechable con Testcontainers. `clean` evita conservar migraciones antiguas en `target/classes`.
+Para las suites completas, ejecutar `.\mvnw.cmd clean verify` en Windows o `./mvnw clean verify` en Linux con Java 25. Las integraciones requieren Docker y usan PostgreSQL desechable con Testcontainers. `clean` evita conservar migraciones antiguas en `target/classes`.
 
 Los Dockerfiles omiten las pruebas durante la construcción: `docker compose up --build` no ejecuta estas suites. El recorrido manual registrado arriba tampoco sustituye sus resultados.
 
@@ -184,7 +184,7 @@ El primer comando escribe el informe JSON en la salida estándar. Devuelve `0` s
 
 ## Administración de distritos: navegador y Gateway aislados
 
-Construir Gestión y Gateway con `./mvnw clean verify` desde cada servicio, con Docker y Java 21. Si la configuración local desactiva Flyway, ejecutar `SPRING_FLYWAY_ENABLED=true ./mvnw clean verify` en Gestión: Testcontainers sigue proporcionando la base desechable; esa variable solo habilita las migraciones en el proceso de pruebas.
+Construir Gestión y Gateway con `./mvnw clean verify` desde cada servicio, con Docker y Java 25. Si la configuración local desactiva Flyway, ejecutar `SPRING_FLYWAY_ENABLED=true ./mvnw clean verify` en Gestión: Testcontainers sigue proporcionando la base desechable; esa variable solo habilita las migraciones en el proceso de pruebas.
 
 Desde la raíz del backend, con los puertos `18080`, `18090` y `4187` disponibles:
 

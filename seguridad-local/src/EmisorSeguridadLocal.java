@@ -79,6 +79,11 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
     private final Map<String, RefrescoLocal> refrescos = new LinkedHashMap<>();
     private final Map<String, AccesoLocal> accesos = new LinkedHashMap<>();
     private final Map<String, java.util.ArrayList<Long>> solicitudesOtp = new LinkedHashMap<>();
+    // Límite de G7 para /password/recuperar: tres por correo y hora, exista o no la cuenta.
+    private final Map<String, java.util.ArrayList<Long>> solicitudesRecuperacion =
+            new LinkedHashMap<>();
+    private static final List<String> CANALES_RECUPERACION =
+            List.of("WEB", "CHATBOT", "RETAIL", "MARKETPLACE");
     // Buzón simulado, consultable solo por la herramienta local; nunca se registra en logs.
     private final Map<String, String> buzonOtp = new LinkedHashMap<>();
     private final java.security.SecureRandom aleatorio = new java.security.SecureRandom();
@@ -214,6 +219,7 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
                 case PREFIJO + "/refresh" -> renovarSesion(intercambio);
                 case PREFIJO + "/logout" -> cerrarSesion(intercambio);
                 case PREFIJO + "/me" -> consultarPerfil(intercambio);
+                case "/api/v1/password/recuperar" -> solicitarRecuperacion(intercambio);
                 case "/pruebas/token-usuario" -> emitirUsuario(intercambio);
                 case "/pruebas/codigo-otp" -> consultarCodigoLocal(intercambio);
                 default ->
@@ -422,6 +428,38 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
                         300,
                         "desafioExpiraEn",
                         desafio.venceEn - ahora));
+    }
+
+    /**
+     * Simula POST /password/recuperar de G7 (OpenAPI 1.2.0, SPEC-08): siempre 202 neutro y 429
+     * tras tres solicitudes por hora para el mismo correo. No envía correos ni emite enlaces; el
+     * restablecimiento ocurre en la página de G7 y no se simula.
+     */
+    private synchronized void solicitarRecuperacion(HttpExchange intercambio) throws IOException {
+        Map<String, String> cuerpo = cuerpoJson(intercambio);
+        String correo = requerido(cuerpo, "correo").trim().toLowerCase(java.util.Locale.ROOT);
+        if (!correo.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+            throw new SolicitudInvalida(400, "VALIDACION", "El correo no tiene un formato válido");
+        String canal = cuerpo.getOrDefault("canalOrigen", "WEB");
+        if (!CANALES_RECUPERACION.contains(canal))
+            throw new SolicitudInvalida(400, "VALIDACION", "canalOrigen no admitido por G7");
+        long ahora = Instant.now().getEpochSecond();
+        var solicitudes =
+                solicitudesRecuperacion.computeIfAbsent(
+                        correo, clave -> new java.util.ArrayList<>());
+        solicitudes.removeIf(instante -> instante <= ahora - 3600);
+        if (solicitudes.size() >= 3) {
+            intercambio
+                    .getResponseHeaders()
+                    .set(
+                            "Retry-After",
+                            Long.toString(Math.max(1, solicitudes.getFirst() + 3600 - ahora)));
+            throw new SolicitudInvalida(
+                    429, "DEMASIADAS_SOLICITUDES", "Máximo tres solicitudes por correo cada hora");
+        }
+        solicitudes.add(ahora);
+        intercambio.getResponseHeaders().set("Cache-Control", "no-store");
+        intercambio.sendResponseHeaders(202, -1);
     }
 
     private synchronized void verificarOtp(HttpExchange intercambio)

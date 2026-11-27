@@ -11,7 +11,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Compose compila con Java 21 dentro de las imágenes y arranca cinco contenedores. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
+Compose compila con Java 25 dentro de las imágenes y arranca cinco contenedores. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
 
 | Servicio | Dirección predeterminada |
 |---|---|
@@ -59,7 +59,7 @@ El emisor local usa cuentas ficticias y firma JWT de prueba. El gestor `gestor@d
 
 ## Pruebas y contratos
 
-Con Java 21, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
+Con Java 25, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
 
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
 
