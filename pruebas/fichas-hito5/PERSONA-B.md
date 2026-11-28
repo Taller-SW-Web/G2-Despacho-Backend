@@ -59,3 +59,20 @@ por dobles. Solicitar esas dependencias al equipo antes de ejecutar INT-10.
 - Repetir A con el analizador corregido y publicar paquetes completos.
 - Revisar en Linux INT-09 y su escucha del intermediario (`-Dintermediario.escucha=0.0.0.0`).
 - Revisión cruzada y PR de la rama de integración a `develop`; ningún push automático.
+
+## Registro de esta ejecución · 27/11/2026
+
+| Comprobación | Resultado observado |
+|---|---|
+| `clean verify` Gestión / Operación / Gateway con Corretto 21 | 321 / 149 / 40 pruebas aprobadas; cero omitidas |
+| Regresiones del analizador y XML JMeter | 7 pruebas aprobadas |
+| Compilación del módulo Java | Aprobada |
+| Groovy de B y carga de `PERF-B.jmx` en JMeter 5.6.3 | Aprobadas; no equivale a una corrida de carga |
+| INT-01 por Gateway, Gestión y Operación locales | 14 pruebas aprobadas |
+| INT-02 e INT-08 | 7 pruebas aprobadas |
+| INT-09 Linux | Primera corrida falló durante preparación: asignación inicial HTTP 503, antes de inyectar el corte. Diagnóstico en curso; no se declara aprobado |
+| PERF-03 / PERF-04 y comparación Python de INT-01 | Pendientes de ejecución |
+
+Logs de sesión bajo `/tmp/opencode/hito5-*.log`; reportes y JSON de integración bajo
+`pruebas/integracion-java/target/`. No se modificaron entornos compartidos. La ejecución local
+no acredita G6/G7 reales, RabbitMQ habilitado ni aceptación humana.
