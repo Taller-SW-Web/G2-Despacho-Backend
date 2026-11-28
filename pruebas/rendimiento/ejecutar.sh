@@ -23,6 +23,11 @@ esac
 plan="${caso}.jmx"
 extras=()
 if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
+  proyecto="${PROYECTO:-hito5-persona-b}"
+  if [[ "$proyecto" != hito5-persona-b ]]; then
+    echo "La reconciliación de B solo admite el proyecto desechable hito5-persona-b" >&2
+    exit 2
+  fi
   plan=PERF-B.jmx
   extras+=("-Jcaso=$caso" "-Jledger=$PWD/$salida/aceptadas.jsonl" "-Jcontrol=$PWD/$salida/control.json")
   if [[ "$caso" == PERF-03 ]]; then
