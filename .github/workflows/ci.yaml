@@ -5,7 +5,7 @@ name: CI/CD backend
 # El despliegue solo ocurre en main (push o ejecución manual) y únicamente si todo lo anterior salió bien.
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, test/hito5-integracion]
   push:
     branches: [develop, main]
   workflow_dispatch:
