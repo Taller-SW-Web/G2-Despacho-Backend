@@ -23,6 +23,22 @@ El ciclo de recuperación revisa la bandeja cada 30 segundos mientras Gestión e
 
 Un gestor puede devolver ese evento a la cola con `POST /api/v1/despachos/{idDespacho}/eventos-ventas/{idEvento}/reenvio`. Requiere el rol `GESTOR_DESPACHO` y responde `202` con `estadoEnvio=PENDIENTE`. El contenido y el `idEvento` no cambian, de modo que Ventas sigue deduplicando. Responde `404 DESP_ERROR_EVENTO_NO_ENCONTRADO` si el evento no pertenece a ese despacho o no va dirigido a Ventas, y `409 DESP_ERROR_EVENTO_NO_REENVIABLE` con `estadoActual` si no está en `ENVIO_FALLIDO`. Los identificadores de los eventos aparecen en las comunicaciones del detalle de la incidencia.
 
+### RabbitMQ para eventos internos
+
+RabbitMQ es un transporte opcional y aditivo entre Gestión y Operación. No sustituye las API REST internas ni el webhook a Ventas. Se activa con `RABBITMQ_HABILITADO=true` en ambos servicios; con el valor por defecto `false` el comportamiento es el anterior. En Render no hay broker desplegado: para activarlo hay que contratar uno externo y configurar sus credenciales.
+
+| Variable | Servicios | Valor |
+|---|---|---|
+| `RABBITMQ_HABILITADO` | Gestión y Operación | `false` por defecto; `true` publica y consume por RabbitMQ. |
+| `RABBITMQ_HOST` / `RABBITMQ_PORT` | Gestión y Operación | Origen AMQP, por defecto `localhost:5672`; en Compose, `rabbitmq:5672`. |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Gestión y Operación | Credenciales del broker, distintas de los tokens `client_credentials`. |
+| `RABBITMQ_VIRTUAL_HOST` | Gestión y Operación | Host virtual, `/` por defecto. |
+| `RABBITMQ_SALUD_HABILITADA` | Gestión y Operación | `false` por defecto para no marcar `DOWN` el health check cuando no hay broker. |
+
+Los exchanges son `despacho.capacidad` (`operacion.liberacion.{idReserva}`) y `despacho.estado` (`despacho.proyeccion`); las colas `operacion.liberaciones` y `despacho.eventos.estado` pertenecen a Operación y tienen su DLQ. El productor espera confirmación del broker antes de marcar el evento como enviado en `eventos_salientes`. El consumidor registra `eventId` en `eventos_procesados` (V8 de Operación) antes de ejecutar la liberación o la proyección; una reentrega se descarta. Los mensajes no procesables van a la DLQ.
+
+Para verificar localmente, levantar Compose con `RABBITMQ_HABILITADO=true` y comprobar las colas en `http://localhost:15672` con las credenciales del `.env.example` raíz. Para volver al flujo anterior, poner el flag en `false` y recrear los servicios: los endpoints internos HTTP siguen operativos. El contrato del sobre está en el [contrato externo](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md#36-mensajería-interna-con-rabbitmq) §3.6.
+
 ### Acceso solo por el Gateway en Render Free
 
 Render Free no ofrece Private Services, así que Gestión y Operación conservan una URL pública. Para que el Gateway sea la única entrada utilizable, el Gateway añade la cabecera `X-Despacho-Interno` con un secreto compartido en las rutas `/api/v1/**`. Gestión y Operación responden `404 DESP_ERROR_RUTA_NO_ENCONTRADA` a cualquier llamada directa a `/api/v1/**` que no la traiga o la traiga con otro valor. El filtro se ejecuta antes que la autenticación, de modo que la respuesta no revela si la ruta existe.
