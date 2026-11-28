@@ -26,6 +26,8 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
         this.json = json;
     }
 
+    private static final String PENDIENTES =
+            "(COALESCE(proyeccion.pendientes,false) OR COALESCE(carga.sin_confirmar,false)) AS pendientes\n";
     private static final String CAMPOS =
             """
         SELECT r.id AS repartidor_id, r.nombres || ' ' || r.apellidos AS nombre,
@@ -35,8 +37,8 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
           j.cerrada_en, j.capacidad_max_kg, j.capacidad_max_m3, j.max_paquetes,
           COALESCE(carga.peso,0) AS peso, COALESCE(carga.volumen,0) AS volumen, COALESCE(carga.paquetes,0) AS paquetes,
           COALESCE(proyeccion.en_camino,false) AS en_camino,
-          (COALESCE(proyeccion.pendientes,false) OR COALESCE(carga.sin_confirmar,false)) AS pendientes
-        """;
+        """
+                    + PENDIENTES;
     private static final String CARGA =
             """
         LEFT JOIN furgonetas f ON f.id=j.furgoneta_id
@@ -73,6 +75,64 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
                                 + " WHERE r.estado_registro='ACTIVO' ORDER BY r.apellidos,r.nombres,r.id")
                 .param("fecha", fecha)
                 .query(this::fila)
+                .list();
+    }
+
+    @Override
+    public List<JornadaAnteriorActiva> consultarJornadasAnterioresActivas(LocalDate hoy) {
+        return sql.sql(
+                        "SELECT j.id, j.fecha_jornada, r.nombres || ' ' || r.apellidos AS nombre, f.placa, "
+                                + PENDIENTES
+                                + "FROM asignaciones_diarias j JOIN perfiles_flota r ON r.id=j.repartidor_id "
+                                + CARGA
+                                + " WHERE j.estado='ACTIVA' AND j.fecha_jornada < :hoy"
+                                + " ORDER BY j.fecha_jornada, r.apellidos, r.nombres, j.id")
+                .param("hoy", hoy)
+                .query(
+                        (fila, indice) ->
+                                new JornadaAnteriorActiva(
+                                        fila.getObject("id", UUID.class),
+                                        fila.getObject("fecha_jornada", LocalDate.class),
+                                        fila.getString("nombre"),
+                                        fila.getString("placa"),
+                                        fila.getBoolean("pendientes")))
+                .list();
+    }
+
+    @Override
+    public List<UUID> listarJornadasParaCorte(LocalDate hasta) {
+        return sql.sql(
+                        """
+            SELECT id FROM asignaciones_diarias WHERE estado='ACTIVA' AND fecha_jornada <= :hasta
+            ORDER BY fecha_jornada, id
+            """)
+                .param("hasta", hasta)
+                .query(UUID.class)
+                .list();
+    }
+
+    @Override
+    public List<PendienteRegularizacion> listarPendientesAnteriores(
+            UUID repartidor, LocalDate hoy) {
+        return sql.sql(
+                        """
+            SELECT p.despacho_id_externo,
+              COALESCE(NULLIF(btrim(p.codigo_rastreo_interno), ''), p.despacho_id_externo::text) AS codigo,
+              j.fecha_jornada, p.estado
+            FROM asignaciones_diarias j JOIN proyecciones_despacho p ON p.asignacion_diaria_id=j.id
+            WHERE j.repartidor_id=:repartidor AND j.estado='ACTIVA' AND j.fecha_jornada < :hoy
+              AND p.estado IN ('ASIGNADO','EN_CAMINO')
+            ORDER BY j.fecha_jornada, p.secuencia_ruta NULLS LAST, p.despacho_id_externo
+            """)
+                .param("repartidor", repartidor)
+                .param("hoy", hoy)
+                .query(
+                        (fila, indice) ->
+                                new PendienteRegularizacion(
+                                        fila.getObject("despacho_id_externo", UUID.class),
+                                        fila.getString("codigo"),
+                                        fila.getObject("fecha_jornada", LocalDate.class),
+                                        fila.getString("estado")))
                 .list();
     }
 
@@ -210,18 +270,44 @@ public class RepositorioJornadasJdbc implements IRepositorioJornadas {
     }
 
     @Override
-    public boolean tieneRecursoOcupado(UUID repartidor, UUID furgoneta) {
+    public List<JornadaBloqueante> buscarJornadasBloqueantes(UUID repartidor, UUID furgoneta) {
         return sql.sql(
                         """
-            SELECT EXISTS(SELECT 1 FROM asignaciones_diarias j
-              WHERE (j.repartidor_id=:repartidor OR j.furgoneta_id=:furgoneta) AND
-                (j.estado='ACTIVA' OR EXISTS(SELECT 1 FROM reservas_capacidad r WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA')
-                 OR EXISTS(SELECT 1 FROM proyecciones_despacho p WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO'))))
+            SELECT j.id, j.fecha_jornada, j.estado, f.placa,
+              j.repartidor_id=:repartidor AS bloquea_repartidor,
+              j.furgoneta_id=:furgoneta AS bloquea_furgoneta,
+              carga.reservas_activas, COALESCE(proyeccion.despachos, ARRAY[]::text[]) AS despachos
+            FROM asignaciones_diarias j
+            JOIN furgonetas f ON f.id=j.furgoneta_id
+            CROSS JOIN LATERAL (
+              SELECT count(*) AS reservas_activas FROM reservas_capacidad r
+              WHERE r.asignacion_diaria_id=j.id AND r.estado='ACTIVA'
+            ) carga
+            CROSS JOIN LATERAL (
+              SELECT array_agg(
+                COALESCE(NULLIF(btrim(p.codigo_rastreo_interno), ''), p.despacho_id_externo::text)
+                ORDER BY p.codigo_rastreo_interno, p.despacho_id_externo) AS despachos
+              FROM proyecciones_despacho p
+              WHERE p.asignacion_diaria_id=j.id AND p.estado IN ('ASIGNADO','EN_CAMINO')
+            ) proyeccion
+            WHERE (j.repartidor_id=:repartidor OR j.furgoneta_id=:furgoneta)
+              AND (j.estado='ACTIVA' OR carga.reservas_activas > 0 OR proyeccion.despachos IS NOT NULL)
+            ORDER BY (j.estado='ACTIVA') DESC, j.fecha_jornada DESC, j.id
             """)
                 .param("repartidor", repartidor)
                 .param("furgoneta", furgoneta)
-                .query(Boolean.class)
-                .single();
+                .query(
+                        (fila, indice) ->
+                                new JornadaBloqueante(
+                                        fila.getObject("id", UUID.class),
+                                        fila.getObject("fecha_jornada", LocalDate.class),
+                                        fila.getString("placa"),
+                                        fila.getString("estado"),
+                                        fila.getBoolean("bloquea_repartidor"),
+                                        fila.getBoolean("bloquea_furgoneta"),
+                                        List.of((String[]) fila.getArray("despachos").getArray()),
+                                        fila.getLong("reservas_activas")))
+                .list();
     }
 
     @Override

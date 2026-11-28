@@ -7,6 +7,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.web.FiltroCorrelacion;
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.http.HttpTimeoutException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +32,13 @@ class ClienteDatosFisicosHttpTests {
 
     @BeforeEach
     void preparar() {
+        preparar(false, "credencial-propia");
+    }
+
+    private void preparar(boolean respaldo, String token) {
         RestClient.Builder constructor = RestClient.builder().baseUrl("https://productos.prueba");
         servidor = MockRestServiceServer.bindTo(constructor).build();
-        cliente = new ClienteDatosFisicosHttp(constructor.build(), () -> "credencial-propia");
+        cliente = new ClienteDatosFisicosHttp(constructor.build(), () -> token, respaldo);
     }
 
     @Test
@@ -98,6 +104,91 @@ class ClienteDatosFisicosHttpTests {
                                     .isEqualTo("DESP_ERROR_PRODUCTO_NO_ENCONTRADO");
                             assertThat(error.getSkusAfectados()).containsExactly("B");
                         });
+    }
+
+    @Test
+    void completaSoloLosSkuAusentesYConservaLosPerfilesReales(CapturedOutput salida) {
+        preparar(true, "credencial-propia");
+        responder(
+                200,
+                "{\"productos\":[" + perfil("A", "INACTIVO") + "],\"noEncontrados\":[\"001-b\"]}");
+
+        var datos = cliente.obtener(List.of("001-b", "A", "001-b"));
+
+        assertThat(datos.keySet()).containsExactly("001-b", "A");
+        assertThat(datos.get("A").simulado()).isFalse();
+        assertThat(datos.get("A").estado()).isEqualTo("INACTIVO");
+        assertThat(datos.get("A").pesoKg()).isEqualByComparingTo("0.123456789123456789");
+        var provisional = datos.get("001-b");
+        assertThat(provisional.simulado()).isTrue();
+        assertThat(provisional.pesoKg()).isEqualByComparingTo("1");
+        assertThat(provisional.largoCm()).isEqualByComparingTo("20");
+        assertThat(provisional.anchoCm()).isEqualByComparingTo("15");
+        assertThat(provisional.altoCm()).isEqualByComparingTo("10");
+        assertThat(provisional.estado()).isEqualTo("ACTIVO");
+        assertThat(salida.getAll()).contains("motivo=sku_no_encontrado cantidad_skus=1");
+        servidor.verify();
+    }
+
+    @Test
+    void completaTodoElLoteAnteUnErrorTecnicoDelProveedor() {
+        preparar(true, "credencial-propia");
+        responder(503, "{}");
+
+        var datos = cliente.obtener(List.of("A", "B"));
+
+        assertThat(datos.keySet()).containsExactly("A", "B");
+        assertThat(datos.values()).allSatisfy(dato -> assertThat(dato.simulado()).isTrue());
+        servidor.verify();
+    }
+
+    @Test
+    void completaTodoElLoteAnteUnTimeoutOFalloDeConexion() {
+        for (IOException causa :
+                List.of(new HttpTimeoutException("prueba"), new ConnectException("prueba"))) {
+            preparar(true, "credencial-propia");
+            servidor.expect(
+                            requestTo(
+                                    "https://productos.prueba/api/v1/productos/datos-fisicos/consulta"))
+                    .andRespond(withException(causa));
+
+            var datos = cliente.obtener(List.of("A", "B"));
+
+            assertThat(datos.keySet()).containsExactly("A", "B");
+            assertThat(datos.values()).allSatisfy(dato -> assertThat(dato.simulado()).isTrue());
+            servidor.verify();
+        }
+    }
+
+    @Test
+    void conservaLosErroresDeCredencialesConElRespaldoHabilitado() {
+        preparar(true, "");
+        comprobarError(503, "DESP_ERROR_PRODUCTOS_NO_DISPONIBLE", List.of("A"));
+        servidor.verify();
+        for (int estado : List.of(401, 403)) {
+            preparar(true, "credencial-propia");
+            responder(estado, "{}");
+            comprobarError(503, "DESP_ERROR_PRODUCTOS_NO_DISPONIBLE", List.of("A"));
+            servidor.verify();
+        }
+    }
+
+    @Test
+    void conservaLosErroresDeNegocioYDeContratoConElRespaldoHabilitado() {
+        preparar(true, "credencial-propia");
+        responder(422, problema("SKU_INVALIDO", "[\"A\"]"));
+        comprobarError(422, "DESP_ERROR_PRODUCTO_NO_ELEGIBLE", List.of("A"));
+        servidor.verify();
+
+        preparar(true, "credencial-propia");
+        responder(422, problema("DATOS_FISICOS_INCOMPLETOS", "[\"A\"]"));
+        comprobarError(422, "DESP_ERROR_DATOS_FISICOS_INCOMPLETOS", List.of("A"));
+        servidor.verify();
+
+        preparar(true, "credencial-propia");
+        responder(200, "{\"productos\":[],\"noEncontrados\":[\"A\"]}");
+        comprobarError(502, "DESP_ERROR_RESPUESTA_PRODUCTOS_INVALIDA", List.of("A", "B"));
+        servidor.verify();
     }
 
     @Test

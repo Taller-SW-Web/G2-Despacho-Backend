@@ -3,16 +3,27 @@ package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.cotizacio
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Datos físicos vigentes de un producto, provistos por Productos y Ofertas. */
+/** Datos físicos de un producto usados para calcular su peso y volumen. */
 public record DatosFisicos(
         BigDecimal pesoKg,
         BigDecimal largoCm,
         BigDecimal anchoCm,
         BigDecimal altoCm,
         String estado,
-        Instant actualizadoEn) {
+        Instant actualizadoEn,
+        boolean simulado) {
 
     private static final BigDecimal CENTIMETROS_POR_METRO = new BigDecimal("100");
+
+    public DatosFisicos(
+            BigDecimal pesoKg,
+            BigDecimal largoCm,
+            BigDecimal anchoCm,
+            BigDecimal altoCm,
+            String estado,
+            Instant actualizadoEn) {
+        this(pesoKg, largoCm, anchoCm, altoCm, estado, actualizadoEn, false);
+    }
 
     public boolean completo() {
         return esPositivo(pesoKg)

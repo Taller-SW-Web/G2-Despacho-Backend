@@ -11,7 +11,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Compose compila con Java 25 LTS dentro de las imágenes y arranca cinco contenedores. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
+Compose compila con Java 25 LTS dentro de las imágenes y arranca seis contenedores, incluido RabbitMQ. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
 
 | Servicio | Dirección predeterminada |
 |---|---|
@@ -20,6 +20,7 @@ Compose compila con Java 25 LTS dentro de las imágenes y arranca cinco contened
 | Operación de Reparto y Flota | `http://localhost:8082/swagger-ui.html` |
 | Seguridad temporal | `http://127.0.0.1:8090` |
 | PostgreSQL/PostGIS | `localhost:15432` |
+| RabbitMQ (AMQP / gestión) | `localhost:5672` / `http://localhost:15672` |
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/actuator/health
@@ -36,7 +37,7 @@ Las aplicaciones del frontend se ejecutan aparte y tienen sus propios archivos `
 
 ## Bases y migraciones
 
-En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V12 en Gestión** y **V1–V7 en Operación** en esta rama. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
+En el primer arranque con un volumen vacío, [init-db.sql](./init-db.sql) crea `despacho_gestion` y `despacho_operacion` en el PostgreSQL local. Flyway aplica **V1–V13 en Gestión** y **V1–V8 en Operación** en esta rama. Una base nueva incluye catálogos y esquema; las zonas, tarifas, perfiles, vehículos y despachos de prueba se preparan según el recorrido.
 
 Para comprobar las migraciones con el usuario local predeterminado:
 
@@ -55,11 +56,15 @@ El emisor local usa cuentas ficticias y firma JWT de prueba. El gestor `gestor@d
 - **Cotización:** Seguridad local emite un token de servicio para Marketplace o Chatbot con `cotizaciones:calcular`. La cobertura se prueba con el Compose normal. Para calcular precio y plazo sin G6, activar el catálogo `productos-simulados` en Gestión y configurar una zona con tarifa. La [guía de Postman](./servicio-gestion-despachos/docs/pruebas-postman-local.md) incluye el override, el token y los cuerpos de ejemplo.
 - **Seguimiento por pedido:** consultar el contrato [RT-04](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md#6-rt-04-seguimiento-para-marketplace-y-chatbot) y el [cargador opcional de ejemplos](./pruebas/cargar_seguimientos_local.sql).
 - **Eventos hacia Ventas:** Compose incluye `ventas-local`, un doble temporal que recibe el webhook de §7.3 en el puerto 8084, valida el token de servicio, descarta duplicados, evita retrocesos de estado y expone lo recibido en `/control`. Para el recorrido con la app del repartidor, consultar la [guía de pruebas](./docs/pruebas.md#eventos-hacia-ventas-con-ventas-local).
+- **Mensajería interna:** el transporte RabbitMQ entre Gestión y Operación se activa con `RABBITMQ_HABILITADO=true` en el `.env` raíz y recreando los servicios. Con el valor por defecto `false`, los eventos internos siguen por las API REST internas. El detalle está en [cambios-rabbitmq-interno.md](./docs/cambios-rabbitmq-interno.md).
 - **Dependencias externas:** Gestión usa Productos para cotizar con SKU y recibir pedidos reales, y entrega eventos a Ventas mediante el webhook configurado en `VENTAS_URL` (por omisión, `ventas-local`). Operación necesita un bucket privado para entregar o registrar fallos con foto. Consultar las [variables del entorno](./.env.example) y los [contratos de integración](https://github.com/Taller-SW-Web/G2-Despacho-Specs/blob/main/integraciones/api-contract.md).
+- Para activar la **contingencia de Productos**, configurar `PRODUCTOS_RESPALDO_TEMPORAL_HABILITADO=true` en el entorno de Gestión. Con Compose se configura en el `.env` raíz y se vuelve a levantar Gestión con `docker compose up -d --build servicio-gestion-despachos`. La cotización y la recepción de despachos usan `1 kg` y `20 × 15 × 10 cm` por unidad para cada SKU que Productos reporte en `noEncontrados` o para todo el lote ante un timeout, fallo de conexión o respuesta HTTP `5xx`. Gestión registra el uso del respaldo y marca las cotizaciones afectadas con `es_simulado=true`. El valor por defecto es `false`.
 
 ## Pruebas y contratos
 
 Con Java 25 LTS, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
+
+El corte de F-03 se activa en Operación con `CORTE_JORNADA_HABILITADO=true`. La hora local en America/Bogota se configura con `CORTE_JORNADA_HORA` (por defecto `23:59`) y el intervalo con `CORTE_JORNADA_INTERVALO_MS` (por defecto `60000`). Las jornadas activas de fechas anteriores se revisan en el primer ciclo, incluso antes de la hora de hoy. Para una prueba manual, activar el corte en una base local con datos ficticios de ambos servicios y consultar las jornadas y Entregas fallidas después del ciclo.
 
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
 

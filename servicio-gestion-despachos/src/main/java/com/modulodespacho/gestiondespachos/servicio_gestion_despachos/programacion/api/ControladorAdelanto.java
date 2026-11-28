@@ -1,0 +1,64 @@
+package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.api;
+
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.AdelantarDespacho;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.application.ModelosAdelanto.Respuesta;
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.errores.ErrorDeNegocio;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.UUID;
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.JsonNode;
+
+@RestController
+@Profile("!integracion-local")
+public class ControladorAdelanto {
+    private final AdelantarDespacho adelanto;
+    private final SolicitudesProgramacion solicitudes;
+
+    public ControladorAdelanto(AdelantarDespacho adelanto, SolicitudesProgramacion solicitudes) {
+        this.adelanto = adelanto;
+        this.solicitudes = solicitudes;
+    }
+
+    @PostMapping(value = "/api/v1/despachos/{idDespacho}/adelanto", consumes = "application/json")
+    public ResponseEntity<Respuesta> ejecutar(
+            @PathVariable String idDespacho,
+            @RequestBody JsonNode cuerpo,
+            @RequestHeader(value = "Idempotency-Key", required = false) String clave,
+            @RequestHeader(value = "If-Match", required = false) String version,
+            @AuthenticationPrincipal Jwt identidad,
+            HttpServletRequest solicitud) {
+        if (!solicitud.getParameterMap().isEmpty())
+            throw SolicitudesProgramacion.invalido("parametros", "No se admiten parámetros");
+        UUID id;
+        try {
+            id = UUID.fromString(idDespacho);
+        } catch (IllegalArgumentException error) {
+            throw ErrorDeNegocio.de(
+                    404, "DESP_ERROR_DESPACHO_NO_ENCONTRADO", "El despacho no existe");
+        }
+        int numero;
+        try {
+            if (version == null || !version.matches("\"[0-9]{1,10}\""))
+                throw new IllegalArgumentException();
+            numero = Integer.parseInt(version.substring(1, version.length() - 1));
+            if (numero < 1) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException error) {
+            throw SolicitudesProgramacion.invalido(
+                    "If-Match", "Indica la versión del despacho entre comillas");
+        }
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(
+                        adelanto.ejecutar(
+                                id,
+                                solicitudes.clave(clave),
+                                numero,
+                                solicitudes.adelanto(cuerpo),
+                                identidad.getSubject()));
+    }
+}

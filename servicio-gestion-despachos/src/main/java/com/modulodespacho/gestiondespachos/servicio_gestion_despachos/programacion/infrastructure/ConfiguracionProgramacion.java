@@ -1,11 +1,13 @@
 package com.modulodespacho.gestiondespachos.servicio_gestion_despachos.programacion.infrastructure;
 
+import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.mensajeria.application.PublicadorInterno;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.productos.infrastructure.ClienteDatosFisicosHttp;
 import com.modulodespacho.gestiondespachos.servicio_gestion_despachos.shared.seguridad.ProveedorTokenServicio;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
@@ -33,11 +35,17 @@ public class ConfiguracionProgramacion {
                         entorno.getProperty("despacho.productos.url", "http://127.0.0.1:1"),
                         Duration.ofMillis(
                                 entorno.getProperty(
-                                        "despacho.productos.timeout-conexion-ms", Long.class, 3000L)),
+                                        "despacho.productos.timeout-conexion-ms",
+                                        Long.class,
+                                        3000L)),
                         Duration.ofMillis(
                                 entorno.getProperty(
-                                        "despacho.productos.timeout-lectura-ms", Long.class, 6000L))),
-                credenciales(entorno, "productos", "productos:fisicos:leer", reloj));
+                                        "despacho.productos.timeout-lectura-ms",
+                                        Long.class,
+                                        6000L))),
+                credenciales(entorno, "productos", "productos:fisicos:leer", reloj),
+                entorno.getProperty(
+                        "despacho.productos.respaldo-temporal-habilitado", Boolean.class, false));
     }
 
     @Bean
@@ -53,7 +61,8 @@ public class ConfiguracionProgramacion {
             Environment entorno,
             Clock reloj,
             org.springframework.jdbc.core.simple.JdbcClient sql,
-            tools.jackson.databind.json.JsonMapper json) {
+            tools.jackson.databind.json.JsonMapper json,
+            ObjectProvider<PublicadorInterno> publicador) {
         // Ventas corre en Render free: tras hibernar, 1,5 s de lectura agota los reintentos.
         // El envío es asíncrono (outbox), así que un plazo mayor no afecta a ninguna petición.
         return new EntregaEventosProgramacion(
@@ -70,7 +79,8 @@ public class ConfiguracionProgramacion {
                 credenciales(entorno, "ventas", "ventas:pedidos:estado", reloj),
                 cliente(entorno.getRequiredProperty("despacho.operacion.url")),
                 credenciales(entorno, "operacion", "", reloj),
-                entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false));
+                entorno.getProperty("despacho.demo.sin-autenticacion", Boolean.class, false),
+                publicador.getIfAvailable());
     }
 
     private static java.util.function.Supplier<String> credenciales(

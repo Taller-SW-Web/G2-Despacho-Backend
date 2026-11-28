@@ -1,6 +1,14 @@
 spring:
   application:
     name: servicio-gestion-despachos
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    publisher-confirm-type: correlated
+    publisher-returns: true
   jpa:
     open-in-view: false
 
@@ -11,6 +19,9 @@ server:
     include-stacktrace: never
 
 management:
+  health:
+    rabbit:
+      enabled: ${RABBITMQ_SALUD_HABILITADA:false}
   info:
     env:
       enabled: true
@@ -30,6 +41,8 @@ springdoc:
     persist-authorization: false
 
 despacho:
+  rabbitmq:
+    habilitado: ${RABBITMQ_HABILITADO:false}
   geometrias:
     maximo-bytes: ${GEOMETRIAS_MAXIMO_BYTES:5242880}
   demo:
@@ -70,6 +83,7 @@ despacho:
     cliente-secreto: ${PRODUCTOS_CLIENT_SECRET:}
     timeout-conexion-ms: ${PRODUCTOS_TIMEOUT_CONEXION_MS:3000}
     timeout-lectura-ms: ${PRODUCTOS_TIMEOUT_LECTURA_MS:6000}
+    respaldo-temporal-habilitado: ${PRODUCTOS_RESPALDO_TEMPORAL_HABILITADO:false}
     stub:
       catalogo:
         POL-NEG-M:

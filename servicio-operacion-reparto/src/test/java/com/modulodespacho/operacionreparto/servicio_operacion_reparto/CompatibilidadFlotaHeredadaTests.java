@@ -15,6 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(properties = "SEGURIDAD_URL=http://127.0.0.1:1")
 @org.springframework.test.context.ActiveProfiles("render")
@@ -24,6 +26,11 @@ class CompatibilidadFlotaHeredadaTests {
     @Autowired DataSource origen;
     @Autowired JdbcClient sql;
     @Autowired GestorFlota gestor;
+
+    @DynamicPropertySource
+    static void sinMigracionesSobreElEsquemaHeredado(DynamicPropertyRegistry propiedades) {
+        propiedades.add("spring.flyway.enabled", () -> false);
+    }
 
     @BeforeAll
     void prepararEsquemaYAplicarAdaptacionReal() throws Exception {

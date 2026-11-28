@@ -12,6 +12,12 @@ public interface IRepositorioJornadas {
 
     List<FilaBase> consultarMonitoreo(LocalDate fecha);
 
+    List<JornadaAnteriorActiva> consultarJornadasAnterioresActivas(LocalDate hoy);
+
+    List<UUID> listarJornadasParaCorte(LocalDate hasta);
+
+    List<PendienteRegularizacion> listarPendientesAnteriores(UUID repartidor, LocalDate hoy);
+
     Perfil obtenerPerfil(UUID id);
 
     Optional<Perfil> buscarPerfilDeUsuario(UUID usuario);
@@ -22,7 +28,7 @@ public interface IRepositorioJornadas {
 
     Optional<JornadaBase> buscarJornadaDelDia(UUID repartidor, LocalDate fecha);
 
-    boolean tieneRecursoOcupado(UUID repartidor, UUID furgoneta);
+    List<JornadaBloqueante> buscarJornadasBloqueantes(UUID repartidor, UUID furgoneta);
 
     UUID crear(Apertura datos, Capacidad capacidad, UUID actor, Instant ahora);
 
