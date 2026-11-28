@@ -1,5 +1,9 @@
 # Fichas del hito 5 · Persona A
 
+**Revalidación A+B en Java 21:** consultar [CIERRE-HITO5](./CIERRE-HITO5.md).
+Contiene las cinco corridas nuevas, INT-01/02/08/09, trazabilidad y límites. Los resultados
+inferiores se conservan como evidencia histórica de Persona A en Java 25, no sustituyen esa revalidación.
+
 Resultados de los casos de integración y rendimiento asignados a Persona A en el plan de pruebas del hito 5. Todos se ejecutaron el 2026-11-26 en el entorno local descrito en cada ficha.
 
 | Caso | Qué verifica | Resultado | Ficha |

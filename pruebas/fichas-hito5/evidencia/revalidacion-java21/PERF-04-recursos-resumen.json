@@ -1,0 +1,30 @@
+{
+  "alcance": "Corrida completa, incluido calentamiento",
+  "contenedores": {
+    "hito5-persona-b-gateway-1": {
+      "cpuMedia": 2.83,
+      "cpuMaxima": 11.26,
+      "ramMaximaMiB": 389.5
+    },
+    "hito5-persona-b-operacion-1": {
+      "cpuMedia": 4.85,
+      "cpuMaxima": 22.43,
+      "ramMaximaMiB": 494.2
+    },
+    "hito5-persona-b-gestion-1": {
+      "cpuMedia": 7.9,
+      "cpuMaxima": 44.74,
+      "ramMaximaMiB": 687.7
+    },
+    "hito5-persona-b-postgres-1": {
+      "cpuMedia": 8.51,
+      "cpuMaxima": 28.2,
+      "ramMaximaMiB": 314.1
+    },
+    "hito5-persona-b-seguridad-local-1": {
+      "cpuMedia": 0.92,
+      "cpuMaxima": 8.75,
+      "ramMaximaMiB": 94.49
+    }
+  }
+}

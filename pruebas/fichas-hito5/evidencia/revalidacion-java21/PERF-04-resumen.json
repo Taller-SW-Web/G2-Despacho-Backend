@@ -1,0 +1,24 @@
+{
+  "jtl": "resultados/PERF-04-20261127-202700/PERF-04.jtl",
+  "fases": {
+    "ASIGNACION-CARGA": {
+      "muestras": 600,
+      "duracionS": 300,
+      "tasaLograda": 2.0,
+      "tasaObjetivo": 2.0,
+      "p50": 24,
+      "p95": 29,
+      "p99": 32,
+      "max": 41,
+      "errores": {},
+      "porcentajeErroresInesperados": 0.0,
+      "fallosNegocio": {},
+      "umbralP95Ms": 1000,
+      "inicioMs": 1795829283686,
+      "finMs": 1795829583209,
+      "resultado": "Aprobado",
+      "incumplimientos": []
+    }
+  },
+  "resultado": "Aprobado"
+}

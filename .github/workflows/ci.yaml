@@ -5,7 +5,7 @@ name: CI/CD backend
 # El despliegue solo ocurre en main (push o ejecución manual) y únicamente si todo lo anterior salió bien.
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, test/hito5-integracion]
   push:
     branches: [develop, main]
   workflow_dispatch:
@@ -34,6 +34,8 @@ jobs:
           persist-credentials: false
       - name: Probar el verificador con dobles explícitos
         run: python3 -B -m unittest discover -s pruebas -p 'test_verificar_f02_publicado.py' -v
+      - name: Probar ventanas nominales y configuración JMeter del hito 5
+        run: python3 -B -m unittest discover -s pruebas/rendimiento -p 'test_*.py' -v
 
   servicios:
     name: Pruebas (${{ matrix.servicio }})

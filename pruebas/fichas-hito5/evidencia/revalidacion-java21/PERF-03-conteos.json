@@ -1,0 +1,10 @@
+{
+  "antes": {
+    "instanteUtcMs": 1795828795498,
+    "filas": 31
+  },
+  "despues": {
+    "instanteUtcMs": 1795829106698,
+    "filas": 181
+  }
+}

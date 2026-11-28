@@ -1,0 +1,34 @@
+OK  Salud local
+OK  Sin token: 401
+OK  Firma de otra clave: 401
+OK  Token vencido: 401
+OK  Emisor ajeno: 401
+OK  Audiencia de Despacho: 403
+OK  Sin scope de Ventas: 403
+OK  Otro módulo: 403
+OK  Un rechazo de autenticación no registra el evento
+OK  JSON inválido: 400
+OK  Tipo no acordado: 400
+OK  idEvento con prefijo: 400
+Ventas local: DESPACHO_EN_CAMINO 8c7c1902-1f49-45eb-b042-dc8c21ce85bf -> APLICADO
+OK  EN_CAMINO cambia el pedido a DESPACHADO
+Ventas local: DESPACHO_EN_CAMINO 8c7c1902-1f49-45eb-b042-dc8c21ce85bf -> DUPLICADO
+OK  Un reintento con el mismo idEvento responde 2xx sin reaplicar
+OK  Mismo idEvento con otro contenido: 409
+Ventas local: DESPACHO_ENTREGADO 7eeee06c-36af-4306-912a-663fad033920 -> APLICADO
+OK  ENTREGADO aplicado aunque EN_CAMINO aún no llegó
+Ventas local: DESPACHO_EN_CAMINO 2a441a68-6b50-443d-92ac-e860302de7a3 -> ATRASADO
+OK  EN_CAMINO atrasado no reabre un pedido ENTREGADO
+OK  El evento atrasado queda registrado para auditoría
+Ventas local: DESPACHO_REPROGRAMADO a8c0735b-f32f-4c91-aef6-a421a81ea62b -> APLICADO
+Ventas local: DESPACHO_REPROGRAMADO 00276be4-7045-4543-9c54-049fe104e01d -> ATRASADO
+OK  Una reprogramación más antigua no reemplaza la fecha vigente
+OK  Fecha programada con formato inválido: 400
+OK  Programar caídas
+OK  Primera caída: 503
+OK  Segunda caída: 503
+Ventas local: DESPACHO_FALLIDO 251b039f-d383-4715-8e85-b810c9bc0a33 -> HITO_REGISTRADO
+OK  Tras la caída, el reintento se procesa por primera vez
+OK  Límite de caídas simuladas
+OK  El reinicio limpia el estado
+Pruebas de Ventas local: OK

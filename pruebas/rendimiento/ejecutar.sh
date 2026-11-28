@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-caso="${1:?Indica el caso: PERF-02, PERF-05 o PERF-06}"
+caso="${1:?Indica PERF-02, PERF-03, PERF-04, PERF-05 o PERF-06}"
 shift
 jmeter="${JMETER:-jmeter}"
 proyecto="${PROYECTO:-hito5-perf}"
@@ -20,6 +20,22 @@ case "$caso" in
   PERF-04) fases=(--fase ASIGNACION-CARGA:2:1000) ;;
   *) echo "Caso desconocido: $caso" >&2; exit 2 ;;
 esac
+plan="${caso}.jmx"
+extras=()
+if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
+  proyecto="${PROYECTO:-hito5-persona-b}"
+  if [[ "$proyecto" != hito5-persona-b ]]; then
+    echo "La reconciliación de B solo admite el proyecto desechable hito5-persona-b" >&2
+    exit 2
+  fi
+  plan=PERF-B.jmx
+  extras+=("-Jcaso=$caso" "-Jledger=$PWD/$salida/aceptadas.jsonl" "-Jcontrol=$PWD/$salida/control.json")
+  if [[ "$caso" == PERF-03 ]]; then
+    extras+=("-Jcsv=cotizaciones.csv" "-Jreciclar=true")
+  else
+    extras+=("-Jcsv=datos/asignaciones.csv" "-Jreciclar=false")
+  fi
+fi
 
 # La evidencia corresponde a un commit y artefactos concretos, no al commit posterior a medir.
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -42,20 +58,35 @@ echo "instante,contenedor,cpu,memoria" > "$salida/recursos.csv"
 monitor=$!
 trap 'kill $monitor 2>/dev/null || true' EXIT
 
+# Conteos independientes; aguarda el calendario que publica el temporizador, no consulta en el sampler.
+contador=""
+if [[ "$caso" == PERF-03 ]]; then
+  python3 -I monitorear_ventana.py "$salida" > "$salida/conteos.log" 2>&1 &
+  contador=$!
+fi
 # Solo las fases medidas entran al informe HTML; el calentamiento y las sesiones quedan en el JTL.
-"$jmeter" -n -t "${caso}.jmx" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
+"$jmeter" -n -t "$plan" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
   -e -o "$salida/html" \
   "-Jjmeter.reportgenerator.sample_filter=^(RUTA-(BASE|PICO|RECUPERACION|CARGA)|COLA-CARGA|COTIZACION-CARGA|ASIGNACION-CARGA)$" \
-  "-Jventanas=$PWD/$salida/ventanas.json" "$@"
+  "-Jventanas=$PWD/$salida/ventanas.json" "${extras[@]}" "$@"
 
 kill $monitor 2>/dev/null || true
-git rev-parse --short HEAD > "$salida/commit.txt" 2>/dev/null || true
+git rev-parse HEAD > "$salida/commit-final.txt"
 "$jmeter" -v 2>/dev/null | grep -o '5\.[0-9.]*' | head -1 > "$salida/version-jmeter.txt" || true
 
 estado=0
+if [[ -n "$contador" ]]; then wait "$contador" || estado=1; fi
+if ! cmp -s "$salida/commit.txt" "$salida/commit-final.txt" || [[ -n "$(git status --porcelain)" ]]; then
+  echo "El código cambió durante la medición; corrida no concluyente" > "$salida/codigo-cambio.txt"
+  estado=1
+fi
 python3 -I analizar_jtl.py "$salida/${caso}.jtl" "${fases[@]}" \
   --ventanas "$salida/ventanas.json" --salida "$salida/resumen.json" \
   | tee "$salida/resumen.txt" || estado=$?
+if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
+  python3 -I reconciliar_persona_b.py "$caso" "$salida" \
+    > "$salida/reconciliacion.log" 2>&1 || estado=1
+fi
 tar -czf "$salida.tar.gz" "$salida"
 echo "Evidencia en $salida"
 exit "$estado"

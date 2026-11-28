@@ -1,0 +1,24 @@
+{
+  "jtl": "resultados/PERF-03-20261127-201850/PERF-03.jtl",
+  "fases": {
+    "COTIZACION-CARGA": {
+      "muestras": 150,
+      "duracionS": 300,
+      "tasaLograda": 0.5,
+      "tasaObjetivo": 0.5,
+      "p50": 24,
+      "p95": 30,
+      "p99": 34,
+      "max": 54,
+      "errores": {},
+      "porcentajeErroresInesperados": 0.0,
+      "fallosNegocio": {},
+      "umbralP95Ms": 100,
+      "inicioMs": 1795828795699,
+      "finMs": 1795829093731,
+      "resultado": "Aprobado",
+      "incumplimientos": []
+    }
+  },
+  "resultado": "Aprobado"
+}

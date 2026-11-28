@@ -68,6 +68,10 @@ El corte de F-03 se activa en Operación con `CORTE_JORNADA_HABILITADO=true`. La
 
 La [guía de pruebas](./docs/pruebas.md) incluye los recorridos F-02 y F-04, el arranque de Gestión para Playwright y cómo distinguir resultados locales de la integración publicada. Para inspeccionar una base local, consultar la [guía de pgAdmin](./servicio-gestion-despachos/docs/conexion-pgadmin-local.md).
 
+El hito 5 cuenta con un [verificador Java independiente](./pruebas/integracion-java/README.md),
+[planes JMeter](./pruebas/rendimiento/README.md) y un [registro consolidado A+B](./pruebas/fichas-hito5/CIERRE-HITO5.md).
+Las corridas usan Compose desechable, sin las bases de trabajo; INT-10 con G6/G7 reales y la revisión humana siguen pendientes.
+
 La administración de distritos de F-01 dispone de un [recorrido aislado por Gateway y navegador](./docs/pruebas.md#administración-de-distritos-navegador-y-gateway-aislados), con base desechable, Seguridad temporal y Productos simulados.
 
 ## Geometrías y mapas administrativos de F-01

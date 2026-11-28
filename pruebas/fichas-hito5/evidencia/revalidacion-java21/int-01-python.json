@@ -1,0 +1,111 @@
+{
+  "fechaUtc": "2026-11-28T00:54:22.672512+00:00",
+  "commitVerificador": "a912304b37ebd28cb6a05c77292af7c8dd0570ce",
+  "entorno": "local desechable con Seguridad temporal",
+  "aprobado": true,
+  "casos": [
+    {
+      "caso": "sin_token_401_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "sin_permiso_403_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "sello_omitido_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "sello_nulo_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "sello_texto_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "version_decimal_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "campo_ajeno_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "observacion_excesiva_400_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "version_obsoleta_409_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "incidencia_ajena_409_sin_cambios",
+      "aprobado": true
+    },
+    {
+      "caso": "recepcion_202_sello_false_sin_observacion",
+      "aprobado": true
+    },
+    {
+      "caso": "liberacion_real_reserva_original",
+      "aprobado": true
+    },
+    {
+      "caso": "repeticion_202_respuesta_original_sin_duplicados",
+      "aprobado": true
+    },
+    {
+      "caso": "contenido_distinto_409_sin_sobrescritura",
+      "aprobado": true
+    }
+  ],
+  "idDespachoSintetico": "2f635343-3492-4c38-b5b4-26ae96897fa9",
+  "persistenciaInicial": {
+    "gestion": {
+      "estado": "FALLIDO",
+      "version": 3,
+      "intentos": 0,
+      "recepciones": 0,
+      "historial": 0,
+      "solicitudes": 0,
+      "eventos": 2
+    },
+    "reservas": [
+      {
+        "id": "b9270f17-2141-4682-98b7-28c1da24524a",
+        "estado": "ACTIVA",
+        "liberadoEn": null
+      }
+    ],
+    "ocupacion": {
+      "pesoKg": 2.0,
+      "volumenM3": 0.01,
+      "paquetes": 1
+    }
+  },
+  "persistenciaFinal": {
+    "gestion": {
+      "estado": "FALLIDO",
+      "version": 4,
+      "intentos": 0,
+      "recepciones": 1,
+      "historial": 1,
+      "solicitudes": 1,
+      "eventos": 2
+    },
+    "reservas": [
+      {
+        "id": "b9270f17-2141-4682-98b7-28c1da24524a",
+        "estado": "LIBERADA",
+        "liberadoEn": "2026-11-28T00:55:11.430393+00:00"
+      }
+    ],
+    "ocupacion": {
+      "pesoKg": 0,
+      "volumenM3": 0,
+      "paquetes": 0
+    }
+  }
+}

@@ -42,6 +42,7 @@ public final class IntermediarioCorte implements AutoCloseable {
 
     private final HttpServer servidor;
     private final String destino;
+    private String controlRemoto;
     private final HttpClient http =
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private final AtomicBoolean corteArmado = new AtomicBoolean();
@@ -51,9 +52,62 @@ public final class IntermediarioCorte implements AutoCloseable {
         this.destino = destino;
         // Docker Desktop entrega host.docker.internal a través de loopback del anfitrión.
         String escucha = System.getProperty("intermediario.escucha", "127.0.0.1");
-        servidor = HttpServer.create(new InetSocketAddress(escucha, 0), 0);
+        servidor = HttpServer.create(new InetSocketAddress(escucha, Integer.getInteger("intermediario.puerto", 0)), 0);
         servidor.setExecutor(Executors.newCachedThreadPool());
+        servidor.createContext("/actuator/health", e -> responder(e, "{\"status\":\"UP\"}"));
+        servidor.createContext("/pruebas/armar", e -> {
+            if (!"POST".equals(e.getRequestMethod())) { e.sendResponseHeaders(405,-1); e.close(); return; }
+            corteArmado.set(true);
+            responder(e, "{}");
+        });
+        servidor.createContext("/pruebas/eventos", e -> {
+            var lista = new ArrayList<java.util.Map<String,Object>>();
+            for (var v : eventos()) {
+                var m = new java.util.LinkedHashMap<String,Object>();
+                m.put("numero",v.numero()); m.put("claveIdempotencia",v.claveIdempotencia());
+                m.put("recibida",v.recibida().toString()); m.put("estadoOperacion",v.estadoOperacion());
+                m.put("estadoTransferencia",v.estadoTransferencia()); m.put("idNuevaReserva",v.idNuevaReserva());
+                m.put("respuestaOperacion",v.respuestaOperacion().toString()); m.put("cortada",v.cortada());
+                m.put("corte",v.corte()==null ? null : v.corte().toString());
+                lista.add(m);
+            }
+            responder(e, ClienteApi.JSON.writeValueAsString(lista));
+        });
         servidor.createContext("/", this::atender);
+    }
+
+    /** El mismo intermediario Java dentro de la red Compose, sin callbacks al host. */
+    public static void main(String[] args) throws Exception {
+        System.setProperty("intermediario.escucha","0.0.0.0");
+        System.setProperty("intermediario.puerto","19099");
+        iniciar("http://operacion:8082");
+        new java.util.concurrent.CountDownLatch(1).await();
+    }
+
+    private IntermediarioCorte(String control, boolean remoto) {
+        this.destino = null;
+        this.servidor = null;
+        this.controlRemoto = control;
+    }
+
+    public static IntermediarioCorte conectar(String control) throws InterruptedException {
+        var limite = Instant.now().plusSeconds(60);
+        while (Instant.now().isBefore(limite)) {
+            try {
+                if (new ClienteApi().get(control+"/actuator/health",null).estado()==200)
+                    return new IntermediarioCorte(control,true);
+            } catch (RuntimeException aunNoIniciado) { }
+            Thread.sleep(500);
+        }
+        throw new IllegalStateException("No inició el intermediario en Compose");
+    }
+
+    private static void responder(HttpExchange e, String texto) throws IOException {
+        byte[] bytes = texto.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        e.getResponseHeaders().set("Content-Type","application/json");
+        e.sendResponseHeaders(200,bytes.length);
+        try (var salida=e.getResponseBody()) { salida.write(bytes); }
+        e.close();
     }
 
     public static IntermediarioCorte iniciar(String destino) throws IOException {
@@ -68,10 +122,25 @@ public final class IntermediarioCorte implements AutoCloseable {
 
     /** La próxima transferencia se confirma en Operación y su respuesta no llega a Gestión. */
     public void armarCorte() {
+        if (controlRemoto != null) {
+            new ClienteApi().postJson(controlRemoto+"/pruebas/armar",java.util.Map.of(),null,null).exigirJson(200);
+            return;
+        }
         corteArmado.set(true);
     }
 
     public synchronized List<Evento> eventos() {
+        if (controlRemoto != null) {
+            var lista = new ArrayList<Evento>();
+            for (var v : new ClienteApi().get(controlRemoto+"/pruebas/eventos",null).exigirJson(200)) {
+                lista.add(new Evento(v.path("numero").asInt(),v.path("claveIdempotencia").asText(),
+                    Instant.parse(v.path("recibida").asText()),v.path("estadoOperacion").asInt(),
+                    v.path("estadoTransferencia").asText(),v.path("idNuevaReserva").asText(),
+                    Instant.parse(v.path("respuestaOperacion").asText()),v.path("cortada").asBoolean(),
+                    v.path("corte").isNull() ? null : Instant.parse(v.path("corte").asText())));
+            }
+            return lista;
+        }
         return List.copyOf(eventos);
     }
 
@@ -162,6 +231,6 @@ public final class IntermediarioCorte implements AutoCloseable {
 
     @Override
     public void close() {
-        servidor.stop(0);
+        if (servidor != null) servidor.stop(0);
     }
 }

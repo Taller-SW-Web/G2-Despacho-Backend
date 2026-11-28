@@ -1,0 +1,24 @@
+{
+  "jtl": "resultados/PERF-05-20261127-204319/PERF-05.jtl",
+  "fases": {
+    "RUTA-CARGA": {
+      "muestras": 899,
+      "duracionS": 300,
+      "tasaLograda": 2.997,
+      "tasaObjetivo": 3.0,
+      "p50": 11,
+      "p95": 13,
+      "p99": 18,
+      "max": 43,
+      "errores": {},
+      "porcentajeErroresInesperados": 0.0,
+      "fallosNegocio": {},
+      "umbralP95Ms": 500,
+      "inicioMs": 1795830264185,
+      "finMs": 1795830563527,
+      "resultado": "Aprobado",
+      "incumplimientos": []
+    }
+  },
+  "resultado": "Aprobado"
+}

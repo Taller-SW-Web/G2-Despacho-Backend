@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+<hashTree>
+<TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Persona B: PERF-03 o PERF-04">
+  <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+</TestPlan>
+<hashTree>
+  <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP">
+    <stringProp name="HTTPSampler.protocol">${__P(esquema,http)}</stringProp>
+    <stringProp name="HTTPSampler.domain">${__P(host,127.0.0.1)}</stringProp>
+    <stringProp name="HTTPSampler.port">${__P(puerto,18080)}</stringProp>
+    <stringProp name="HTTPSampler.connect_timeout">${__P(tiempoConexion,5000)}</stringProp>
+    <stringProp name="HTTPSampler.response_timeout">${__P(tiempoRespuesta,10000)}</stringProp>
+  </ConfigTestElement><hashTree/>
+  <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="SETUP-sesion">
+    <stringProp name="ThreadGroup.num_threads">1</stringProp>
+    <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+    <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+    <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+      <boolProp name="LoopController.continue_forever">false</boolProp>
+      <stringProp name="LoopController.loops">1</stringProp>
+    </elementProp>
+  </SetupThreadGroup>
+  <hashTree>
+    <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="SETUP-token">
+      <stringProp name="scriptLanguage">groovy</stringProp>
+      <stringProp name="filename">persona-b-sesion.groovy</stringProp>
+      <stringProp name="cacheKey">true</stringProp>
+    </JSR223Sampler><hashTree/>
+  </hashTree>
+  <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Carga Persona B">
+    <stringProp name="ThreadGroup.num_threads">${__P(hilos,5)}</stringProp>
+    <stringProp name="ThreadGroup.ramp_time">${__P(rampa,30)}</stringProp>
+    <boolProp name="ThreadGroup.scheduler">true</boolProp>
+    <stringProp name="ThreadGroup.duration">${__P(duracionTotal,360)}</stringProp>
+    <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+    <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+      <boolProp name="LoopController.continue_forever">false</boolProp>
+      <stringProp name="LoopController.loops">-1</stringProp>
+    </elementProp>
+  </ThreadGroup>
+  <hashTree>
+    <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Una fila por operación">
+      <stringProp name="filename">${__P(csv,datos/asignaciones.csv)}</stringProp>
+      <stringProp name="fileEncoding">UTF-8</stringProp>
+      <stringProp name="variableNames"></stringProp>
+      <stringProp name="delimiter">,</stringProp>
+      <boolProp name="ignoreFirstLine">false</boolProp>
+      <stringProp name="recycle">${__P(reciclar,false)}</stringProp>
+      <boolProp name="stopThread">true</boolProp>
+      <stringProp name="shareMode">shareMode.all</stringProp>
+    </CSVDataSet><hashTree/>
+    <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Cabeceras">
+      <collectionProp name="HeaderManager.headers">
+        <elementProp name="" elementType="Header"><stringProp name="Header.name">Authorization</stringProp><stringProp name="Header.value">Bearer ${__property(tokenB)}</stringProp></elementProp>
+        <elementProp name="" elementType="Header"><stringProp name="Header.name">Content-Type</stringProp><stringProp name="Header.value">application/json</stringProp></elementProp>
+      </collectionProp>
+    </HeaderManager><hashTree/>
+    <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Cuerpo y destino">
+      <stringProp name="scriptLanguage">groovy</stringProp>
+      <stringProp name="filename">persona-b-peticion.groovy</stringProp>
+      <stringProp name="cacheKey">true</stringProp>
+    </JSR223PreProcessor><hashTree/>
+    <JSR223Timer guiclass="TestBeanGUI" testclass="JSR223Timer" testname="Tasa global y ventanas">
+      <stringProp name="scriptLanguage">groovy</stringProp>
+      <stringProp name="filename">persona-b-turnos.groovy</stringProp>
+      <stringProp name="cacheKey">true</stringProp>
+    </JSR223Timer><hashTree/>
+    <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="B">
+      <stringProp name="HTTPSampler.path">${rutaB}</stringProp>
+      <stringProp name="HTTPSampler.method">POST</stringProp>
+      <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+      <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+      <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="" elementType="HTTPArgument">
+            <boolProp name="HTTPArgument.always_encode">false</boolProp>
+            <stringProp name="Argument.value">${cuerpoB}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </HTTPSamplerProxy>
+    <hashTree>
+      <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Fase">
+        <stringProp name="scriptLanguage">groovy</stringProp>
+        <stringProp name="script">prev.setSampleLabel(vars.get('faseB'))</stringProp>
+      </JSR223PostProcessor><hashTree/>
+      <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Negocio">
+        <stringProp name="scriptLanguage">groovy</stringProp>
+        <stringProp name="filename">persona-b-validar.groovy</stringProp>
+        <stringProp name="cacheKey">true</stringProp>
+      </JSR223Assertion><hashTree/>
+    </hashTree>
+  </hashTree>
+</hashTree>
+</hashTree>
+</jmeterTestPlan>

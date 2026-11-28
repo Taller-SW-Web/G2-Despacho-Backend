@@ -4,7 +4,7 @@ Verificador Java 21 + JUnit Jupiter con `java.net.http.HttpClient`. Levanta `pru
 
 ## Ejecutar
 
-Requisitos: Docker en ejecución, JDK 21 en `JAVA_HOME`, puertos `18080`, `18082` y `18090` libres, y los tres JAR construidos. INT-09 publica Operación en `127.0.0.1:18082`.
+Requisitos: Docker en ejecución, JDK 21 en `JAVA_HOME`, puertos `18080` y `18090` libres, y los tres JAR construidos. INT-09 ejecuta el intermediario dentro de Compose; su control se publica en un puerto aleatorio de `127.0.0.1`. No publica Operación ni requiere callbacks al host.
 
 ```powershell
 # Desde la raíz del backend, una vez por cambio de código
@@ -23,9 +23,13 @@ Salidas en `target/`:
 
 - `surefire-reports/`: informe JUnit (XML y TXT).
 - `informes/int-02-int-08.json` e `informes/int-09.json`: IDs sintéticos y cada aserción por caso. No contienen tokens.
-- `informes/servicios-compose.log`: registros de los servicios. INT-02 e INT-08 lo generan solo si algo falla; INT-09 siempre, como evidencia.
+- `informes/servicios-compose-<proyecto>.log`: registros separados por escenario, sin sobrescribir los de otra clase. INT-02 e INT-08 lo generan solo si algo falla; INT-01 e INT-09 siempre, como evidencia.
 
 Para ejecutar un solo caso: `-Dtest=RutasRepartidorF02Test` (INT-02 e INT-08) o `-Dtest=ReasignacionRecuperacionF02Test` (INT-09).
+
+Persona B añade `-Dtest=RecepcionLiberacionF04Test` (INT-01): 14 comprobaciones, reserva original
+de 2 kg / 0,01 m³ / un paquete y persistencia antes/después. No invoca Python. La comparación
+se ejecuta por separado recreando los datos. Resultados y límites en [CIERRE-HITO5](../fichas-hito5/CIERRE-HITO5.md).
 
 ## Escenario y servicios
 
@@ -65,7 +69,13 @@ Fuera de alcance: `verificar_anulacion_fallido` (anulación de un fallido, recep
 
 `ReasignacionRecuperacionF02Test` no tiene equivalente en Python. Reutiliza el escenario anterior y reasigna a B el despacho bajo prueba de A.
 
-**Intermediario.** `IntermediarioCorte` es un servidor HTTP dentro del JVM de la prueba. Una superposición Compose hace que Gestión llame a Operación a través de él (`host.docker.internal`). Reenvía todo sin cambios, salvo la primera transferencia después de armarlo: la entrega a Operación, espera su respuesta completa y cierra la conexión hacia Gestión sin responder.
+**Intermediario.** `IntermediarioCorte` es el mismo servidor HTTP Java, ejecutado en un contenedor
+de la red desechable. Una superposición Compose hace que Gestión llame a `intermediario:19099`;
+el intermediario llama a Operación por su DNS interno. El control se publica solo en loopback,
+sin depender de `host.docker.internal` ni del firewall del anfitrión. Se montan en solo lectura
+las clases compiladas del módulo y las dependencias Maven, no credenciales ni configuración Maven.
+Reenvía todo sin cambios, salvo la primera transferencia después de armarlo: la entrega a Operación,
+espera su respuesta completa y cierra la conexión hacia Gestión sin responder.
 
 **Comprobaciones:**
 
@@ -75,6 +85,7 @@ Fuera de alcance: `verificar_anulacion_fallido` (anulación de un fallido, recep
 4. Existe una única reserva activa del despacho, en B, y Operación guarda una sola transferencia por clave.
 5. Al converger, el despacho aparece solo en la ruta administrativa y en Mi Ruta de B. La carga pasa de la ocupación de A a la de B.
 
-Si es necesario, la escucha del intermediario se cambia con `-Dintermediario.escucha=0.0.0.0`. Por defecto escucha en `127.0.0.1`, que en Docker Desktop alcanza a los contenedores.
+El contenedor y su puerto de control se retiran junto con el proyecto Compose. No es un servicio
+productivo ni debe desplegarse en QA o producción.
 
 **Limitación.** El ciclo periódico de recuperación de Gestión (500 ms en `compose.f02.yaml`) también entrega los eventos de proyección, así que no se desactiva. Por eso la transferencia pendiente puede reenviarla ese ciclo o el reintento del cliente. El informe registra cuándo se observó el reenvío.

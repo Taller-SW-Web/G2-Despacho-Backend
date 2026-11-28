@@ -1,0 +1,52 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------< com.modulodespacho:pruebas-integracion >---------------
+[INFO] Building pruebas-integracion 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 24664 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ pruebas-integracion ---
+[INFO] Deleting /home/nicolas/Github-repos/Repos/Modulo-Despacho/G2-Despacho-Backend/pruebas/integracion-java/target
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ pruebas-integracion ---
+[INFO] skip non existing resourceDirectory /home/nicolas/Github-repos/Repos/Modulo-Despacho/G2-Despacho-Backend/pruebas/integracion-java/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ pruebas-integracion ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ pruebas-integracion ---
+[INFO] skip non existing resourceDirectory /home/nicolas/Github-repos/Repos/Modulo-Despacho/G2-Despacho-Backend/pruebas/integracion-java/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ pruebas-integracion ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 11 source files with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ pruebas-integracion ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.modulodespacho.pruebas.integracion.f02.ReasignacionRecuperacionF02Test
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 40.31 s -- in com.modulodespacho.pruebas.integracion.f02.ReasignacionRecuperacionF02Test
+[INFO] Running com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test
+[INFO] Running com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test$Int08
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.124 s -- in com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test$Int08
+[INFO] Running com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test$Int02
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.229 s -- in com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test$Int02
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 38.83 s -- in com.modulodespacho.pruebas.integracion.f02.RutasRepartidorF02Test
+[INFO] Running com.modulodespacho.pruebas.integracion.f04.RecepcionLiberacionF04Test
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 43.67 s -- in com.modulodespacho.pruebas.integracion.f04.RecepcionLiberacionF04Test
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  02:07 min
+[INFO] Finished at: 2026-11-27T21:00:10-05:00
+[INFO] ------------------------------------------------------------------------
