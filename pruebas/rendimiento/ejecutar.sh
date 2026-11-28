@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-caso="${1:?Indica el caso: PERF-02, PERF-05 o PERF-06}"
+caso="${1:?Indica PERF-02, PERF-03, PERF-04, PERF-05 o PERF-06}"
 shift
 jmeter="${JMETER:-jmeter}"
 proyecto="${PROYECTO:-hito5-perf}"
@@ -60,10 +60,14 @@ trap 'kill $monitor 2>/dev/null || true' EXIT
   "-Jventanas=$PWD/$salida/ventanas.json" "${extras[@]}" "$@"
 
 kill $monitor 2>/dev/null || true
-git rev-parse --short HEAD > "$salida/commit.txt" 2>/dev/null || true
+git rev-parse HEAD > "$salida/commit-final.txt"
 "$jmeter" -v 2>/dev/null | grep -o '5\.[0-9.]*' | head -1 > "$salida/version-jmeter.txt" || true
 
 estado=0
+if ! cmp -s "$salida/commit.txt" "$salida/commit-final.txt" || [[ -n "$(git status --porcelain)" ]]; then
+  echo "El código cambió durante la medición; corrida no concluyente" > "$salida/codigo-cambio.txt"
+  estado=1
+fi
 python3 -I analizar_jtl.py "$salida/${caso}.jtl" "${fases[@]}" \
   --ventanas "$salida/ventanas.json" --salida "$salida/resumen.json" \
   | tee "$salida/resumen.txt" || estado=$?
