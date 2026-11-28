@@ -1,0 +1,19 @@
+{
+  "caso": "PERF-03",
+  "resultado": "Aprobado",
+  "datos": {
+    "total": 181,
+    "coherentes": 181,
+    "medidasPersistidas": 150,
+    "conteosAntesDespues": {
+      "antes": {
+        "instanteUtcMs": 1795828795498,
+        "filas": 31
+      },
+      "despues": {
+        "instanteUtcMs": 1795829106698,
+        "filas": 181
+      }
+    }
+  }
+}

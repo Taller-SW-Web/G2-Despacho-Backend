@@ -1,6 +1,9 @@
 # Pruebas de rendimiento del hito 5 (JMeter)
 
-Planes de **PERF-02** (cola de pendientes, carga sostenida), **PERF-05** (Mi Ruta, carga sostenida) y **PERF-06** (Mi Ruta, pico y recuperación). Se mide el tiempo total de respuesta HTTP desde el cliente, columna `elapsed` del JTL.
+Planes de **PERF-02** (cola de pendientes), **PERF-03** (cotización), **PERF-04** (asignación),
+**PERF-05** (Mi Ruta sostenida) y **PERF-06** (pico y recuperación).
+PERF-03/04 son perfiles explícitos de `PERF-B.jmx`.
+Se mide el tiempo total de respuesta HTTP desde el cliente, columna `elapsed` del JTL.
 
 ## Requisitos
 

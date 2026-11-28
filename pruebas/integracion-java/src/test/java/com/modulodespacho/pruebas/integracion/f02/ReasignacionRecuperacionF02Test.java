@@ -34,7 +34,6 @@ import org.junit.jupiter.api.TestInstance;
 @DisplayName("F-02 reasignación con respuesta perdida (INT-09)")
 class ReasignacionRecuperacionF02Test {
     private static final String INT_09 = "INT-09";
-    private static final String OPERACION_PUBLICADA = "http://127.0.0.1:18082";
     private static final Duration CONVERGENCIA_MAXIMA = Duration.ofSeconds(20);
     private static final String MOTIVO = "Prueba INT-09: redistribución de carga";
 
@@ -296,8 +295,8 @@ class ReasignacionRecuperacionF02Test {
     }
 
     /**
-     * Superposición Compose del caso: Gestión llama a Operación a través del intermediario del
-     * anfitrión; Operación se publica en loopback para que el intermediario la alcance. La
+     * Superposición Compose del caso: Gestión llama al intermediario Java de la misma red;
+     * únicamente el control del intermediario se publica en loopback. La
      * recuperación periódica de Gestión (500 ms) se conserva porque también entrega los eventos
      * de proyección; por eso la transferencia pendiente puede completarla ese ciclo o el
      * reintento del cliente, y el informe registra cuál.
@@ -307,7 +306,8 @@ class ReasignacionRecuperacionF02Test {
         archivo.toFile().deleteOnExit();
         String modulo = Path.of("").toAbsolutePath().normalize().toString();
         String repositorio = Path.of(System.getProperty("user.home"),".m2","repository").toString();
-        String cp = System.getProperty("java.class.path").replace(modulo,"/verificador").replace(repositorio,"/m2");
+        String cp = System.getProperty("java.class.path").replace(modulo,"/verificador").replace(repositorio,"/m2")
+                .replace(java.io.File.separatorChar, '/').replace(java.io.File.pathSeparatorChar, ':');
         Files.writeString(archivo, """
                 services:
                   gestion:

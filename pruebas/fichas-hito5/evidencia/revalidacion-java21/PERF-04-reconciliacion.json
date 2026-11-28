@@ -1,0 +1,9 @@
+{
+  "caso": "PERF-04",
+  "resultado": "Aprobado",
+  "datos": {
+    "despachos": 721,
+    "reservasActivas": 721,
+    "jornadasExcedidas": 0
+  }
+}

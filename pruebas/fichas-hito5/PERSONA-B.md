@@ -53,25 +53,27 @@ confirmación vigente de los tres SKU ni acceso a evidencia correlacionada de em
 No se consultarán proveedores externos con credenciales locales ni se sustituirá esta aceptación
 por dobles. Solicitar esas dependencias al equipo antes de ejecutar INT-10.
 
-## Pendientes de cierre
+## Cierre local
 
-- Registrar resultados reales de los comandos anteriores y comparación Java/Python.
-- Repetir A con el analizador corregido y publicar paquetes completos.
-- Revisar en Linux INT-09 y su escucha del intermediario (`-Dintermediario.escucha=0.0.0.0`).
-- Revisión cruzada y PR de la rama de integración a `develop`; ningún push automático.
+- INT-01 Java/Python convergente, rendimiento de B y revalidación de A ejecutados.
+- INT-09 corregido de forma portable mediante intermediario Java dentro de Compose y verificado.
+- Resultados completos y referencias de artefactos en [CIERRE-HITO5](./CIERRE-HITO5.md).
+- Siguen pendientes INT-10 real, revisión humana cruzada, publicación de paquetes y PR a `develop`.
 
 ## Registro de esta ejecución · 27/11/2026
 
 | Comprobación | Resultado observado |
 |---|---|
 | `clean verify` Gestión / Operación / Gateway con Corretto 21 | 321 / 149 / 40 pruebas aprobadas; cero omitidas |
-| Regresiones del analizador y XML JMeter | 7 pruebas aprobadas |
+| Regresiones del analizador y XML JMeter | 8 pruebas aprobadas |
 | Compilación del módulo Java | Aprobada |
 | Groovy de B y carga de `PERF-B.jmx` en JMeter 5.6.3 | Aprobadas; no equivale a una corrida de carga |
 | INT-01 por Gateway, Gestión y Operación locales | 14 pruebas aprobadas |
 | INT-02 e INT-08 | 7 pruebas aprobadas |
-| INT-09 Linux | Primera corrida falló durante preparación: asignación inicial HTTP 503, antes de inyectar el corte. Diagnóstico en curso; no se declara aprobado |
-| PERF-03 / PERF-04 y comparación Python de INT-01 | Pendientes de ejecución |
+| INT-09 Linux | Primera corrida falló durante preparación; se corrigió el aislamiento de red. Corrida final aprobada y suite conjunta 22/22 |
+| PERF-03 | 150 muestras, p95 30 ms, 0 errores; 150 instantáneas coherentes, conteos 31→181 |
+| PERF-04 | 600 muestras, p95 29 ms, 0 errores; 721 asignados y reservas únicas contando control/calentamiento, sin sobrecarga |
+| Comparación Python de INT-01 | 14/14 sobre datos recreados, convergente con Java |
 
 Logs de sesión bajo `/tmp/opencode/hito5-*.log`; reportes y JSON de integración bajo
 `pruebas/integracion-java/target/`. No se modificaron entornos compartidos. La ejecución local
