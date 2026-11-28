@@ -23,20 +23,25 @@ def main():
     aceptadas = [json.loads(l) for l in (a.directorio / "aceptadas.jsonl").read_text().splitlines()]
     if not aceptadas:
         raise AssertionError("No hay éxitos verificables")
+    control = json.loads((a.directorio / "control.json").read_text())
     if a.caso == "PERF-03":
         datos = sql("despacho_gestion", """
             SELECT json_build_object('total',count(*),'coherentes',count(*) FILTER
             (WHERE peso_kg=2.65 AND volumen_m3=0.021 AND total=10 AND moneda='PEN' AND es_simulado))
             FROM cotizaciones;
             """)
-        assert datos["total"] == datos["coherentes"] == len(aceptadas), (datos, len(aceptadas))
+        assert datos["total"] == datos["coherentes"] == len(aceptadas) + 1, (datos, len(aceptadas))
         limites = json.loads((a.directorio / "ventanas.json").read_text())["COTIZACION-CARGA"]
         inicio, fin = limites["inicioMs"], limites["inicioMs"] + limites["duracionS"] * 1000
         datos["medidasPersistidas"] = sql("despacho_gestion",
             f"SELECT to_json(count(*)) FROM cotizaciones WHERE creado_en >= to_timestamp({inicio}/1000.0) AND creado_en < to_timestamp({fin}/1000.0);")
         medidas = sum(f["fase"] == "COTIZACION-CARGA" for f in aceptadas)
         assert datos["medidasPersistidas"] == medidas, (datos, medidas)
+        conteos = json.loads((a.directorio / "conteos.json").read_text())
+        assert conteos["despues"]["filas"] - conteos["antes"]["filas"] == medidas
+        datos["conteosAntesDespues"] = conteos
     else:
+        aceptadas.append({"fase": "CONTROL", "respuesta": control})
         respuestas = {f["respuesta"]["idDespacho"]: f["respuesta"] for f in aceptadas}
         assert len(respuestas) == len(aceptadas), "Despacho repetido"
         reservadas = sql("despacho_operacion", """

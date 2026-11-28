@@ -16,7 +16,8 @@
     <stringProp name="ThreadGroup.num_threads">1</stringProp>
     <stringProp name="ThreadGroup.ramp_time">0</stringProp>
     <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
-    <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+    <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+      <boolProp name="LoopController.continue_forever">false</boolProp>
       <stringProp name="LoopController.loops">1</stringProp>
     </elementProp>
   </SetupThreadGroup>
@@ -29,11 +30,12 @@
   </hashTree>
   <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Carga Persona B">
     <stringProp name="ThreadGroup.num_threads">${__P(hilos,5)}</stringProp>
-    <stringProp name="ThreadGroup.ramp_time">30</stringProp>
+    <stringProp name="ThreadGroup.ramp_time">${__P(rampa,30)}</stringProp>
     <boolProp name="ThreadGroup.scheduler">true</boolProp>
-    <stringProp name="ThreadGroup.duration">360</stringProp>
+    <stringProp name="ThreadGroup.duration">${__P(duracionTotal,360)}</stringProp>
     <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-    <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+    <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+      <boolProp name="LoopController.continue_forever">false</boolProp>
       <stringProp name="LoopController.loops">-1</stringProp>
     </elementProp>
   </ThreadGroup>

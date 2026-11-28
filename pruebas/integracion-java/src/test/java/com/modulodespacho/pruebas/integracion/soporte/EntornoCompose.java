@@ -157,6 +157,15 @@ public final class EntornoCompose implements AutoCloseable {
         return proyecto;
     }
 
+    public String direccionPublicada(String servicio, int puerto) throws Exception {
+        if (!"intermediario".equals(servicio) || puerto != 19099)
+            throw new IllegalArgumentException("Solo el control del intermediario se publica");
+        String direccion = ejecutar(null,"port",servicio,Integer.toString(puerto)).strip();
+        if (!direccion.matches("127\\.0\\.0\\.1:[0-9]+"))
+            throw new IllegalStateException("El control debe estar publicado solo en loopback");
+        return "http://" + direccion;
+    }
+
     @Override
     public void close() {
         if (!conservar) retirar();

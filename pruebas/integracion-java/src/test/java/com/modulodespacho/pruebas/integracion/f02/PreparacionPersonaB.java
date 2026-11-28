@@ -54,9 +54,12 @@ class PreparacionPersonaB {
             // Entrelazar jornadas para no concentrar las escrituras en una sola.
             List<String> mezcladas = new ArrayList<>(filas.subList(1,filas.size()));
             Collections.shuffle(mezcladas,new Random(504));
+            String[] control = mezcladas.remove(0).split(",");
+            Files.writeString(datos.resolve("control-asignacion.json"),ClienteApi.JSON.writeValueAsString(
+                    Map.of("idDespacho",control[0],"idRepartidor",control[1],"idJornada",control[2])));
             mezcladas.add(0,filas.get(0));
             Files.write(datos.resolve("asignaciones.csv"),mezcladas);
-            assertEquals(801,mezcladas.size());
+            assertEquals(800,mezcladas.size()); // 799 de carga más cabecera; control separado.
         }
         Files.writeString(datos.resolve("preparacion-persona-b.json"),ClienteApi.JSON.writeValueAsString(
                 Map.of("caso",caso,"proyecto",entorno.proyecto(),"zona",zona,

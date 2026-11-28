@@ -24,7 +24,7 @@ plan="${caso}.jmx"
 extras=()
 if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
   plan=PERF-B.jmx
-  extras+=("-Jcaso=$caso" "-Jledger=$PWD/$salida/aceptadas.jsonl")
+  extras+=("-Jcaso=$caso" "-Jledger=$PWD/$salida/aceptadas.jsonl" "-Jcontrol=$PWD/$salida/control.json")
   if [[ "$caso" == PERF-03 ]]; then
     extras+=("-Jcsv=cotizaciones.csv" "-Jreciclar=true")
   else
@@ -53,6 +53,12 @@ echo "instante,contenedor,cpu,memoria" > "$salida/recursos.csv"
 monitor=$!
 trap 'kill $monitor 2>/dev/null || true' EXIT
 
+# Conteos independientes; aguarda el calendario que publica el temporizador, no consulta en el sampler.
+contador=""
+if [[ "$caso" == PERF-03 ]]; then
+  python3 -I monitorear_ventana.py "$salida" > "$salida/conteos.log" 2>&1 &
+  contador=$!
+fi
 # Solo las fases medidas entran al informe HTML; el calentamiento y las sesiones quedan en el JTL.
 "$jmeter" -n -t "$plan" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
   -e -o "$salida/html" \
@@ -64,6 +70,7 @@ git rev-parse HEAD > "$salida/commit-final.txt"
 "$jmeter" -v 2>/dev/null | grep -o '5\.[0-9.]*' | head -1 > "$salida/version-jmeter.txt" || true
 
 estado=0
+if [[ -n "$contador" ]]; then wait "$contador" || estado=1; fi
 if ! cmp -s "$salida/commit.txt" "$salida/commit-final.txt" || [[ -n "$(git status --porcelain)" ]]; then
   echo "El código cambió durante la medición; corrida no concluyente" > "$salida/codigo-cambio.txt"
   estado=1

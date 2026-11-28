@@ -46,8 +46,8 @@ class ReasignacionRecuperacionF02Test {
 
     @BeforeAll
     void prepararEntorno() throws Exception {
-        intermediario = IntermediarioCorte.iniciar(OPERACION_PUBLICADA);
-        entorno = EntornoCompose.iniciar(List.of(superposicion(intermediario.puerto())));
+        entorno = EntornoCompose.iniciar(List.of(superposicion()));
+        intermediario = IntermediarioCorte.conectar(entorno.direccionPublicada("intermediario",19099));
         cliente = entorno.cliente();
         escenario = EscenarioRutasF02.preparar(entorno);
         informe.dato("ids", escenario.identificadores());
@@ -57,13 +57,14 @@ class ReasignacionRecuperacionF02Test {
 
     @AfterAll
     void retirarEntorno() throws Exception {
+        if (entorno == null) return;
         try {
-            informe.dato("transferenciasVistasPorIntermediario", eventos());
+            if (intermediario != null) informe.dato("transferenciasVistasPorIntermediario", eventos());
             informe.escribir(entorno.informes(), "int-09.json");
             entorno.guardarRegistros();
         } finally {
             entorno.close();
-            intermediario.close();
+            if (intermediario != null) intermediario.close();
         }
     }
 
@@ -301,18 +302,27 @@ class ReasignacionRecuperacionF02Test {
      * de proyección; por eso la transferencia pendiente puede completarla ese ciclo o el
      * reintento del cliente, y el informe registra cuál.
      */
-    private static Path superposicion(int puerto) throws Exception {
+    private static Path superposicion() throws Exception {
         Path archivo = Files.createTempFile("hito5-int09-", ".yaml");
         archivo.toFile().deleteOnExit();
+        String modulo = Path.of("").toAbsolutePath().normalize().toString();
+        String repositorio = Path.of(System.getProperty("user.home"),".m2","repository").toString();
+        String cp = System.getProperty("java.class.path").replace(modulo,"/verificador").replace(repositorio,"/m2");
         Files.writeString(archivo, """
                 services:
                   gestion:
                     environment:
-                      OPERACION_REPARTO_URL: http://host.docker.internal:%d
-                    extra_hosts: ['host.docker.internal:host-gateway']
-                  operacion:
-                    ports: ['127.0.0.1:18082:8082']
-                """.formatted(puerto));
+                      OPERACION_REPARTO_URL: http://intermediario:19099
+                  intermediario:
+                    image: eclipse-temurin:21-jre-jammy
+                    command: ['java','-cp',%s,'com.modulodespacho.pruebas.integracion.soporte.IntermediarioCorte']
+                    volumes:
+                      - %s
+                      - %s
+                    ports: ['127.0.0.1::19099']
+                """.formatted(ClienteApi.JSON.writeValueAsString(cp),
+                    ClienteApi.JSON.writeValueAsString(modulo+":/verificador:ro"),
+                    ClienteApi.JSON.writeValueAsString(repositorio+":/m2:ro")));
         return archivo;
     }
 }
