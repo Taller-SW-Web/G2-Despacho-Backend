@@ -2,7 +2,8 @@
 
 ## Entorno y trazabilidad
 
-- Código verificado: `4a81f6d` en `test/hito5-persona-b`, derivada de `test/hito5-integracion`.
+- Código medido: `4a81f6d` en `test/hito5-persona-b`, derivada de `test/hito5-integracion`.
+- Suite Java de cierre repetida sobre `c9363fe`: 22/22 aprobadas, sin fallos, errores ni omitidas.
 - Verificador y generador en Java 21.0.13.1 (Corretto); Apache JMeter 5.6.3. Servicios en imágenes Temurin 21.
 - Linux 6.18.65, AMD Ryzen 7 7735HS, 16 CPU disponibles; Docker 29.10.0, memoria disponible de 13,33 GiB.
 - Gateway, Gestión, Operación y PostgreSQL/PostGIS reales locales. Seguridad temporal; Productos simulados únicamente para cotización local.
@@ -72,6 +73,11 @@ los conteos tomados antes/después. Se adjuntan resúmenes, gráficas y XML de i
 [evidencia/revalidacion-java21](./evidencia/revalidacion-java21/).
 Los paquetes con JTL/HTML completos permanecen fuera de Git y requieren adjuntarse al PR o a
 un almacenamiento autorizado: los enlaces locales no significan que ya se hayan publicado.
+Paquete consolidado: `pruebas/rendimiento/resultados/entrega-hito5-java21.tar.gz`;
+verificación: `sha256sum -c entrega-hito5-java21.tar.gz.sha256` desde esa carpeta.
+Incluye las cinco corridas completas, sus fichas, entradas sin credenciales, fuentes medidas,
+informes Surefire, comparación Python y logs de los primeros intentos.
+Tamaño, checksum y contenido inventariado en [PAQUETE-EVIDENCIA](./PAQUETE-EVIDENCIA.md).
 
 ## Recursos de B
 
@@ -103,6 +109,7 @@ Medias y máximos de toda la corrida, incluidos setup/control y calentamiento.
 - INT-11/G5 real permanece fuera de alcance como pendiente crítico.
 - La revisión técnica de código de A encontró y corrigió ventanas, señal de error y trazabilidad.
   La revisión humana cruzada A↔B sigue pendiente y no se considera aprobada automáticamente.
+  Se deja una [lista de revisión cruzada](./REVISION-CRUZADA.md) para registrar ambas aceptaciones.
 - Publicación de paquetes completos y PR a `develop` a cargo del equipo; sin push ni merge a `develop` por el agente.
 
 ## Estado de cierre
@@ -112,4 +119,4 @@ ni a una aprobación de personas A/B. El equipo debe revisar los paquetes, adjun
 y abrir el PR de `test/hito5-integracion` a `develop`. Los commits posteriores a `4a81f6d` que cierran
 esta entrega agregan evidencia, documentación, permisos de ejecución y normalización del classpath
 del intermediario para el separador del host. No alteran los servicios ni los planes o scripts de carga medidos.
-Se repite la suite Java al cerrar este ajuste. Windows no se ejecutó en esta sesión.
+La suite Java se repitió al cerrar este ajuste: 22/22 aprobadas. Windows no se ejecutó en esta sesión.

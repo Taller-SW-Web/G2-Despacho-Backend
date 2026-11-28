@@ -1,19 +1,19 @@
 {
   "verificacion" : "Hito 5 · INT-02 e INT-08 · rutas F-02 y F-03",
-  "fechaUtc" : "2026-11-28T01:17:20.135292568Z",
-  "commitBackend" : "4a81f6ddaef557937c4cbce545059a761a040606",
+  "fechaUtc" : "2026-11-28T01:59:23.393579661Z",
+  "commitBackend" : "c9363feb332142086ee4be8633d5ba0add664156",
   "datosSinteticos" : {
     "ids" : {
-      "otroDespachoA" : "1eec01c7-82e7-4ff0-ad55-6284234df5a7",
-      "idDespachoBajoPrueba" : "00531b7f-5d80-4f23-a5d0-e227dc6957c2",
-      "despachoPropioB" : "75454ba7-6ed2-4717-bbf8-e5aca997f295",
-      "idRepartidorB" : "19d3309c-4999-46c7-a2b8-b3fd1c301f1a",
-      "idZona" : "8666915e-307d-4cd4-8dfe-915c21eca5dd",
-      "idRepartidorA" : "5d7a36ec-763a-46e4-b2d8-c19878194e9c",
-      "idJornadaB" : "c5a03397-e275-4982-8dea-9ebba1c48657",
-      "idJornadaA" : "17987b60-9ca8-4bf1-8bc9-c4c903fee6ba"
+      "idJornadaB" : "a473cd8d-66f4-41ad-8e7c-fc77afb32ad1",
+      "idJornadaA" : "b6a43b51-5d4c-4656-9374-6df9058578db",
+      "otroDespachoA" : "a38716f9-2802-4075-9925-bcabefa988f1",
+      "idDespachoBajoPrueba" : "11bce02a-bdef-4201-b20b-e54c5c3ceaff",
+      "despachoPropioB" : "a47e76b2-50ba-43d7-9f55-6027083e7357",
+      "idRepartidorB" : "00c61f69-fe85-4dd1-ab18-d3de9165bf0d",
+      "idZona" : "13c5794b-e588-4e90-a040-87b64c693447",
+      "idRepartidorA" : "32fbda6e-e93c-496e-8951-efa31285d9ae"
     },
-    "convergenciaProyeccionMs" : 734,
+    "convergenciaProyeccionMs" : 658,
     "codigoError404" : "DESP_ERROR_DESPACHO_NO_ENCONTRADO"
   },
   "casos" : {

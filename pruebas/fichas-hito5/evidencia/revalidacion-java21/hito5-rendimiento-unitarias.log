@@ -1,0 +1,13 @@
+test_carga_completa_usa_duracion_nominal (test_analizar_jtl.AnalizadorTests.test_carga_completa_usa_duracion_nominal) ... ok
+test_recuperacion_truncada_no_desplaza_ultimos30 (test_analizar_jtl.AnalizadorTests.test_recuperacion_truncada_no_desplaza_ultimos30) ... ok
+test_sin_ventana_no_se_infiere_aprobacion (test_analizar_jtl.AnalizadorTests.test_sin_ventana_no_se_infiere_aprobacion) ... ok
+test_un_fallo_de_negocio_invalida_la_carga (test_analizar_jtl.AnalizadorTests.test_un_fallo_de_negocio_invalida_la_carga) ... ok
+test_una_muestra_no_acredita_cinco_minutos (test_analizar_jtl.AnalizadorTests.test_una_muestra_no_acredita_cinco_minutos) ... ok
+test_csv_de_asignacion_no_aplica_al_setup (test_reconciliar_persona_b.PlanesTests.test_csv_de_asignacion_no_aplica_al_setup) ... ok
+test_ningun_plan_sigue_redirecciones (test_reconciliar_persona_b.PlanesTests.test_ningun_plan_sigue_redirecciones) ... ok
+test_setup_tiene_controlador_identificado_y_una_sola_iteracion (test_reconciliar_persona_b.PlanesTests.test_setup_tiene_controlador_identificado_y_una_sola_iteracion) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+OK
