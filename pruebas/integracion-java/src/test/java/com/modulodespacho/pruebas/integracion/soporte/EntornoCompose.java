@@ -145,7 +145,7 @@ public final class EntornoCompose implements AutoCloseable {
             var proceso =
                     new ProcessBuilder(concatenar("logs", "--no-color", "--tail", "200"))
                             .redirectErrorStream(true)
-                            .redirectOutput(informes.resolve("servicios-compose.log").toFile())
+                            .redirectOutput(informes.resolve("servicios-compose-" + proyecto + ".log").toFile())
                             .start();
             proceso.waitFor(60, TimeUnit.SECONDS);
         } catch (IOException | InterruptedException ignorado) {
