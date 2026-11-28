@@ -66,6 +66,10 @@ public final class EntornoCompose implements AutoCloseable {
         return iniciar(List.of(), proyecto, true);
     }
 
+    public static EntornoCompose iniciarConservado(String proyecto, List<Path> adicionales) throws Exception {
+        return iniciar(adicionales, proyecto, true);
+    }
+
     private static EntornoCompose iniciar(List<Path> adicionales, String proyecto, boolean conservar)
             throws Exception {
         Path raiz = raizBackend();
@@ -118,6 +122,20 @@ public final class EntornoCompose implements AutoCloseable {
                         "exec", "-T", "postgres", "psql", "-v", "ON_ERROR_STOP=1", "-At", "-U",
                         "prueba", "-d", base);
         return salida.lines().filter(linea -> !linea.isBlank()).toList();
+    }
+
+    /** Solo para escenarios locales: el Bearer viaja por stdin y no aparece en argumentos. */
+    public com.fasterxml.jackson.databind.JsonNode postInterno(String ruta, Object cuerpo, String token) throws Exception {
+        if (!ruta.matches("/internal/v1/despachos/[0-9a-f-]+/transiciones"))
+            throw new IllegalArgumentException("Ruta interna no autorizada para el escenario");
+        String configuracion = "url = \"http://gestion:8081" + ruta + "\"\n"
+                + "header = \"Authorization: Bearer " + token + "\"\n"
+                + "header = \"Idempotency-Key: " + UUID.randomUUID() + "\"\n"
+                + "header = \"Content-Type: application/json\"\n"
+                + "data = " + ClienteApi.JSON.writeValueAsString(ClienteApi.JSON.writeValueAsString(cuerpo)) + "\n";
+        String salida = ejecutar(configuracion, "exec", "-T", "seguridad-local", "curl",
+                "--fail", "--silent", "--config", "-");
+        return ClienteApi.JSON.readTree(salida);
     }
 
     /** Conserva los últimos registros de los servicios si la prueba falla. Nunca contienen tokens. */

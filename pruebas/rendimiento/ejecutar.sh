@@ -20,6 +20,17 @@ case "$caso" in
   PERF-04) fases=(--fase ASIGNACION-CARGA:2:1000) ;;
   *) echo "Caso desconocido: $caso" >&2; exit 2 ;;
 esac
+plan="${caso}.jmx"
+extras=()
+if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
+  plan=PERF-B.jmx
+  extras+=("-Jcaso=$caso" "-Jledger=$PWD/$salida/aceptadas.jsonl")
+  if [[ "$caso" == PERF-03 ]]; then
+    extras+=("-Jcsv=cotizaciones.csv" "-Jreciclar=true")
+  else
+    extras+=("-Jcsv=datos/asignaciones.csv" "-Jreciclar=false")
+  fi
+fi
 
 # La evidencia corresponde a un commit y artefactos concretos, no al commit posterior a medir.
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -43,10 +54,10 @@ monitor=$!
 trap 'kill $monitor 2>/dev/null || true' EXIT
 
 # Solo las fases medidas entran al informe HTML; el calentamiento y las sesiones quedan en el JTL.
-"$jmeter" -n -t "${caso}.jmx" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
+"$jmeter" -n -t "$plan" -l "$salida/${caso}.jtl" -j "$salida/jmeter.log" \
   -e -o "$salida/html" \
   "-Jjmeter.reportgenerator.sample_filter=^(RUTA-(BASE|PICO|RECUPERACION|CARGA)|COLA-CARGA|COTIZACION-CARGA|ASIGNACION-CARGA)$" \
-  "-Jventanas=$PWD/$salida/ventanas.json" "$@"
+  "-Jventanas=$PWD/$salida/ventanas.json" "${extras[@]}" "$@"
 
 kill $monitor 2>/dev/null || true
 git rev-parse --short HEAD > "$salida/commit.txt" 2>/dev/null || true
@@ -56,6 +67,10 @@ estado=0
 python3 -I analizar_jtl.py "$salida/${caso}.jtl" "${fases[@]}" \
   --ventanas "$salida/ventanas.json" --salida "$salida/resumen.json" \
   | tee "$salida/resumen.txt" || estado=$?
+if [[ "$caso" == PERF-03 || "$caso" == PERF-04 ]]; then
+  python3 -I reconciliar_persona_b.py "$caso" "$salida" \
+    > "$salida/reconciliacion.log" 2>&1 || estado=1
+fi
 tar -czf "$salida.tar.gz" "$salida"
 echo "Evidencia en $salida"
 exit "$estado"

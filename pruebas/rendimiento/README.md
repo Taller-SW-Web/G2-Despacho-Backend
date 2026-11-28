@@ -4,7 +4,7 @@ Planes de **PERF-02** (cola de pendientes, carga sostenida), **PERF-05** (Mi Rut
 
 ## Requisitos
 
-- Apache JMeter **5.6.3** ejecutado con **Java 21**. El Groovy 3.0.20 que trae JMeter 5.6.3 no lee clases de Java 23 ni de Java 25, y con esas versiones fallan los elementos JSR223. Esto solo afecta al generador de carga. Los servicios siguen en Java 25.
+- Apache JMeter **5.6.3** ejecutado con **Java 21**. El Groovy 3.0.20 que trae JMeter 5.6.3 no lee clases de Java 23 ni de Java 25, y con esas versiones fallan los elementos JSR223. La rama de integración conserva Java 21 también en servicios y verificador; las fichas previas de A documentan su entorno histórico Java 25.
 - Docker en ejecución y los JAR de los servicios construidos con `clean verify`.
 - Python 3 para el análisis.
 
@@ -88,6 +88,16 @@ Se comprobó cruzando las páginas del CSV: todas las muestras fallaron con `IDS
 Otras propiedades (`-J`): `esquema`, `host`, `puerto` (18080), `seguridad`, `hilos` (30), `rampa` (30 s), `tiempoConexion` (5000 ms), `tiempoRespuesta` (10000 ms) y `rutas`.
 
 ## Análisis
+
+Desde la corrección de integración, `analizar_jtl.py` exige `--ventanas ventanas.json`,
+generado por el temporizador JMeter con límites nominales por fase. La tasa usa la duración
+planificada, no la distancia entre primera y última muestra. La recuperación usa el final
+programado; una corrida truncada no desplaza los últimos 30 segundos. Sin ventanas no puede aprobar.
+El ejecutor propaga fallos y requiere árbol limpio antes de medir; registra hashes de JAR
+y empaqueta toda la evidencia. Los resúmenes históricos no se recalculan sin sus JTL originales.
+
+Persona B usa los perfiles `PERF-03` y `PERF-04` de `PERF-B.jmx`, con las mismas garantías.
+Preparación, reconciliación y comandos en [PERSONA-B](../fichas-hito5/PERSONA-B.md).
 
 `analizar_jtl.py` aplica el criterio común del plan por fase:
 
