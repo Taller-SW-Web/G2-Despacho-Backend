@@ -20,7 +20,7 @@ services:
       DIRECCION_ESCUCHA: 0.0.0.0
     ports: ['127.0.0.1:18090:8090']
   gestion:
-    image: eclipse-temurin:25-jre-jammy
+    image: eclipse-temurin:21-jre-jammy
     command: [java, -Xmx384m, -jar, /app/servicio.jar, '--despacho.programacion.intervalo-recuperacion-ms=500']
     volumes:
       - ../servicio-gestion-despachos/target/servicio-gestion-despachos-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro
@@ -37,7 +37,7 @@ services:
       postgres: {condition: service_healthy}
       seguridad-local: {condition: service_healthy}
   operacion:
-    image: eclipse-temurin:25-jre-jammy
+    image: eclipse-temurin:21-jre-jammy
     command: [java, -Xmx384m, -jar, /app/servicio.jar]
     volumes:
       - ../servicio-operacion-reparto/target/servicio-operacion-reparto-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro
@@ -54,7 +54,7 @@ services:
       postgres: {condition: service_healthy}
       seguridad-local: {condition: service_healthy}
   gateway:
-    image: eclipse-temurin:25-jre-jammy
+    image: eclipse-temurin:21-jre-jammy
     command: [java, -Xmx256m, -jar, /app/servicio.jar]
     volumes:
       - ../api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar:/app/servicio.jar:ro

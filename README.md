@@ -11,7 +11,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Compose compila con Java 25 LTS dentro de las imágenes y arranca seis contenedores, incluido RabbitMQ. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
+Compose compila con Java 21 dentro de las imágenes y arranca seis contenedores, incluido RabbitMQ. La primera construcción descarga imágenes y dependencias. Se puede añadir `--wait` al comando de arranque para esperar a que pasen las comprobaciones de salud.
 
 | Servicio | Dirección predeterminada |
 |---|---|
@@ -62,7 +62,7 @@ El emisor local usa cuentas ficticias y firma JWT de prueba. El gestor `gestor@d
 
 ## Pruebas y contratos
 
-Con Java 25 LTS, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
+Con Java 21, ejecutar `.\mvnw.cmd clean verify` en cada servicio afectado en Windows, o `./mvnw clean verify` en Linux. Las pruebas de integración requieren Docker y crean bases desechables con Testcontainers. El arranque de Compose construye las imágenes, mientras que Maven Wrapper ejecuta las suites.
 
 El corte de F-03 se activa en Operación con `CORTE_JORNADA_HABILITADO=true`. La hora local en America/Bogota se configura con `CORTE_JORNADA_HORA` (por defecto `23:59`) y el intervalo con `CORTE_JORNADA_INTERVALO_MS` (por defecto `60000`). Las jornadas activas de fechas anteriores se revisan en el primer ciclo, incluso antes de la hora de hoy. Para una prueba manual, activar el corte en una base local con datos ficticios de ambos servicios y consultar las jornadas y Entregas fallidas después del ciclo.
 

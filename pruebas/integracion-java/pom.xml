@@ -10,10 +10,10 @@
 	<artifactId>pruebas-integracion</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>pruebas-integracion</name>
-	<description>Pruebas de integración entre servicios de Despacho (Java 25 y JUnit)</description>
+	<description>Pruebas de integración entre servicios de Despacho (Java 21 y JUnit)</description>
 
 	<properties>
-		<maven.compiler.release>25</maven.compiler.release>
+		<maven.compiler.release>21</maven.compiler.release>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<junit.version>5.11.4</junit.version>
 		<jackson.version>2.18.2</jackson.version>

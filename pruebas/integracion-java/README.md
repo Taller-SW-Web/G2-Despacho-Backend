@@ -1,10 +1,10 @@
 # Pruebas de integración del hito 5 (Java)
 
-Verificador Java 25 LTS + JUnit Jupiter con `java.net.http.HttpClient`. Levanta `pruebas/compose.f02.yaml` y no invoca los scripts Python.
+Verificador Java 21 + JUnit Jupiter con `java.net.http.HttpClient`. Levanta `pruebas/compose.f02.yaml` y no invoca los scripts Python.
 
 ## Ejecutar
 
-Requisitos: Docker en ejecución, JDK 25 en `JAVA_HOME`, puertos `18080`, `18082` y `18090` libres, y los tres JAR construidos. INT-09 publica Operación en `127.0.0.1:18082`.
+Requisitos: Docker en ejecución, JDK 21 en `JAVA_HOME`, puertos `18080`, `18082` y `18090` libres, y los tres JAR construidos. INT-09 publica Operación en `127.0.0.1:18082`.
 
 ```powershell
 # Desde la raíz del backend, una vez por cambio de código

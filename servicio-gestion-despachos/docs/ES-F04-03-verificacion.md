@@ -29,7 +29,7 @@ Comando de la entrega, desde el directorio del servicio:
 .\mvnw.cmd clean verify
 ```
 
-Entorno: Java 25 LTS, Maven Wrapper, Docker Desktop y PostgreSQL/PostGIS 17.11 desechable mediante Testcontainers. Flyway crea una base vacía con las migraciones originales V1/V2. Las pruebas no utilizan Supabase ni las bases de Compose. El emisor JWT es un doble de prueba y Operación se representa mediante un servidor HTTP local o MockRestServiceServer; no se acredita su lógica ni la ocupación de su base real.
+Entorno: Java 21, Maven Wrapper, Docker Desktop y PostgreSQL/PostGIS 17.11 desechable mediante Testcontainers. Flyway crea una base vacía con las migraciones originales V1/V2. Las pruebas no utilizan Supabase ni las bases de Compose. El emisor JWT es un doble de prueba y Operación se representa mediante un servidor HTTP local o MockRestServiceServer; no se acredita su lógica ni la ocupación de su base real.
 
 Verificación final del contenido incluido en este commit: 24/10/2026 a las 01:28:56 (America/Lima), `clean verify`, **BUILD SUCCESS** en 2 min 47 s: **109 pruebas, cero fallos, cero errores y cero omisiones**. Incluye 25 pruebas nuevas: 14 de recepción HTTP con PostgreSQL, 3 de validación, 4 del procesador y 4 del adaptador HTTP. Las demás son regresiones existentes de Gestión. El JAR también se construyó correctamente. Las ejecuciones previas de revisión finalizaron aprobadas; se repitió la suite al reforzar las protecciones de datos históricos.
 

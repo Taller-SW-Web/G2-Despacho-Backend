@@ -43,16 +43,20 @@ def clasificar(fila):
     return "red_o_tiempo_agotado"
 
 
-def resumir(filas, tasa_objetivo, umbral_ms, ventana=None):
+def resumir(filas, tasa_objetivo, umbral_ms, ventana=None, inicio_ms=None, duracion_s=None):
+    if inicio_ms is None or duracion_s is None or duracion_s <= 0:
+        return {"muestras": 0, "resultado": "No concluyente",
+                "motivo": "Faltan límites nominales de la fase; no se infieren de las muestras"}
+    if ventana:
+        inicio_ms += (duracion_s - ventana) * 1000
+        duracion_s = ventana
+    filas = [f for f in filas
+             if inicio_ms <= int(f["timeStamp"]) < inicio_ms + duracion_s * 1000]
     if not filas:
         return {"muestras": 0, "resultado": "No concluyente", "motivo": "sin muestras"}
     inicio = min(int(f["timeStamp"]) for f in filas)
     fin = max(int(f["timeStamp"]) + int(f["elapsed"]) for f in filas)
-    if ventana:
-        # La tasa de una ventana se mide sobre su duración nominal.
-        duracion = ventana
-    else:
-        duracion = (max(int(f["timeStamp"]) for f in filas) - inicio) / 1000 or 1
+    duracion = duracion_s
     tiempos = [int(f["elapsed"]) for f in filas]
     errores = {}
     motivos_negocio = {}
@@ -101,7 +105,10 @@ def main():
     parser.add_argument("--fase", action="append", required=True,
                         help="ETIQUETA[@ultimosN]:TASA_POR_S[:UMBRAL_P95_MS]")
     parser.add_argument("--salida", type=Path, help="JSON con el resumen")
+    parser.add_argument("--ventanas", type=Path, required=True,
+                        help="JSON generado por JMeter: etiqueta -> inicioMs, duracionS")
     argumentos = parser.parse_args()
+    ventanas = json.loads(argumentos.ventanas.read_text(encoding="utf-8"))
 
     with argumentos.jtl.open(encoding="utf-8", newline="") as archivo:
         filas = list(csv.DictReader(archivo))
@@ -118,10 +125,9 @@ def main():
         etiqueta, _, ventana = nombre.partition("@ultimos")
         muestras = por_etiqueta.get(etiqueta, [])
         segundos = int(ventana) if ventana else None
-        if segundos and muestras:
-            limite = max(int(f["timeStamp"]) for f in muestras) - segundos * 1000
-            muestras = [f for f in muestras if int(f["timeStamp"]) > limite]
-        resumen["fases"][nombre] = resumir(muestras, tasa, umbral, segundos)
+        limites = ventanas.get(etiqueta, {})
+        resumen["fases"][nombre] = resumir(muestras, tasa, umbral, segundos,
+                                          limites.get("inicioMs"), limites.get("duracionS"))
 
     resultados = [fase["resultado"] for fase in resumen["fases"].values()]
     resumen["resultado"] = ("No concluyente" if "No concluyente" in resultados

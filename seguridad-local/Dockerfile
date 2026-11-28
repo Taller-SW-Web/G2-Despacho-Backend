@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:25-jdk-jammy AS compilacion
+FROM eclipse-temurin:21-jdk-jammy AS compilacion
 WORKDIR /compilacion
 COPY src/EmisorSeguridadLocal.java ./
 RUN javac --add-modules jdk.httpserver -encoding UTF-8 -d clases EmisorSeguridadLocal.java
@@ -10,7 +10,7 @@ COPY pruebas/EmisorSeguridadLocalPruebas.java ./
 RUN javac --add-modules jdk.httpserver -encoding UTF-8 -cp clases -d clases EmisorSeguridadLocalPruebas.java \
     && java --add-modules jdk.httpserver -cp clases EmisorSeguridadLocalPruebas
 
-FROM eclipse-temurin:25-jre-jammy AS ejecucion
+FROM eclipse-temurin:21-jre-jammy AS ejecucion
 WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \

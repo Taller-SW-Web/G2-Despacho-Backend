@@ -29,7 +29,7 @@ public final class ClienteApi {
                     .build();
 
     /** Estado HTTP, cuerpo textual y su lectura JSON (null si no es JSON). */
-    public record Respuesta(int estado, String texto, JsonNode json) {
+    public record Respuesta(int estado, String texto, JsonNode json, java.net.http.HttpHeaders cabeceras) {
         public JsonNode exigirJson(int esperado) {
             if (estado != esperado || json == null)
                 throw new AssertionError(
@@ -83,7 +83,7 @@ public final class ClienteApi {
         var solicitud =
                 HttpRequest.newBuilder(URI.create(url))
                         .timeout(TIEMPO_MAXIMO)
-                        .header("Accept", "application/json");
+                        .header("Accept", "application/json, application/problem+json");
         if (token != null) solicitud.header("Authorization", "Bearer " + token);
         return solicitud;
     }
@@ -101,7 +101,7 @@ public final class ClienteApi {
             } catch (IOException noEsJson) {
                 json = null;
             }
-            return new Respuesta(respuesta.statusCode(), texto, json);
+            return new Respuesta(respuesta.statusCode(), texto, json, respuesta.headers());
         } catch (IOException error) {
             // El mensaje no incluye cabeceras, así que nunca expone el token.
             throw new IllegalStateException(

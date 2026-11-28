@@ -128,6 +128,10 @@ if (fases == null) {
 long ahora = System.currentTimeMillis()
 props.putIfAbsent('colaInicio', ahora)
 long inicio = props.get('colaInicio') as long
+if (props.putIfAbsent('ventanasGuardadas', true) == null) {
+    def limites = fases.collectEntries { [(it.etiqueta): [inicioMs: inicio + it.desde, duracionS: (it.hasta - it.desde) / 1000]] }
+    new File(props.getProperty('ventanas', 'ventanas.json')).text = groovy.json.JsonOutput.toJson(limites)
+}
 synchronized (fases) {
     double siguiente = (props.get('colaSiguiente') ?: (double) inicio) as double
     double turno = Math.max(siguiente, (double) ahora)
