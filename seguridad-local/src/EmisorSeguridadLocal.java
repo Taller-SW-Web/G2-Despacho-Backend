@@ -112,6 +112,20 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
 
     private record Perfil(String sujeto, List<String> roles) {}
 
+    /**
+     * Pruebas de rendimiento (hito 5, PERF-05/06): identidades de repartidor distintas, sin roles
+     * globales, con sujeto determinista 55555555-5555-4555-8555-0000000000NN.
+     */
+    static final int PERFILES_CARGA = 30;
+
+    private static Perfil perfilDeCarga(String nombre) {
+        var coincidencia = java.util.regex.Pattern.compile("repartidor-carga-(\\d{2})").matcher(nombre);
+        if (!coincidencia.matches()) return null;
+        int indice = Integer.parseInt(coincidencia.group(1));
+        if (indice < 1 || indice > PERFILES_CARGA) return null;
+        return new Perfil("55555555-5555-4555-8555-%012d".formatted(indice), List.of());
+    }
+
     public EmisorSeguridadLocal(String direccion, int puerto, String origen, boolean habilitado)
             throws IOException, GeneralSecurityException {
         if (!habilitado) {
@@ -308,12 +322,15 @@ public final class EmisorSeguridadLocal implements AutoCloseable {
     private void emitirUsuario(HttpExchange intercambio)
             throws IOException, GeneralSecurityException {
         Map<String, String> formulario = formulario(intercambio);
-        Perfil perfil = PERFILES.get(formulario.getOrDefault("perfil", ""));
+        String nombrePerfil = formulario.getOrDefault("perfil", "");
+        Perfil perfil = PERFILES.getOrDefault(nombrePerfil, perfilDeCarga(nombrePerfil));
         if (perfil == null) {
             throw new SolicitudInvalida(
                     400,
                     "PERFIL_INVALIDO",
-                    "Utilizar perfil=gestor, repartidor, repartidor-kevin o sin-rol");
+                    "Utilizar perfil=gestor, repartidor, repartidor-kevin, sin-rol o"
+                            + " repartidor-carga-01 a repartidor-carga-"
+                            + PERFILES_CARGA);
         }
         Map<String, Object> claims = claims(perfil.sujeto(), "acceso", 900);
         claims.put("roles", perfil.roles());

@@ -1,0 +1,24 @@
+{
+  "jtl": "resultados\\PERF-02-20261126-031324\\PERF-02.jtl",
+  "fases": {
+    "COLA-CARGA": {
+      "muestras": 1500,
+      "duracionS": 299.8,
+      "tasaLograda": 5.003,
+      "tasaObjetivo": 5.0,
+      "p50": 17,
+      "p95": 20,
+      "p99": 22,
+      "max": 31,
+      "errores": {},
+      "porcentajeErroresInesperados": 0.0,
+      "fallosNegocio": {},
+      "umbralP95Ms": 250,
+      "inicioMs": 1795680866398,
+      "finMs": 1795681166215,
+      "resultado": "Aprobado",
+      "incumplimientos": []
+    }
+  },
+  "resultado": "Aprobado"
+}

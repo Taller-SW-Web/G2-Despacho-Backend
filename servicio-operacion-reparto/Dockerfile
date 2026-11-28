@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:21-jdk-jammy AS compilacion
+FROM eclipse-temurin:25-jdk-jammy AS compilacion
 WORKDIR /compilacion
 
 COPY .mvn/ .mvn/
@@ -13,7 +13,7 @@ COPY src/ src/
 RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw --batch-mode -Dmaven.test.skip=true package
 
-FROM eclipse-temurin:21-jre-jammy AS ejecucion
+FROM eclipse-temurin:25-jre-jammy AS ejecucion
 WORKDIR /app
 
 RUN apt-get update \
